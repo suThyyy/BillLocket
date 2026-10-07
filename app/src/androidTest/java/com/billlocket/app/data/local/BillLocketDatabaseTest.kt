@@ -123,7 +123,7 @@ class BillLocketDatabaseTest {
 
         assertEquals(-150_000, accountDao.balance(initialAccount().id)?.balanceMinor)
         assertEquals(100_000, database.projectionDao().periodTotals(20_000, 20_030).expenseMinor)
-        assertEquals(100_000, database.projectionDao().budgetProgress(20_000, 20_031).single().spentMinor)
+        assertEquals(100_000, database.projectionDao().budgetProgress(20_000, 20_031, 20_030).single().spentMinor)
         assertEquals(1, database.projectionDao().mapMarkers().size)
 
         database.transactionDao().softDelete(transaction.id, 3)

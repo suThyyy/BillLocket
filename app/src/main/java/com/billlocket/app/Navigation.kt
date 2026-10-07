@@ -10,6 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
+import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -28,6 +29,7 @@ import com.billlocket.app.feature.insights.BudgetsScreen
 import com.billlocket.app.feature.insights.StatisticsScreen
 import com.billlocket.app.feature.location.ImageLocationScreen
 import com.billlocket.app.feature.map.MapScreen
+import com.billlocket.app.feature.recap.MonthlyRecapScreen
 import com.billlocket.app.feature.widget.SettingsHubScreen
 import com.billlocket.app.feature.widget.WidgetSettingsScreen
 import com.billlocket.app.feature.settings.GeneralSettingsScreen
@@ -49,7 +51,13 @@ import com.billlocket.app.widget.WIDGET_ACTION_WEEKLY
 @Composable
 fun Navigation(navController: NavHostController = rememberNavController(), widgetLaunch: WidgetLaunch? = null) {
     val backStackEntry by navController.currentBackStackEntryAsState()
-    val selectedTopLevel = TopLevelDestination.fromRoute(backStackEntry?.destination?.route)
+    val currentDestination = backStackEntry?.destination
+    val selectedTopLevel = TopLevelDestination.entries.firstOrNull { topLevel ->
+        currentDestination?.hierarchy?.any { destination ->
+            destination.route == topLevel.route ||
+                (topLevel == TopLevelDestination.Map && destination.route == RoutePattern.MAP_ROUTE)
+        } == true
+    }
     LaunchedEffect(widgetLaunch?.token) {
         when (widgetLaunch?.action) {
             WIDGET_ACTION_CAPTURE -> navController.navigate(AppDestination.Capture(newDraftId()).route)
@@ -86,6 +94,7 @@ fun Navigation(navController: NavHostController = rememberNavController(), widge
                     onOpenCapture = { navController.navigate(AppDestination.Capture(it).route) },
                     onOpenSearch = { navController.navigate(AppDestination.TransactionSearch.route) },
                     onOpenTransaction = { navController.navigate(AppDestination.TransactionDetail(it).route) },
+                    onOpenMonthlyRecap = { navController.navigate(AppDestination.MonthlyRecap(it).route) },
                 )
             }
             composable(RoutePattern.STATISTICS) {
@@ -93,6 +102,7 @@ fun Navigation(navController: NavHostController = rememberNavController(), widge
                     onOpenTransaction = { navController.navigate(AppDestination.TransactionDetail(it).route) },
                     onOpenAllTransactions = { navController.navigate(AppDestination.TransactionSearch.route) },
                     onOpenBudgets = { navController.navigate(AppDestination.Budgets().route) },
+                    onOpenMonthlyRecap = { navController.navigate(AppDestination.MonthlyRecap(it).route) },
                 )
             }
             composable(
@@ -239,6 +249,20 @@ fun Navigation(navController: NavHostController = rememberNavController(), widge
             ) {
                 BudgetsScreen(navController::navigateUp)
             }
+            composable(
+                route = RoutePattern.MONTHLY_RECAP_ROUTE,
+                arguments = listOf(navArgument(RoutePattern.ARG_MONTH_EPOCH_DAY) { type = androidx.navigation.NavType.LongType; defaultValue = -1L }),
+            ) {
+                MonthlyRecapScreen(
+                    onBack = navController::navigateUp,
+                    onOpenTransaction = { id -> navController.navigate(AppDestination.TransactionDetail(id).route) },
+                    onOpenCalendar = {
+                        navController.navigate(RoutePattern.HOME) {
+                            popUpTo(RoutePattern.HOME) { inclusive = false }
+                        }
+                    },
+                )
+            }
             composable(RoutePattern.SETTINGS) {
                 GeneralSettingsScreen(
                     onBack = navController::navigateUp,
@@ -273,10 +297,11 @@ private fun SafePlaceholder(valid: Boolean, @Suppress("UNUSED_PARAMETER") titleR
 private fun NavBackStackEntry.safeId(name: String): String? = arguments?.getString(name)?.let(::parseRouteId)
 
 private fun NavController.navigateTopLevel(destination: TopLevelDestination) {
+    val isHome = destination == TopLevelDestination.Home
     navigate(destination.route) {
         popUpTo(graph.findStartDestination().id) { saveState = true }
         launchSingleTop = true
-        restoreState = true
+        restoreState = !isHome
     }
 }
 

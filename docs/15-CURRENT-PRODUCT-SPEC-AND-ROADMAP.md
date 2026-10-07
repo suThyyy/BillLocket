@@ -4,7 +4,7 @@ Last updated: 2026-10-07
 
 ## 1. Purpose and authority
 
-This document describes the current BillLocket product after its foundation, UI/UX, widget, map, memory-viewer and date-validation work. It is the primary product reference for deciding what to stabilize and what to build next.
+This document describes the current BillLocket product after its foundation, UI/UX, widget, map, memory-viewer, date-validation and monthly-recap work. It is the primary product reference for deciding what to stabilize and what to build next.
 
 When documentation and implementation differ, use this evidence order:
 
@@ -52,7 +52,7 @@ The product is not intended to be a full accounting suite. Its core promise is:
 - Google Maps renderer and theme switching were reintroduced after the earlier MapLibre migration.
 - Category and budget UI refinements.
 - Future transaction dates are rejected in UI, ViewModel, domain and repository paths.
-- Physical-device testing has been performed on Android 13 for the primary capture, editor, calendar, map and widget flows.
+- Physical-device testing has been performed on Android 13 for the primary capture, editor, calendar, map, widget and monthly-recap flows.
 
 ### Accounts/navigation state
 

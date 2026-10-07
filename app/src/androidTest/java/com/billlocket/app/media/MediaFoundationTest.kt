@@ -16,8 +16,13 @@ import com.billlocket.app.domain.port.Clock
 import com.billlocket.app.domain.port.MediaImageId
 import com.billlocket.app.domain.port.MediaOperationId
 import com.billlocket.app.domain.result.Outcome
+import com.billlocket.app.domain.model.CurrencyCode
+import com.billlocket.app.domain.model.Money
+import com.billlocket.app.feature.recap.AndroidMonthlyRecapExporter
+import com.billlocket.app.feature.recap.ShareableMonthlyRecap
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.time.YearMonth
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.*
@@ -107,6 +112,31 @@ class MediaFoundationTest {
         assertThrows(IllegalArgumentException::class.java) {
             MediaShareIntentFactory.create(OwnedMediaReference.uri("not-a-share-uri"))
         }
+    }
+
+    @Test fun monthlyRecapExportsReadableJpegThroughReadOnlyShareProvider() = runBlocking {
+        val currency = CurrencyCode.of("VND")
+        val recap = ShareableMonthlyRecap(
+            month = YearMonth.of(2026, 10),
+            income = Money(1_000_000, currency),
+            expense = Money(250_000, currency),
+            net = Money(750_000, currency),
+            transactionCount = 3,
+            topCategoryName = "Ăn uống",
+            photos = emptyList(),
+        )
+
+        val shareUri = AndroidMonthlyRecapExporter(context).export(recap)
+        val bitmap = context.contentResolver.openInputStream(android.net.Uri.parse(shareUri))
+            ?.use { input -> android.graphics.BitmapFactory.decodeStream(input) }
+        assertNotNull(bitmap)
+        assertEquals(1080, bitmap!!.width)
+        assertEquals(1350, bitmap.height)
+        bitmap.recycle()
+
+        val intent = MediaShareIntentFactory.create(shareUri)
+        assertTrue(intent.flags and android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION != 0)
+        assertEquals(0, intent.flags and android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION)
     }
 
     private suspend fun createPromoted(operation: String, image: String): String {

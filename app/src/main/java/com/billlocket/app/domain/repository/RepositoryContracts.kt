@@ -7,6 +7,7 @@ import kotlinx.coroutines.flow.Flow
 interface TransactionRepository {
     fun observe(id: TransactionId): Flow<TransactionDetails?>
     fun observeCalendar(range: DateRange, filter: TransactionFilter = TransactionFilter()): Flow<List<CalendarDaySummary>>
+    fun observeRecapTransactions(range: DateRange): Flow<List<TransactionDetails>>
     fun observeMapPhotos(filter: TransactionFilter = TransactionFilter()): Flow<List<MapPhoto>>
     fun observeWidgetPhoto(selection: WidgetSelection): Flow<WidgetPhoto?>
     suspend fun widgetPhotoCandidates(limit: Int = 20): List<WidgetPhoto>

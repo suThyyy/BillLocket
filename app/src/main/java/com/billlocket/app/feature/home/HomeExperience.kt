@@ -30,6 +30,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -52,6 +53,7 @@ fun HomeScreen(
     onOpenCapture: (DraftId) -> Unit,
     onOpenSearch: () -> Unit,
     onOpenTransaction: (TransactionId) -> Unit,
+    onOpenMonthlyRecap: (Long) -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectUiState()
@@ -75,6 +77,15 @@ fun HomeScreen(
         item { MonthTotalsCard(state, viewModel::onAction) }
         item { HomeFilters(state, viewModel::onAction) }
         item { CalendarCard(state, summaries, viewModel::onAction) }
+        item {
+            val allMonthPhotos = summaries.values.flatMap { it.thumbnailUris }
+            HomeMonthlyRecapBanner(
+                month = state.month,
+                photoCount = allMonthPhotos.size,
+                thumbnails = allMonthPhotos.take(2),
+                onClick = { onOpenMonthlyRecap(state.month.atDay(1).toEpochDay()) },
+            )
+        }
         if (state.isLoading) item { LinearProgressIndicator(Modifier.fillMaxWidth().clip(CircleShape)) }
         state.errorMessage?.let { message -> item { Text(message, color = MaterialTheme.colorScheme.error) } }
         item {
@@ -737,3 +748,122 @@ private fun formatInstantTime(instantAtZone: InstantAtZone): String = runCatchin
     val zone = runCatching { ZoneId.of(instantAtZone.zoneId) }.getOrElse { ZoneId.systemDefault() }
     Instant.ofEpochMilli(instantAtZone.epochMillis).atZone(zone).format(DateTimeFormatter.ofPattern("HH:mm"))
 }.getOrElse { "--:--" }
+
+@Composable
+private fun HomeMonthlyRecapBanner(
+    month: java.time.YearMonth,
+    photoCount: Int,
+    thumbnails: List<String>,
+    onClick: () -> Unit,
+) {
+    val isCurrentMonth = month == java.time.YearMonth.now()
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(22.dp),
+        color = Color(0xFF191815),
+        border = BorderStroke(1.dp, Color(0xFF2A2824)),
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    text = "TỔNG KẾT THÁNG ${month.monthValue}",
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                )
+                Text(
+                    text = if (photoCount > 0) "Nhìn lại $photoCount khoảnh khắc và câu chuyện chi tiêu của bạn" else "Nhìn lại câu chuyện chi tiêu của bạn",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = Color(0xFFA8A39A),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = if (isCurrentMonth) "Tạm tính đến hôm nay" else "Xem lại trọn vẹn tháng",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color(0xFF75736D),
+                )
+                Spacer(Modifier.height(2.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                ) {
+                    Text(
+                        text = "Xem tổng kết",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFFFB800),
+                    )
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = null,
+                        tint = Color(0xFFFFB800),
+                        modifier = Modifier.size(14.dp),
+                    )
+                }
+            }
+
+            Spacer(Modifier.width(12.dp))
+
+            if (thumbnails.isNotEmpty()) {
+                Box(
+                    modifier = Modifier.size(width = 84.dp, height = 72.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (thumbnails.size > 1) {
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = Color(0xFF24221D),
+                            border = BorderStroke(1.dp, Color(0xFF3D3A33)),
+                            modifier = Modifier
+                                .size(54.dp)
+                                .offset(x = (-10).dp, y = (-4).dp),
+                        ) {
+                            AsyncImage(
+                                model = thumbnails[1],
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.fillMaxSize(),
+                            )
+                        }
+                    }
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = Color(0xFF24221D),
+                        border = BorderStroke(1.5.dp, Color(0xFFFFB800).copy(alpha = 0.7f)),
+                        modifier = Modifier
+                            .size(58.dp)
+                            .offset(x = 10.dp, y = 4.dp),
+                    ) {
+                        AsyncImage(
+                            model = thumbnails[0],
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize(),
+                        )
+                    }
+                }
+            } else {
+                Surface(
+                    shape = CircleShape,
+                    color = Color(0xFFFFB800).copy(alpha = 0.15f),
+                    modifier = Modifier.size(46.dp),
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(Icons.Default.AutoAwesome, null, tint = Color(0xFFFFB800), modifier = Modifier.size(24.dp))
+                    }
+                }
+            }
+        }
+    }
+}

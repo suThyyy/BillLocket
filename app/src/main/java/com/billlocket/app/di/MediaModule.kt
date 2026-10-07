@@ -10,6 +10,8 @@ import com.billlocket.app.feature.capture.CameraCaptureTarget
 import com.billlocket.app.feature.capture.PhotoImportSource
 import com.billlocket.app.feature.capture.CaptureLocationPreference
 import com.billlocket.app.feature.capture.SharedPreferencesCaptureLocationPreference
+import com.billlocket.app.feature.recap.AndroidMonthlyRecapExporter
+import com.billlocket.app.feature.recap.MonthlyRecapExporter
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -23,6 +25,7 @@ abstract class MediaModule {
     @Binds @Singleton abstract fun bindPhotoImportSource(implementation: AndroidPhotoImportSource): PhotoImportSource
     @Binds @Singleton abstract fun bindCaptureLocationPreference(implementation: SharedPreferencesCaptureLocationPreference): CaptureLocationPreference
     @Binds @Singleton abstract fun bindBackup(implementation: AndroidPortableBackup): BackupPort
+    @Binds @Singleton abstract fun bindMonthlyRecapExporter(implementation: AndroidMonthlyRecapExporter): MonthlyRecapExporter
 
     companion object {
         @dagger.Provides

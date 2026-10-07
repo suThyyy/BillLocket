@@ -59,6 +59,25 @@ class TransactionRepositoryImpl @Inject constructor(
                 .sortedBy { it.epochDay }
         }
 
+    override fun observeRecapTransactions(range: DateRange): Flow<List<TransactionDetails>> =
+        transactionDao.observeCalendarRange(
+            range.startEpochDay,
+            range.endInclusiveEpochDay,
+            type = null,
+            accountId = null,
+        ).map { rows ->
+            val today = java.time.Instant.ofEpochMilli(clock.nowEpochMillis())
+                .atZone(java.time.ZoneId.systemDefault())
+                .toLocalDate()
+                .toEpochDay()
+            rows.map { it.toDomain() }
+                .filter { it.occurred.localDateEpochDay <= today }
+                .sortedWith(
+                    compareByDescending<TransactionDetails> { it.occurred.epochMillis }
+                        .thenByDescending { it.id.value },
+                )
+        }
+
     override fun observeMapPhotos(filter: TransactionFilter): Flow<List<MapPhoto>> =
         transactionDao.observeCalendarRange(
             filter.range?.startEpochDay ?: -365_243_219_162L,

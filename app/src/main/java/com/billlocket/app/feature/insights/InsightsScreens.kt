@@ -169,6 +169,7 @@ fun StatisticsScreen(
     onOpenTransaction: (TransactionId) -> Unit = {},
     onOpenAllTransactions: () -> Unit = {},
     onOpenBudgets: () -> Unit = {},
+    onOpenMonthlyRecap: (Long) -> Unit = {},
     viewModel: StatisticsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectUiState()
@@ -261,6 +262,40 @@ fun StatisticsScreen(
                 onNext = { viewModel.onAction(StatisticsAction.Next) },
                 onToday = { viewModel.onAction(StatisticsAction.Today) },
             )
+        }
+        item {
+            Surface(
+                onClick = { onOpenMonthlyRecap(state.anchor.withDayOfMonth(1).toEpochDay()) },
+                shape = RoundedCornerShape(16.dp),
+                color = Color(0xFF191815),
+                border = BorderStroke(1.dp, Color(0xFF2A2824)),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Icon(Icons.Default.AutoAwesome, null, tint = Color(0xFFFFB800), modifier = Modifier.size(18.dp))
+                        Text(
+                            text = "Nhìn lại tháng ${state.anchor.monthValue}/${state.anchor.year}",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                        )
+                    }
+                    Text(
+                        text = "Xem tổng kết ->",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFFFB800),
+                    )
+                }
+            }
         }
 
         // Account filter chips (if user has multiple accounts)

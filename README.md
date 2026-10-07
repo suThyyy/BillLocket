@@ -2,7 +2,7 @@
 
 BillLocket is a private, offline-first Android money journal built around receipt photos. V1 includes capture/import, transaction CRUD/search, a visual calendar, accounts/categories/transfers, statistics, budgets and alerts, optional per-image location with a Google photo map, a Glance home-screen widget, and portable local backup/restore.
 
-The app lets one device owner record income and expenses with optional photos, review a visual calendar and statistics, manage categories, accounts, transfers, and budgets, and use two photo-focused features: a home-screen widget and a map of transaction images with optional per-image locations. Core use is offline-first, requires no account, and remains usable without location permission. See [the V1 requirements](docs/01-REQUIREMENTS.md) for the authoritative scope.
+The app lets one device owner record income and expenses with optional photos, review a visual calendar and monthly photo recap, inspect statistics, manage categories, accounts, transfers, and budgets, and use two photo-focused features: a home-screen widget and a map of transaction images with optional per-image locations. Core use is offline-first, requires no account, and remains usable without location permission. See [the V1 requirements](docs/01-REQUIREMENTS.md) for the authoritative scope.
 
 ## Prerequisites
 

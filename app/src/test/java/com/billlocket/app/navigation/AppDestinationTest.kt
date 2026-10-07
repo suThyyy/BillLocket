@@ -34,9 +34,23 @@ class AppDestinationTest {
 
     @Test
     fun `only exact top level routes select a tab`() {
+        assertEquals(TopLevelDestination.Home, TopLevelDestination.fromRoute("home"))
+        assertEquals(TopLevelDestination.Statistics, TopLevelDestination.fromRoute("statistics"))
         assertEquals(TopLevelDestination.Accounts, TopLevelDestination.fromRoute("accounts"))
         assertEquals(TopLevelDestination.Map, TopLevelDestination.fromRoute("map"))
+        assertEquals(
+            TopLevelDestination.Map,
+            TopLevelDestination.fromRoute("map?transactionId={transactionId}"),
+        )
+        assertNull(TopLevelDestination.fromRoute("more"))
         assertNull(TopLevelDestination.fromRoute("capture/{draftId}"))
         assertNull(TopLevelDestination.fromRoute("transaction/{transactionId}"))
+    }
+
+    @Test
+    fun `monthly recap route formats monthEpochDay safely or falls back to base route`() {
+        assertEquals("monthly-recap", AppDestination.MonthlyRecap().route)
+        assertEquals("monthly-recap?monthEpochDay=20728", AppDestination.MonthlyRecap(20728L).route)
+        assertNull(TopLevelDestination.fromRoute("monthly-recap"))
     }
 }

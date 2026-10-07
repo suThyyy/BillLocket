@@ -76,6 +76,10 @@ sealed interface AppDestination {
     data class Budgets(val monthEpochDay: Long? = null) : AppDestination {
         override val route = monthEpochDay?.let { "budgets?monthEpochDay=$it" } ?: "budgets"
     }
+
+    data class MonthlyRecap(val monthEpochDay: Long? = null) : AppDestination {
+        override val route = monthEpochDay?.let { "monthly-recap?${RoutePattern.ARG_MONTH_EPOCH_DAY}=$it" } ?: RoutePattern.MONTHLY_RECAP
+    }
 }
 
 sealed class TopLevelDestination(val route: String) {
@@ -89,9 +93,11 @@ sealed class TopLevelDestination(val route: String) {
         val entries: List<TopLevelDestination>
             get() = listOf(Home, Statistics, Accounts, Map)
 
-        fun fromRoute(route: String?): TopLevelDestination? = entries.firstOrNull {
-            it.route == route || (it == Map && (route == RoutePattern.MAP || route?.startsWith("map?") == true))
-        } ?: if (route == RoutePattern.MORE) More else null
+        fun fromRoute(route: String?): TopLevelDestination? {
+            if (route == null) return null
+            return entries.firstOrNull { it.route == route }
+                ?: if (route == RoutePattern.MAP || route == RoutePattern.MAP_ROUTE) Map else null
+        }
     }
 }
 
@@ -128,6 +134,8 @@ object RoutePattern {
     const val SETTINGS_WIDGET = "settings/widget"
     const val SETTINGS_STORAGE = "settings/storage"
     const val SETTINGS_BACKUP = "settings/backup"
+    const val MONTHLY_RECAP = "monthly-recap"
+    const val MONTHLY_RECAP_ROUTE = "monthly-recap?$ARG_MONTH_EPOCH_DAY={$ARG_MONTH_EPOCH_DAY}"
 }
 
 private fun String.requireRouteId(): String =
