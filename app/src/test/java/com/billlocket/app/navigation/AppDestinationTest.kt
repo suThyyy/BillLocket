@@ -1,0 +1,42 @@
+package com.billlocket.app.navigation
+
+import com.billlocket.app.domain.model.DraftId
+import com.billlocket.app.domain.model.TransactionId
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Test
+
+class AppDestinationTest {
+    @Test
+    fun `home is the first top level destination`() {
+        assertEquals(TopLevelDestination.Home, TopLevelDestination.entries.first())
+        assertEquals("home", AppDestination.Home.route)
+    }
+
+    @Test
+    fun `capture carries only a validated draft id`() {
+        assertEquals("capture/draft-123", AppDestination.Capture(DraftId("draft-123")).route)
+        assertEquals(
+            "transaction/transaction-1/edit/draft-123",
+            AppDestination.EditTransaction(TransactionId("transaction-1"), DraftId("draft-123")).route,
+        )
+    }
+
+    @Test
+    fun `unsafe and malformed route ids are rejected at boundary`() {
+        assertNull(parseRouteId(null))
+        assertNull(parseRouteId(""))
+        assertNull(parseRouteId("has/slash"))
+        assertNull(parseRouteId("has space"))
+        assertNull(parseRouteId("a".repeat(129)))
+        assertEquals("valid_ID-1.0", parseRouteId("valid_ID-1.0"))
+    }
+
+    @Test
+    fun `only exact top level routes select a tab`() {
+        assertEquals(TopLevelDestination.Accounts, TopLevelDestination.fromRoute("accounts"))
+        assertEquals(TopLevelDestination.Map, TopLevelDestination.fromRoute("map"))
+        assertNull(TopLevelDestination.fromRoute("capture/{draftId}"))
+        assertNull(TopLevelDestination.fromRoute("transaction/{transactionId}"))
+    }
+}
