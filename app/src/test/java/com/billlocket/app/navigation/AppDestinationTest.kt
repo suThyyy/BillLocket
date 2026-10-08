@@ -2,6 +2,7 @@ package com.billlocket.app.navigation
 
 import com.billlocket.app.domain.model.DraftId
 import com.billlocket.app.domain.model.TransactionId
+import com.billlocket.app.domain.model.TransactionImageId
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -40,11 +41,22 @@ class AppDestinationTest {
         assertEquals(TopLevelDestination.Map, TopLevelDestination.fromRoute("map"))
         assertEquals(
             TopLevelDestination.Map,
-            TopLevelDestination.fromRoute("map?transactionId={transactionId}"),
+            TopLevelDestination.fromRoute(RoutePattern.MAP_ROUTE),
         )
         assertNull(TopLevelDestination.fromRoute("more"))
         assertNull(TopLevelDestination.fromRoute("capture/{draftId}"))
         assertNull(TopLevelDestination.fromRoute("transaction/{transactionId}"))
+    }
+
+    @Test
+    fun `map route can focus a specific transaction image`() {
+        assertEquals(
+            "map?transactionId=transaction-1&imageId=image-1",
+            AppDestination.Map(
+                transactionId = TransactionId("transaction-1"),
+                imageId = TransactionImageId("image-1"),
+            ).route,
+        )
     }
 
     @Test

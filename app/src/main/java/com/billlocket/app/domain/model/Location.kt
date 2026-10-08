@@ -10,6 +10,14 @@ data class GeoPoint(
     }
 }
 
+fun isValidCoordinate(latitude: Double?, longitude: Double?): Boolean {
+    if (latitude == null || longitude == null) return false
+    if (!latitude.isFinite() || !longitude.isFinite()) return false
+    if (latitude !in -90.0..90.0 || longitude !in -180.0..180.0) return false
+    if (latitude == 0.0 && longitude == 0.0) return false
+    return true
+}
+
 data class PhotoLocation(
     val point: GeoPoint,
     val source: LocationSource,

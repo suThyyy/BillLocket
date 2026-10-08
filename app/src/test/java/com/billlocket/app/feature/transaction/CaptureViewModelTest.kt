@@ -13,8 +13,11 @@ import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.InputStream
 import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.advanceUntilIdle
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.*
 import org.junit.Rule
@@ -89,10 +92,129 @@ class CaptureViewModelTest {
         assertEquals(106.0, location?.point?.longitude ?: 0.0, 0.0)
     }
 
+    @Test
+    fun `slow safe location is attached before captured image becomes available`() = runTest {
+        val preference = FakeCaptureLocationPreference(CaptureLocationChoice.ENABLED)
+        val slowLocation = object : DeviceLocationPort {
+            override suspend fun current(): Outcome<GeoPoint> {
+                delay(5_500)
+                return Outcome.Success(GeoPoint(21.033243, 105.771583))
+            }
+        }
+        val viewModel = viewModel(
+            locationPreference = preference,
+            deviceLocation = slowLocation,
+        )
+        advanceUntilIdle()
+
+        val permissionEffect = async { viewModel.effects.first() }
+        viewModel.onAction(CaptureAction.TakePhoto)
+        advanceUntilIdle()
+        assertEquals(CaptureEffect.LaunchLocationPermission, permissionEffect.await())
+
+        val captureEffect = async { viewModel.effects.first() }
+        viewModel.onAction(CaptureAction.LocationPermissionChanged(true))
+        val request = captureEffect.await() as CaptureEffect.CapturePhoto
+        viewModel.onAction(CaptureAction.PhotoCaptured(request.staged))
+        advanceUntilIdle()
+
+        val location = viewModel.state.value.images.single().confirmedLocation
+        assertEquals(21.033243, location?.point?.latitude ?: 0.0, 0.0)
+        assertEquals(105.771583, location?.point?.longitude ?: 0.0, 0.0)
+        assertFalse(viewModel.state.value.isProcessing)
+    }
+
+    @Test
+    fun `prefetched location is reused when shutter is pressed`() = runTest {
+        val preference = FakeCaptureLocationPreference(CaptureLocationChoice.ENABLED)
+        var locationRequests = 0
+        val delayedLocation = object : DeviceLocationPort {
+            override suspend fun current(): Outcome<GeoPoint> {
+                locationRequests += 1
+                delay(2_000)
+                return Outcome.Success(GeoPoint(21.028511, 105.804817))
+            }
+        }
+        val viewModel = viewModel(
+            locationPreference = preference,
+            deviceLocation = delayedLocation,
+        )
+        advanceUntilIdle()
+
+        viewModel.onAction(CaptureAction.WarmAutomaticLocation)
+        runCurrent()
+        advanceTimeBy(2_000)
+        runCurrent()
+        assertEquals(1, locationRequests)
+
+        val permissionEffect = async { viewModel.effects.first() }
+        viewModel.onAction(CaptureAction.TakePhoto)
+        runCurrent()
+        assertEquals(CaptureEffect.LaunchLocationPermission, permissionEffect.await())
+
+        val captureEffect = async { viewModel.effects.first() }
+        viewModel.onAction(CaptureAction.LocationPermissionChanged(true))
+        runCurrent()
+        val request = captureEffect.await() as CaptureEffect.CapturePhoto
+        viewModel.onAction(CaptureAction.PhotoCaptured(request.staged))
+        runCurrent()
+
+        val location = viewModel.state.value.images.single().confirmedLocation
+        assertEquals(21.028511, location?.point?.latitude ?: 0.0, 0.0)
+        assertEquals(105.804817, location?.point?.longitude ?: 0.0, 0.0)
+        assertFalse(viewModel.state.value.isProcessing)
+    }
+
+    @Test
+    fun `failed prefetch is retried when shutter is pressed`() = runTest {
+        val preference = FakeCaptureLocationPreference(CaptureLocationChoice.ENABLED)
+        var locationRequests = 0
+        val recoveringLocation = object : DeviceLocationPort {
+            override suspend fun current(): Outcome<GeoPoint> {
+                locationRequests += 1
+                return if (locationRequests == 1) {
+                    Outcome.Failure(com.billlocket.app.domain.result.DomainFailure.StorageUnavailable("temporary"))
+                } else {
+                    Outcome.Success(GeoPoint(21.033243, 105.771583))
+                }
+            }
+        }
+        val viewModel = viewModel(
+            locationPreference = preference,
+            deviceLocation = recoveringLocation,
+        )
+        advanceUntilIdle()
+
+        viewModel.onAction(CaptureAction.WarmAutomaticLocation)
+        advanceUntilIdle()
+        assertEquals(1, locationRequests)
+
+        val permissionEffect = async { viewModel.effects.first() }
+        viewModel.onAction(CaptureAction.TakePhoto)
+        advanceUntilIdle()
+        assertEquals(CaptureEffect.LaunchLocationPermission, permissionEffect.await())
+
+        val captureEffect = async { viewModel.effects.first() }
+        viewModel.onAction(CaptureAction.LocationPermissionChanged(true))
+        advanceUntilIdle()
+        val request = captureEffect.await() as CaptureEffect.CapturePhoto
+        viewModel.onAction(CaptureAction.PhotoCaptured(request.staged))
+        advanceUntilIdle()
+
+        assertTrue(locationRequests >= 2)
+        val location = viewModel.state.value.images.single().confirmedLocation
+        assertEquals(21.033243, location?.point?.latitude ?: 0.0, 0.0)
+        assertEquals(105.771583, location?.point?.longitude ?: 0.0, 0.0)
+        assertNull(viewModel.state.value.errorMessage)
+    }
+
     private fun viewModel(
         store: FakeDraftStore = FakeDraftStore(),
         media: FakeMediaStore = FakeMediaStore(),
         locationPreference: CaptureLocationPreference = FakeCaptureLocationPreference(),
+        deviceLocation: DeviceLocationPort = object : DeviceLocationPort {
+            override suspend fun current() = Outcome.Success(GeoPoint(10.0, 106.0))
+        },
     ) = CaptureViewModel(
         SavedStateHandle(mapOf("draftId" to "draft-1")),
         store,
@@ -102,9 +224,7 @@ class CaptureViewModelTest {
             override suspend fun stage(uri: String, operationId: MediaOperationId, imageId: MediaImageId) =
                 media.stageImport(operationId, imageId, "image/jpeg", ByteArrayInputStream(byteArrayOf(1)))
         },
-        object : DeviceLocationPort {
-            override suspend fun current() = Outcome.Success(GeoPoint(10.0, 106.0))
-        },
+        deviceLocation,
         locationPreference,
         Clock { 1_000L },
     )

@@ -23,6 +23,8 @@ data class DetailImage(val image: TransactionImage, val exists: Boolean)
 data class TransactionDetailState(
     val transaction: TransactionDetails? = null,
     val images: List<DetailImage> = emptyList(),
+    val selectedImageId: TransactionImageId? = null,
+    val selectedLocation: PhotoLocation? = null,
     val categoryName: String = "",
     val categoryIconKey: String? = null,
     val accountName: String = "",
@@ -36,6 +38,7 @@ data class TransactionDetailState(
 )
 
 sealed interface TransactionDetailAction {
+    data class SelectImage(val imageId: TransactionImageId) : TransactionDetailAction
     data object Edit : TransactionDetailAction
     data object RequestDelete : TransactionDetailAction
     data object CancelDelete : TransactionDetailAction
@@ -78,25 +81,34 @@ class TransactionDetailViewModel @Inject constructor(
                     _state.value = _state.value.copy(isLoading = false, notFound = true)
                 } else {
                     val images = transaction.images.map { DetailImage(it, mediaStore.exists(it.mediaUri)) }
-                    val loc = transaction.images.firstOrNull { it.location != null }?.location
+                    val currentSelectedId = _state.value.selectedImageId
+                    val selectedImage = transaction.images.firstOrNull { it.id == currentSelectedId }
+                        ?: transaction.images.firstOrNull()
+                    val targetLocation = selectedImage?.location
+                    val previousLocation = _state.value.selectedLocation
                     val cat = categoryList.firstOrNull { it.id == transaction.categoryId }
                     _state.value = _state.value.copy(
                         transaction = transaction,
                         images = images,
+                        selectedImageId = selectedImage?.id,
+                        selectedLocation = targetLocation,
                         categoryName = cat?.name.orEmpty(),
                         categoryIconKey = cat?.iconKey,
                         accountName = accountList.firstOrNull { it.id == transaction.accountId }?.name.orEmpty(),
                         isLoading = false,
                         notFound = false,
-                        isResolvingAddress = loc != null && _state.value.address == null,
+                        isResolvingAddress = targetLocation != null && (targetLocation != previousLocation || _state.value.address == null),
+                        address = if (targetLocation == null) null else if (targetLocation == previousLocation) _state.value.address else null,
                     )
-                    if (loc != null) {
+                    if (targetLocation != null && (_state.value.address == null || targetLocation != previousLocation)) {
                         viewModelScope.launch {
-                            val resolved = addressResolver.resolve(loc.point, loc.placeName)
-                            _state.value = _state.value.copy(
-                                address = resolved,
-                                isResolvingAddress = false,
-                            )
+                            val resolved = addressResolver.resolve(targetLocation.point, targetLocation.placeName)
+                            if (_state.value.selectedLocation == targetLocation) {
+                                _state.value = _state.value.copy(
+                                    address = resolved,
+                                    isResolvingAddress = false,
+                                )
+                            }
                         }
                     }
                 }
@@ -106,6 +118,29 @@ class TransactionDetailViewModel @Inject constructor(
 
     fun onAction(action: TransactionDetailAction) {
         when (action) {
+            is TransactionDetailAction.SelectImage -> {
+                val tx = _state.value.transaction ?: return
+                val selectedImage = tx.images.firstOrNull { it.id == action.imageId } ?: return
+                val targetLocation = selectedImage.location
+                val previousLocation = _state.value.selectedLocation
+                _state.value = _state.value.copy(
+                    selectedImageId = action.imageId,
+                    selectedLocation = targetLocation,
+                    isResolvingAddress = targetLocation != null && (targetLocation != previousLocation || _state.value.address == null),
+                    address = if (targetLocation == null) null else if (targetLocation == previousLocation) _state.value.address else null,
+                )
+                if (targetLocation != null && (_state.value.address == null || targetLocation != previousLocation)) {
+                    viewModelScope.launch {
+                        val resolved = addressResolver.resolve(targetLocation.point, targetLocation.placeName)
+                        if (_state.value.selectedLocation == targetLocation) {
+                            _state.value = _state.value.copy(
+                                address = resolved,
+                                isResolvingAddress = false,
+                            )
+                        }
+                    }
+                }
+            }
             TransactionDetailAction.Edit -> emit(
                 TransactionDetailEffect.NavigateEdit(transactionId, DraftId(java.util.UUID.randomUUID().toString())),
             )

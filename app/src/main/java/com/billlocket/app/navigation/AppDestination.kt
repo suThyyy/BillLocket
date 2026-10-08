@@ -19,8 +19,20 @@ sealed interface AppDestination {
 
     data object Home : AppDestination { override val route = RoutePattern.HOME }
     data object Statistics : AppDestination { override val route = RoutePattern.STATISTICS }
-    data class Map(val transactionId: TransactionId? = null) : AppDestination {
-        override val route = transactionId?.let { "map?${RoutePattern.ARG_TRANSACTION_ID}=${it.value.requireRouteId()}" } ?: RoutePattern.MAP
+    data class Map(
+        val transactionId: TransactionId? = null,
+        val imageId: TransactionImageId? = null,
+    ) : AppDestination {
+        override val route = buildString {
+            append(RoutePattern.MAP)
+            val params = mutableListOf<String>()
+            transactionId?.let { params.add("${RoutePattern.ARG_TRANSACTION_ID}=${it.value.requireRouteId()}") }
+            imageId?.let { params.add("${RoutePattern.ARG_IMAGE_ID}=${it.value.requireRouteId()}") }
+            if (params.isNotEmpty()) {
+                append("?")
+                append(params.joinToString("&"))
+            }
+        }
     }
     data object More : AppDestination { override val route = RoutePattern.MORE }
     data object Accounts : AppDestination { override val route = RoutePattern.ACCOUNTS }
@@ -121,7 +133,7 @@ object RoutePattern {
     const val TRANSACTION_SEARCH = "transactions/search"
     const val IMAGE_LOCATION = "image-location/{$ARG_DRAFT_ID}/{$ARG_IMAGE_ID}"
     const val MAP = "map"
-    const val MAP_ROUTE = "map?$ARG_TRANSACTION_ID={$ARG_TRANSACTION_ID}"
+    const val MAP_ROUTE = "map?$ARG_TRANSACTION_ID={$ARG_TRANSACTION_ID}&$ARG_IMAGE_ID={$ARG_IMAGE_ID}"
     const val MORE = "more"
     const val ACCOUNTS = "accounts"
     const val ACCOUNT_DETAIL = "account/{$ARG_ACCOUNT_ID}"

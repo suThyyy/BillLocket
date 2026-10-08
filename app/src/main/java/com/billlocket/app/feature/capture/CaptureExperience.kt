@@ -79,6 +79,15 @@ fun CaptureScreen(
         )
     }
 
+    LaunchedEffect(state.autoLocationEnabled) {
+        val hasLocationPermission =
+            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+                ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        if (state.autoLocationEnabled && hasLocationPermission) {
+            viewModel.onAction(CaptureAction.WarmAutomaticLocation)
+        }
+    }
+
     LaunchedEffect(isShutterFlashing) {
         if (isShutterFlashing) {
             kotlinx.coroutines.delay(120)

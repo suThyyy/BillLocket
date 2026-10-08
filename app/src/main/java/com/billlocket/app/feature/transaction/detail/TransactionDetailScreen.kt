@@ -3,6 +3,7 @@ package com.billlocket.app.feature.transaction.detail
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
@@ -33,6 +34,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil3.compose.AsyncImage
 import com.billlocket.app.domain.model.DraftId
 import com.billlocket.app.domain.model.TransactionId
+import com.billlocket.app.domain.model.TransactionImageId
 import com.billlocket.app.domain.model.TransactionType
 import com.billlocket.app.feature.finance.categoryIcon
 import com.billlocket.app.feature.map.BILLLOCKET_DARK_MAP_STYLE_JSON
@@ -60,7 +62,7 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 fun TransactionDetailScreen(
     onNavigateEdit: (TransactionId, DraftId) -> Unit,
-    onNavigateMap: (TransactionId) -> Unit,
+    onNavigateMap: (TransactionId, TransactionImageId?) -> Unit,
     onNavigateBack: () -> Unit,
     viewModel: TransactionDetailViewModel = hiltViewModel(),
 ) {
@@ -134,7 +136,7 @@ fun TransactionDetailScreen(
             state.isLoading -> Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) { BillLocketLoadingState("Đang tải giao dịch") }
             state.notFound -> Box(Modifier.fillMaxSize().padding(padding).padding(18.dp), contentAlignment = Alignment.Center) { BillLocketEmptyState(Icons.AutoMirrored.Filled.ReceiptLong, "Không tìm thấy giao dịch", "Giao dịch có thể đã bị xóa hoặc đường dẫn không còn hợp lệ.") }
             else -> state.transaction?.let { transaction ->
-                val primaryLocation = transaction.images.firstOrNull { it.location != null }?.location
+                val primaryLocation = state.selectedLocation
 
                 Column(
                     modifier = Modifier
@@ -171,17 +173,28 @@ fun TransactionDetailScreen(
                         val cardWidth = (LocalConfiguration.current.screenWidthDp - 32).dp
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                             itemsIndexed(state.images, key = { _, item -> item.image.id.value }) { _, item ->
-                                HeroImageCard(
-                                    item = item,
-                                    amountText = amountText,
-                                    transactionType = transaction.type,
-                                    categoryName = state.categoryName,
-                                    categoryIconKey = state.categoryIconKey,
-                                    accountName = state.accountName,
+                                val isSelected = item.image.id == state.selectedImageId
+                                Box(
                                     modifier = Modifier
                                         .width(cardWidth)
-                                        .height(380.dp),
-                                )
+                                        .height(380.dp)
+                                        .clip(RoundedCornerShape(24.dp))
+                                        .then(
+                                            if (isSelected) Modifier.border(2.dp, Color(0xFFFFB800), RoundedCornerShape(24.dp))
+                                            else Modifier
+                                        )
+                                        .clickable { viewModel.onAction(TransactionDetailAction.SelectImage(item.image.id)) },
+                                ) {
+                                    HeroImageCard(
+                                        item = item,
+                                        amountText = amountText,
+                                        transactionType = transaction.type,
+                                        categoryName = state.categoryName,
+                                        categoryIconKey = state.categoryIconKey,
+                                        accountName = state.accountName,
+                                        modifier = Modifier.fillMaxSize(),
+                                    )
+                                }
                             }
                         }
                     }
@@ -229,7 +242,7 @@ fun TransactionDetailScreen(
                                 label = "Địa chỉ",
                                 value = addressValue,
                                 hasTrailingChevron = primaryLocation != null,
-                                onClick = if (primaryLocation != null) { { onNavigateMap(transaction.id) } } else null,
+                                onClick = if (primaryLocation != null) { { onNavigateMap(transaction.id, state.selectedImageId) } } else null,
                             )
 
                             // Row 3: Vị trí chi tiết (optional, only if resolved)
@@ -292,7 +305,7 @@ fun TransactionDetailScreen(
                                             .weight(1f)
                                             .height(86.dp)
                                             .clip(RoundedCornerShape(14.dp))
-                                            .clickable { onNavigateMap(transaction.id) },
+                                            .clickable { onNavigateMap(transaction.id, state.selectedImageId) },
                                     ) {
                                         val cameraPositionState = rememberCameraPositionState {
                                             position = CameraPosition.fromLatLngZoom(
@@ -343,7 +356,7 @@ fun TransactionDetailScreen(
 
                                     // Button "Xem trên bản đồ"
                                     Surface(
-                                        onClick = { onNavigateMap(transaction.id) },
+                                        onClick = { onNavigateMap(transaction.id, state.selectedImageId) },
                                         shape = RoundedCornerShape(14.dp),
                                         color = Color(0xFF1B1914),
                                         border = BorderStroke(1.dp, Color(0xFFFFB800)),

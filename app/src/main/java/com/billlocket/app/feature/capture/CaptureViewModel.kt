@@ -23,7 +23,6 @@ import java.time.Instant
 import java.time.ZoneId
 import java.util.UUID
 import javax.inject.Inject
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -65,6 +64,7 @@ sealed interface CaptureAction {
     data object TakePhoto : CaptureAction
     data object EnableAutomaticLocation : CaptureAction
     data object DisableAutomaticLocation : CaptureAction
+    data object WarmAutomaticLocation : CaptureAction
     data class LocationPermissionChanged(val granted: Boolean) : CaptureAction
     data class PhotoCaptured(val staged: StagedMedia) : CaptureAction
     data class CaptureFailed(val staged: StagedMedia) : CaptureAction
@@ -157,9 +157,14 @@ class CaptureViewModel @Inject constructor(
             }
             CaptureAction.DisableAutomaticLocation -> {
                 locationPreference.set(CaptureLocationChoice.DISABLED)
+                pendingLocationJob?.cancel()
+                pendingLocationJob = null
+                pendingLocationResult = null
+                pendingLocationStartedAtEpochMillis = null
                 _state.value = _state.value.copy(showLocationConsent = false, autoLocationEnabled = false)
                 prepareCapture()
             }
+            CaptureAction.WarmAutomaticLocation -> warmAutomaticLocation()
             is CaptureAction.LocationPermissionChanged -> {
                 if (!action.granted) {
                     locationPreference.set(CaptureLocationChoice.DISABLED)
@@ -169,6 +174,10 @@ class CaptureViewModel @Inject constructor(
             }
             is CaptureAction.PhotoCaptured -> normalizeAndAdd(action.staged, attachCurrentLocation = locationPreference.get() == CaptureLocationChoice.ENABLED)
             is CaptureAction.CaptureFailed -> viewModelScope.launch {
+                pendingLocationJob?.cancel()
+                pendingLocationJob = null
+                pendingLocationResult = null
+                pendingLocationStartedAtEpochMillis = null
                 mediaStore.discardStaged(action.staged)
                 _state.value = _state.value.copy(isProcessing = false, errorMessage = "Không thể chụp ảnh")
             }
@@ -192,14 +201,38 @@ class CaptureViewModel @Inject constructor(
     }
 
     private var pendingLocationJob: kotlinx.coroutines.Deferred<Outcome<GeoPoint>>? = null
+    private var pendingLocationResult: Outcome<GeoPoint>? = null
+    private var pendingLocationStartedAtEpochMillis: Long? = null
+
+    private fun warmAutomaticLocation() {
+        if (locationPreference.get() != CaptureLocationChoice.ENABLED) return
+        val now = clock.nowEpochMillis()
+        val existing = pendingLocationJob
+        val isFresh = existing != null &&
+            !existing.isCancelled &&
+            (existing.isActive || pendingLocationResult is Outcome.Success) &&
+            pendingLocationStartedAtEpochMillis?.let { now - it <= LOCATION_PREFETCH_MAX_AGE_MILLIS } == true
+        if (isFresh) return
+
+        existing?.cancel()
+        pendingLocationResult = null
+        pendingLocationStartedAtEpochMillis = now
+        pendingLocationJob = viewModelScope.async {
+            deviceLocation.current().also { pendingLocationResult = it }
+        }
+    }
 
     private fun prepareCapture() = viewModelScope.launch {
         _state.value = _state.value.copy(isProcessing = true, errorMessage = null)
         if (locationPreference.get() == CaptureLocationChoice.ENABLED) {
-            pendingLocationJob = async(Dispatchers.IO) { deviceLocation.current() }
+            warmAutomaticLocation()
         }
         val staged = when (val result = mediaStore.stageCapture(newOperationId(), MediaImageId(UUID.randomUUID().toString()))) {
             is Outcome.Failure -> {
+                pendingLocationJob?.cancel()
+                pendingLocationJob = null
+                pendingLocationResult = null
+                pendingLocationStartedAtEpochMillis = null
                 _state.value = _state.value.copy(isProcessing = false, errorMessage = "Không thể chuẩn bị ảnh")
                 return@launch
             }
@@ -238,8 +271,19 @@ class CaptureViewModel @Inject constructor(
             is Outcome.Success -> {
                 val locJob = pendingLocationJob
                 pendingLocationJob = null
+                pendingLocationResult = null
+                pendingLocationStartedAtEpochMillis = null
                 val locationOutcome = if (attachCurrentLocation) {
-                    withTimeoutOrNull(600) { locJob?.await() ?: deviceLocation.current() }
+                    // The location port may probe fused, GPS and network providers before it
+                    // returns a safe fix. Keep the normalized image in the processing state
+                    // until that single acquisition finishes so the editor cannot persist the
+                    // draft before its location arrives.
+                    withTimeoutOrNull(LOCATION_CAPTURE_TIMEOUT_MILLIS) {
+                        when (val prefetched = locJob?.await()) {
+                            is Outcome.Success -> prefetched
+                            else -> deviceLocation.current()
+                        }
+                    }
                 } else null
 
                 val confirmedLocation = when (locationOutcome) {
@@ -253,22 +297,12 @@ class CaptureViewModel @Inject constructor(
                 val image = DraftImage.fromNormalized(result.value, mediaStore.previewUri(staged))
                     .copy(confirmedLocation = confirmedLocation)
                 updateImages(_state.value.images + image)
-
-                if (attachCurrentLocation && confirmedLocation == null && locJob != null) {
-                    viewModelScope.launch(Dispatchers.IO) {
-                        val delayedLocation = withTimeoutOrNull(3_000) { locJob.await() }
-                        if (delayedLocation is Outcome.Success) {
-                            val resolved = PhotoLocation(
-                                point = delayedLocation.value,
-                                source = LocationSource.CURRENT,
-                                confirmedAtEpochMillis = clock.nowEpochMillis(),
-                            )
-                            val current = _state.value.images
-                            val updated = current.map { if (it.id == image.id) it.copy(confirmedLocation = resolved) else it }
-                            updateImages(updated)
-                        }
-                    }
+                if (attachCurrentLocation && confirmedLocation == null) {
+                    _state.value = _state.value.copy(
+                        errorMessage = "Không lấy được vị trí chính xác; ảnh vẫn được lưu bình thường",
+                    )
                 }
+                if (attachCurrentLocation) warmAutomaticLocation()
             }
         }
     }
@@ -331,5 +365,7 @@ class CaptureViewModel @Inject constructor(
 
     private companion object {
         const val MAX_IMAGES = 10
+        const val LOCATION_CAPTURE_TIMEOUT_MILLIS = 8_500L
+        const val LOCATION_PREFETCH_MAX_AGE_MILLIS = 30_000L
     }
 }

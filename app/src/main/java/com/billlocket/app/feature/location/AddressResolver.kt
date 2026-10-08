@@ -47,8 +47,10 @@ class AndroidAddressResolver @Inject constructor(
         point: GeoPoint,
         existingPlaceName: String?,
     ): ResolvedAddress {
-        // Approximate to 4 decimal places (~11 meters) to deduplicate near-identical coordinates
-        val cacheKey = String.format(Locale.US, "%.4f,%.4f", point.latitude, point.longitude)
+        // Approximate to 4 decimal places (~11 meters) to deduplicate near-identical coordinates,
+        // and include custom place name if provided to avoid cross-cache contamination.
+        val placeKey = existingPlaceName?.trim()?.takeIf { it.isNotEmpty() && !isCoordinateString(it) }?.let { ":$it" } ?: ""
+        val cacheKey = String.format(Locale.US, "%.4f,%.4f%s", point.latitude, point.longitude, placeKey)
         cache[cacheKey]?.let { return it }
 
         val deferred = mutex.withLock {
@@ -56,7 +58,9 @@ class AndroidAddressResolver @Inject constructor(
             inFlight.getOrPut(cacheKey) {
                 scope.async {
                     val resolved = performGeocode(point, existingPlaceName)
-                    cache[cacheKey] = resolved
+                    if (!resolved.isFallback) {
+                        cache[cacheKey] = resolved
+                    }
                     mutex.withLock { inFlight.remove(cacheKey) }
                     resolved
                 }
@@ -170,9 +174,9 @@ class AndroidAddressResolver @Inject constructor(
         }
         val coord = "${point.latitude.formatCoordinate()}, ${point.longitude.formatCoordinate()}"
         return ResolvedAddress(
-            shortAddress = coord,
-            fullAddress = coord,
-            detailLocation = null,
+            shortAddress = "Không xác định được địa chỉ",
+            fullAddress = "Không xác định được địa chỉ",
+            detailLocation = coord,
             isFallback = true,
         )
     }

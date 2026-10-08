@@ -21,6 +21,7 @@ import androidx.navigation.navArgument
 import com.billlocket.app.components.bottombar.BillLocketBottomBar
 import com.billlocket.app.domain.model.DraftId
 import com.billlocket.app.domain.model.TransactionId
+import com.billlocket.app.domain.model.TransactionImageId
 import com.billlocket.app.feature.capture.CaptureScreen
 import com.billlocket.app.feature.home.DayGalleryScreen
 import com.billlocket.app.feature.home.HomeScreen
@@ -112,6 +113,10 @@ fun Navigation(navController: NavHostController = rememberNavController(), widge
                         nullable = true
                         defaultValue = null
                     },
+                    navArgument(RoutePattern.ARG_IMAGE_ID) {
+                        nullable = true
+                        defaultValue = null
+                    },
                 ),
             ) {
                 MapScreen(onOpenTransaction = { navController.navigate(AppDestination.TransactionDetail(it).route) })
@@ -167,8 +172,8 @@ fun Navigation(navController: NavHostController = rememberNavController(), widge
                     onNavigateEdit = { transaction, draft ->
                         navController.navigate(AppDestination.EditTransaction(transaction, draft).route)
                     },
-                    onNavigateMap = { targetId ->
-                        navController.navigate(AppDestination.Map(targetId).route)
+                    onNavigateMap = { targetId, targetImageId ->
+                        navController.navigate(AppDestination.Map(targetId, targetImageId).route)
                     },
                     onNavigateBack = navController::navigateUp,
                 )

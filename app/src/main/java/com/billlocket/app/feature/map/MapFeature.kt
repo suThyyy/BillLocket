@@ -252,6 +252,7 @@ class MapViewModel @Inject constructor(
     private val addressResolver: AddressResolver,
 ) : androidx.lifecycle.ViewModel() {
     private val initialTxId = savedStateHandle.get<String>(RoutePattern.ARG_TRANSACTION_ID)?.let(::TransactionId)
+    private val initialImageId = savedStateHandle.get<String>(RoutePattern.ARG_IMAGE_ID)?.let(::TransactionImageId)
     private val month = MutableStateFlow(YearMonth.now())
     private val type = MutableStateFlow<TransactionType?>(null)
     private val account = MutableStateFlow<AccountId?>(null)
@@ -262,15 +263,17 @@ class MapViewModel @Inject constructor(
     val effects = effectChannel.receiveAsFlow()
 
     init {
-        if (initialTxId != null) {
+        if (initialTxId != null || initialImageId != null) {
             viewModelScope.launch {
-                transactions.observe(initialTxId).firstOrNull()?.let { tx ->
+                val tx = initialTxId?.let { transactions.observe(it).firstOrNull() }
+                if (tx != null) {
                     val txMonth = YearMonth.from(
                         Instant.ofEpochMilli(tx.occurred.epochMillis)
                             .atZone(ZoneId.of(tx.occurred.zoneId))
                     )
                     month.value = txMonth
-                    val img = tx.images.firstOrNull { it.location != null }
+                    val img = initialImageId?.let { imgId -> tx.images.firstOrNull { it.id == imgId } }
+                        ?: tx.images.firstOrNull { it.location != null }
                     if (img?.location != null) {
                         _state.update { it.copy(currentFocus = img.location.point) }
                     }
@@ -294,7 +297,8 @@ class MapViewModel @Inject constructor(
                 .catch { _state.update { it.copy(errorMessage = "Không thể tải ảnh có vị trí") } }
                 .collect { photos ->
                     _state.update { current ->
-                        val targetFromArg = initialTxId?.let { txId -> photos.firstOrNull { it.transactionId == txId } }
+                        val targetFromArg = initialImageId?.let { imgId -> photos.firstOrNull { it.imageId == imgId } }
+                            ?: initialTxId?.let { txId -> photos.firstOrNull { it.transactionId == txId } }
                         val preservedSelection = targetFromArg
                             ?: current.selected?.takeIf { selected -> photos.any { it.imageId == selected.imageId } }
                         current.copy(
