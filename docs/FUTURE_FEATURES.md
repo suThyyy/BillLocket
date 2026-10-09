@@ -2,6 +2,8 @@
 
 This document preserves promising ideas without expanding the V1 commitment. Items may move into requirements only after V1 is stable, measured, and explicitly reprioritized.
 
+The report-ready V1 baseline is now preserved at `baseline/report-ready-2026-10-09`. Vietnamese/English localization, bounded voice dictation for the note field, and on-device image category suggestions are approved post-baseline work in [the active delivery plan](16-VOICE-LOCALIZATION-AI-PLAN.md). Broader voice parsing and receipt OCR remain deferred.
+
 ## Selection gate
 
 A future feature may be scheduled only when:
@@ -19,7 +21,7 @@ A future feature may be scheduled only when:
 - Present suggestions for confirmation; never silently save OCR output.
 - Preserve the original image and confidence metadata for debugging.
 
-### Monthly photo recap
+### Monthly photo recap — complete
 
 - Generate an album/collage of the month's transactions.
 - Summarize total expense, favorite category, most visited place, and memorable photos.
@@ -74,8 +76,15 @@ A future feature may be scheduled only when:
 
 ### Voice-assisted entry
 
+- Bounded note-field dictation is scheduled separately in BL-046.
 - Parse utterances such as “ăn trưa năm mươi nghìn, ví tiền mặt”.
 - Always show parsed fields before save.
+
+### On-device image category suggestions — scheduled
+
+- Label the primary transaction image locally and map only a conservative whitelist to category suggestions.
+- Require explicit user confirmation and never override a manual category selection.
+- Keep remote vision APIs and custom model training out of the scheduled scope.
 
 ### Barcode or QR assistance
 

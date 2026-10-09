@@ -1,6 +1,6 @@
 # BillLocket — Current Product Specification and Continuation Roadmap
 
-Last updated: 2026-10-07
+Last updated: 2026-10-09
 
 ## 1. Purpose and authority
 
@@ -53,6 +53,8 @@ The product is not intended to be a full accounting suite. Its core promise is:
 - Category and budget UI refinements.
 - Future transaction dates are rejected in UI, ViewModel, domain and repository paths.
 - Physical-device testing has been performed on Android 13 for the primary capture, editor, calendar, map, widget and monthly-recap flows.
+- Monthly photo recap is implemented in `85ef952`; the follow-up location-correctness fix is implemented in `771324b`.
+- The report-ready state is preserved on `main` and tag `baseline/report-ready-2026-10-09` before localization, voice or AI work begins.
 
 ### Accounts/navigation state
 
@@ -418,22 +420,24 @@ Acceptance:
 
 ## 12. Proposed new features
 
+The approved next delivery sequence is specified in [Voice, Localization and On-device AI Delivery Plan](16-VOICE-LOCALIZATION-AI-PLAN.md). It prioritizes complete Vietnamese/English localization, optional note dictation using Android speech recognition, and conservative on-device image category suggestions. These features remain optional enhancements above the report-ready baseline.
+
 The ranking below balances user value, BillLocket identity, implementation effort and course-project risk.
 
 | Rank | Proposal | Value | Effort | Risk | Recommendation |
 |---|---|---:|---:|---:|---|
-| 1 | Monthly photo recap | High | Medium | Low | Build first after stabilization |
-| 2 | CSV and privacy-aware PDF export | High | Medium | Low | Strong reporting/demo value |
-| 3 | Enhanced widget configuration | High | Medium | Medium | Extend existing strength |
-| 4 | Biometric app lock | Medium-high | Medium | Medium | Valuable for financial-photo privacy |
-| 5 | Receipt OCR suggestions | High | High | Medium-high | Prototype after stable flows |
-| 6 | Duplicate receipt warning | Medium-high | Medium | Medium | Useful with OCR/photo hashes |
-| 7 | Savings goals | Medium | Medium-high | Medium | Requires clear transfer semantics |
-| 8 | Recurring transaction templates | Medium | High | High | Requires planned-vs-confirmed model |
-| 9 | Location insights | Medium | High | Privacy/network | Only with explicit consent design |
-| 10 | Cloud sync/shared budgets | High for some users | Very high | Very high | Not recommended for course V1 |
+| 1 | Vietnamese/English localization | High | Medium | Low | Approved next task |
+| 2 | Voice-to-text transaction notes | High | Medium | Medium | Approved after localization |
+| 3 | On-device image category suggestion | High | Medium | Medium | Approved after localization |
+| 4 | CSV and privacy-aware PDF export | High | Medium | Low | Strong reporting/demo value |
+| 5 | Enhanced widget configuration | High | Medium | Medium | Extend existing strength |
+| 6 | Biometric app lock | Medium-high | Medium | Medium | Valuable for financial-photo privacy |
+| 7 | Receipt OCR suggestions | High | High | Medium-high | Later phase; distinct from image labeling |
+| 8 | Duplicate receipt warning | Medium-high | Medium | Medium | Useful with OCR/photo hashes |
+| 9 | Savings goals | Medium | Medium-high | Medium | Requires clear transfer semantics |
+| 10 | Recurring transaction templates | Medium | High | High | Requires planned-vs-confirmed model |
 
-### F1 — Monthly photo recap
+### F1 — Monthly photo recap — complete
 
 Concept:
 
@@ -558,19 +562,20 @@ Constraints:
 ### Milestone A — Stabilize the actual current app
 
 1. BL-042 only if a new reproducible defect is reported.
-2. Backup, widget, invalid-key/offline-map and accessibility release checks as needed for distribution.
-3. Select BL-043 explicitly when ready to begin the first new feature.
+2. BL-043 monthly photo recap is complete in `85ef952`.
+3. BL-044 report-ready baseline and extension planning are complete at `771324b` and tag `baseline/report-ready-2026-10-09`.
 
 ### Milestone B — High-value local extensions
 
-1. Monthly photo recap.
-2. CSV export, then optional PDF report.
-3. Per-widget configuration and budget widget.
-4. Optional biometric lock.
+1. BL-045 Vietnamese/English localization.
+2. BL-046 voice-to-text for transaction notes.
+3. BL-047 on-device image category suggestions.
+4. BL-048 combined regression and merge decision.
+5. CSV export, optional PDF report and enhanced widgets remain later candidates.
 
 ### Milestone C — Smart assistance
 
-1. On-device OCR suggestions.
+1. On-device receipt OCR suggestions after image-labeling evidence is reviewed.
 2. Duplicate receipt warning.
 3. Savings goals after schema review.
 

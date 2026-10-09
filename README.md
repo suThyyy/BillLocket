@@ -53,5 +53,6 @@ Files under `Sources/assets/` are retained only as historical upstream reference
 - [UI/UX specification](docs/12-UIUX-SPEC.md)
 - [UI state matrix](docs/14-UI-STATE-MATRIX.md)
 - [Current product specification and roadmap](docs/15-CURRENT-PRODUCT-SPEC-AND-ROADMAP.md)
+- [Voice, localization and on-device AI delivery plan](docs/16-VOICE-LOCALIZATION-AI-PLAN.md)
 - [Architecture decisions](docs/DECISIONS.md)
 - [Future feature ideas](docs/FUTURE_FEATURES.md)
