@@ -32,7 +32,10 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.billlocket.app.R
 import com.billlocket.app.domain.model.*
+import com.billlocket.app.locale.BillLocketFormatters
+import com.billlocket.app.locale.activeAppLocale
 import com.billlocket.app.ui.common.CollectEffects
 import com.billlocket.app.ui.common.collectUiState
 import com.billlocket.app.ui.common.BillLocketEmptyState
@@ -40,13 +43,32 @@ import com.billlocket.app.ui.common.BillLocketSectionCard
 import com.billlocket.app.ui.common.BillLocketGroupCard
 import com.billlocket.app.ui.common.BillLocketGroupItem
 import com.billlocket.app.ui.common.BillLocketErrorBanner
-import java.text.NumberFormat
+import androidx.compose.ui.res.stringResource
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
-private fun money(value: Long) = NumberFormat.getNumberInstance(Locale("vi", "VN")).format(value) + " ₫"
+@Composable
+private fun money(value: Long): String {
+    val locale = activeAppLocale()
+    return BillLocketFormatters.formatMoney(value, locale)
+}
+
+@Composable
+private fun localizeFinancialError(message: String?): String? = when (message) {
+    "Không thể tải tài khoản" -> stringResource(R.string.accounts_error_load)
+    "Không thể lưu trữ tài khoản" -> stringResource(R.string.accounts_error_archive)
+    "Không thể sắp xếp tài khoản" -> stringResource(R.string.accounts_error_reorder)
+    "Vui lòng nhập tên và số dư hợp lệ" -> stringResource(R.string.accounts_error_invalid_input)
+    "Không thể lưu tài khoản; tên có thể đã tồn tại" -> stringResource(R.string.accounts_error_save_exists)
+    "Vui lòng nhập tên danh mục" -> stringResource(R.string.categories_error_name_required)
+    "Không thể lưu danh mục; tên có thể đã tồn tại" -> stringResource(R.string.categories_error_save_exists)
+    "Không thể tải lịch sử chuyển tiền" -> stringResource(R.string.transfers_error_load)
+    "Chọn hai tài khoản khác nhau và nhập số tiền lớn hơn 0" -> stringResource(R.string.transfers_error_invalid_input)
+    "Không thể lưu chuyển tiền" -> stringResource(R.string.transfers_error_save)
+    else -> message
+}
 
 @Composable
 fun MoreScreen(onAccounts: () -> Unit, onCategories: () -> Unit, onTransfers: () -> Unit, onBudgets: () -> Unit, onSettings: () -> Unit) {
@@ -57,8 +79,8 @@ fun MoreScreen(onAccounts: () -> Unit, onCategories: () -> Unit, onTransfers: ()
     ) {
         item {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("Của bạn", style = MaterialTheme.typography.headlineLarge)
-                Text("Quản lý tiền theo cách riêng", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(R.string.more_title), style = MaterialTheme.typography.headlineLarge)
+                Text(stringResource(R.string.more_subtitle), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
         item {
@@ -83,7 +105,7 @@ fun MoreScreen(onAccounts: () -> Unit, onCategories: () -> Unit, onTransfers: ()
                     }
                     Column(Modifier.weight(1f)) {
                         Text("BillLocket", style = MaterialTheme.typography.titleLarge)
-                        Text("Tài chính của bạn, lưu bằng ảnh", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(stringResource(R.string.home_tagline), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     Icon(Icons.Filled.Favorite, null, tint = MaterialTheme.colorScheme.primary)
                 }
@@ -91,7 +113,7 @@ fun MoreScreen(onAccounts: () -> Unit, onCategories: () -> Unit, onTransfers: ()
         }
         item {
             Text(
-                "Quản lý",
+                stringResource(R.string.nav_more),
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(top = 8.dp, bottom = 2.dp),
             )
@@ -99,8 +121,8 @@ fun MoreScreen(onAccounts: () -> Unit, onCategories: () -> Unit, onTransfers: ()
         item {
             BillLocketGroupCard {
                 BillLocketGroupItem(
-                    title = "Tài khoản",
-                    subtitle = "Số dư và thứ tự tài khoản",
+                    title = stringResource(R.string.accounts_title),
+                    subtitle = stringResource(R.string.accounts_subtitle),
                     icon = Icons.Filled.AccountBalanceWallet,
                     onClick = onAccounts,
                 )
@@ -109,8 +131,8 @@ fun MoreScreen(onAccounts: () -> Unit, onCategories: () -> Unit, onTransfers: ()
                     color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
                 )
                 BillLocketGroupItem(
-                    title = "Danh mục",
-                    subtitle = "Danh mục thu và chi",
+                    title = stringResource(R.string.destination_categories),
+                    subtitle = stringResource(R.string.more_categories_subtitle),
                     icon = Icons.Filled.Category,
                     onClick = onCategories,
                 )
@@ -119,8 +141,8 @@ fun MoreScreen(onAccounts: () -> Unit, onCategories: () -> Unit, onTransfers: ()
                     color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
                 )
                 BillLocketGroupItem(
-                    title = "Chuyển tiền",
-                    subtitle = "Lịch sử chuyển giữa tài khoản",
+                    title = stringResource(R.string.destination_transfers),
+                    subtitle = stringResource(R.string.more_transfers_subtitle),
                     icon = Icons.Filled.SwapHoriz,
                     onClick = onTransfers,
                 )
@@ -129,8 +151,8 @@ fun MoreScreen(onAccounts: () -> Unit, onCategories: () -> Unit, onTransfers: ()
                     color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
                 )
                 BillLocketGroupItem(
-                    title = "Ngân sách",
-                    subtitle = "Hạn mức chi theo tháng",
+                    title = stringResource(R.string.destination_budgets),
+                    subtitle = stringResource(R.string.more_budgets_subtitle),
                     icon = Icons.Filled.Savings,
                     onClick = onBudgets,
                 )
@@ -139,8 +161,8 @@ fun MoreScreen(onAccounts: () -> Unit, onCategories: () -> Unit, onTransfers: ()
                     color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
                 )
                 BillLocketGroupItem(
-                    title = "Cài đặt",
-                    subtitle = "Giao diện, quyền riêng tư và dữ liệu",
+                    title = stringResource(R.string.setting),
+                    subtitle = stringResource(R.string.settings_personalization_sub),
                     icon = Icons.Filled.Settings,
                     onClick = onSettings,
                 )
@@ -190,12 +212,12 @@ fun AccountsScreen(
                         }
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text(
-                                text = "Tài khoản",
+                                text = stringResource(R.string.accounts_title),
                                 style = MaterialTheme.typography.headlineLarge,
                                 fontWeight = FontWeight.Bold,
                             )
                             Text(
-                                text = "Quản lý số dư và các tài khoản của bạn",
+                                text = stringResource(R.string.accounts_subtitle),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -212,7 +234,7 @@ fun AccountsScreen(
                             Box(contentAlignment = Alignment.Center) {
                                 Icon(
                                     Icons.Filled.MoreHoriz,
-                                    contentDescription = "Tùy chọn",
+                                    contentDescription = stringResource(R.string.accounts_options),
                                     tint = MaterialTheme.colorScheme.onSurface,
                                 )
                             }
@@ -222,22 +244,22 @@ fun AccountsScreen(
                             onDismissRequest = { showTopMenu = false },
                         ) {
                             DropdownMenuItem(
-                                text = { Text("Chuyển tiền") },
+                                text = { Text(stringResource(R.string.destination_transfers)) },
                                 leadingIcon = { Icon(Icons.Filled.SwapHoriz, null) },
                                 onClick = { showTopMenu = false; onTransfers() },
                             )
                             DropdownMenuItem(
-                                text = { Text("Danh mục") },
+                                text = { Text(stringResource(R.string.destination_categories)) },
                                 leadingIcon = { Icon(Icons.Filled.Category, null) },
                                 onClick = { showTopMenu = false; onCategories() },
                             )
                             DropdownMenuItem(
-                                text = { Text("Ngân sách") },
+                                text = { Text(stringResource(R.string.destination_budgets)) },
                                 leadingIcon = { Icon(Icons.Filled.Savings, null) },
                                 onClick = { showTopMenu = false; onBudgets() },
                             )
                             DropdownMenuItem(
-                                text = { Text("Cài đặt") },
+                                text = { Text(stringResource(R.string.setting)) },
                                 leadingIcon = { Icon(Icons.Filled.Settings, null) },
                                 onClick = { showTopMenu = false; onSettings() },
                             )
@@ -250,7 +272,12 @@ fun AccountsScreen(
                 item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
             }
             state.errorMessage?.let { msg ->
-                item { BillLocketErrorBanner(msg) }
+                item {
+                    val localized = localizeFinancialError(msg)
+                    if (localized != null) {
+                        BillLocketErrorBanner(localized)
+                    }
+                }
             }
 
             val active = state.items.filterNot { it.account.isArchived }.sortedBy { it.account.sortOrder }
@@ -292,7 +319,7 @@ fun AccountsScreen(
                                     }
                                 }
                                 Text(
-                                    text = "Tổng số dư",
+                                    text = stringResource(R.string.accounts_total_balance),
                                     style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.SemiBold,
                                 )
@@ -302,7 +329,7 @@ fun AccountsScreen(
                                 ) {
                                     Icon(
                                         imageVector = if (state.amountVisibility == AmountVisibility.SHOWN) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
-                                        contentDescription = "Ẩn/hiện số dư",
+                                        contentDescription = stringResource(R.string.accounts_toggle_balance_cd),
                                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                         modifier = Modifier.size(18.dp),
                                     )
@@ -336,7 +363,7 @@ fun AccountsScreen(
                         )
 
                         Text(
-                            text = "${active.size} tài khoản đang hoạt động",
+                            text = stringResource(R.string.accounts_active_count, active.size),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -353,9 +380,9 @@ fun AccountsScreen(
                     ) {
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             listOf(
-                                AccountPeriodTab.THIS_MONTH to "Tháng này",
-                                AccountPeriodTab.THIS_YEAR to "Năm nay",
-                                AccountPeriodTab.ALL to "Tất cả",
+                                AccountPeriodTab.THIS_MONTH to stringResource(R.string.accounts_tab_this_month),
+                                AccountPeriodTab.THIS_YEAR to stringResource(R.string.accounts_tab_this_year),
+                                AccountPeriodTab.ALL to stringResource(R.string.accounts_tab_all),
                             ).forEach { (tab, label) ->
                                 val selected = state.periodTab == tab
                                 Surface(
@@ -392,12 +419,12 @@ fun AccountsScreen(
                                     ) {
                                         Icon(
                                             Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                                            contentDescription = "Tháng trước",
+                                            contentDescription = stringResource(R.string.home_previous_month),
                                             modifier = Modifier.size(18.dp),
                                         )
                                     }
                                     Text(
-                                        text = "tháng ${state.anchorMonth.monthValue} ${state.anchorMonth.year}",
+                                        text = BillLocketFormatters.formatMonthYear(state.anchorMonth, activeAppLocale()),
                                         style = MaterialTheme.typography.labelSmall,
                                         fontWeight = FontWeight.Medium,
                                     )
@@ -407,7 +434,7 @@ fun AccountsScreen(
                                     ) {
                                         Icon(
                                             Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                                            contentDescription = "Tháng sau",
+                                            contentDescription = stringResource(R.string.home_next_month),
                                             modifier = Modifier.size(18.dp),
                                         )
                                     }
@@ -443,7 +470,7 @@ fun AccountsScreen(
                                         modifier = Modifier.size(16.dp),
                                     )
                                     Text(
-                                        text = "Thu nhập",
+                                        text = stringResource(R.string.transaction_income),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -481,7 +508,7 @@ fun AccountsScreen(
                                         modifier = Modifier.size(16.dp),
                                     )
                                     Text(
-                                        text = "Chi tiêu",
+                                        text = stringResource(R.string.transaction_expense),
                                         style = MaterialTheme.typography.bodySmall,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                     )
@@ -526,7 +553,7 @@ fun AccountsScreen(
                             )
                             Spacer(Modifier.width(8.dp))
                             Text(
-                                text = "Chuyển tiền",
+                                text = stringResource(R.string.destination_transfers),
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.SemiBold,
                                 color = MaterialTheme.colorScheme.onSurface,
@@ -555,7 +582,7 @@ fun AccountsScreen(
                             )
                             Spacer(Modifier.width(6.dp))
                             Text(
-                                text = "Tài khoản",
+                                text = stringResource(R.string.accounts_title),
                                 style = MaterialTheme.typography.titleSmall,
                                 fontWeight = FontWeight.Bold,
                             )
@@ -573,7 +600,7 @@ fun AccountsScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = "Tài khoản của bạn (${active.size})",
+                        text = stringResource(R.string.accounts_your_accounts, active.size),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                     )
@@ -596,7 +623,7 @@ fun AccountsScreen(
                                     modifier = Modifier.size(16.dp),
                                 )
                                 Text(
-                                    text = if (state.isReorderMode) "Xong" else "Sắp xếp",
+                                    text = if (state.isReorderMode) stringResource(R.string.accounts_reorder_done) else stringResource(R.string.accounts_reorder_action),
                                     style = MaterialTheme.typography.labelMedium,
                                     color = if (state.isReorderMode) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                                     fontWeight = FontWeight.Medium,
@@ -611,9 +638,9 @@ fun AccountsScreen(
                 item {
                     BillLocketEmptyState(
                         Icons.Filled.AccountBalanceWallet,
-                        "Chưa có tài khoản",
-                        "Tạo ví tiền mặt hoặc tài khoản ngân hàng để bắt đầu.",
-                        actionLabel = "Thêm tài khoản",
+                        stringResource(R.string.accounts_empty_title),
+                        stringResource(R.string.accounts_empty_message),
+                        actionLabel = stringResource(R.string.accounts_create),
                         onAction = onCreate,
                     )
                 }
@@ -685,13 +712,13 @@ fun AccountsScreen(
                                     onClick = { viewModel.onAction(AccountsAction.Move(item.account.id, -1)) },
                                     modifier = Modifier.size(28.dp),
                                 ) {
-                                    Icon(Icons.Filled.KeyboardArrowUp, "Đưa lên", modifier = Modifier.size(20.dp))
+                                    Icon(Icons.Filled.KeyboardArrowUp, stringResource(R.string.accounts_move_up), modifier = Modifier.size(20.dp))
                                 }
                                 IconButton(
                                     onClick = { viewModel.onAction(AccountsAction.Move(item.account.id, 1)) },
                                     modifier = Modifier.size(28.dp),
                                 ) {
-                                    Icon(Icons.Filled.KeyboardArrowDown, "Đưa xuống", modifier = Modifier.size(20.dp))
+                                    Icon(Icons.Filled.KeyboardArrowDown, stringResource(R.string.accounts_move_down), modifier = Modifier.size(20.dp))
                                 }
                             } else {
                                 Icon(
@@ -710,7 +737,7 @@ fun AccountsScreen(
                                     ) {
                                         Icon(
                                             Icons.Filled.MoreVert,
-                                            contentDescription = "Tùy chọn tài khoản",
+                                            contentDescription = stringResource(R.string.accounts_options),
                                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                             modifier = Modifier.size(18.dp),
                                         )
@@ -720,12 +747,12 @@ fun AccountsScreen(
                                         onDismissRequest = { itemMenuExpanded = false },
                                     ) {
                                         DropdownMenuItem(
-                                            text = { Text("Chỉnh sửa") },
+                                            text = { Text(stringResource(R.string.action_edit)) },
                                             leadingIcon = { Icon(Icons.Filled.Edit, null) },
                                             onClick = { itemMenuExpanded = false; onEdit(item.account.id) },
                                         )
                                         DropdownMenuItem(
-                                            text = { Text("Lưu trữ") },
+                                            text = { Text(stringResource(R.string.accounts_archive)) },
                                             leadingIcon = { Icon(Icons.Filled.Archive, null) },
                                             onClick = {
                                                 itemMenuExpanded = false
@@ -770,12 +797,12 @@ fun AccountsScreen(
                         }
                         Column(Modifier.weight(1f)) {
                             Text(
-                                text = "Thêm tài khoản mới",
+                                text = stringResource(R.string.accounts_create),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold,
                             )
                             Text(
-                                text = "Quản lý tất cả tài khoản của bạn tại đây",
+                                text = stringResource(R.string.accounts_subtitle),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -793,7 +820,7 @@ fun AccountsScreen(
             if (archived.isNotEmpty()) {
                 item {
                     Text(
-                        text = "Đã lưu trữ (${archived.size})",
+                        text = stringResource(R.string.accounts_archived_count, archived.size),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.padding(top = 12.dp, bottom = 2.dp),
@@ -832,7 +859,7 @@ fun AccountsScreen(
 
             item {
                 Text(
-                    text = "Quản lý & Cài đặt",
+                    text = stringResource(R.string.more_section_manage_settings),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.padding(top = 16.dp, bottom = 2.dp),
@@ -841,8 +868,8 @@ fun AccountsScreen(
             item {
                 BillLocketGroupCard {
                     BillLocketGroupItem(
-                        title = "Danh mục",
-                        subtitle = "Danh mục thu và chi",
+                        title = stringResource(R.string.more_categories_title),
+                        subtitle = stringResource(R.string.more_categories_subtitle),
                         icon = Icons.Filled.Category,
                         onClick = onCategories,
                     )
@@ -851,8 +878,8 @@ fun AccountsScreen(
                         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
                     )
                     BillLocketGroupItem(
-                        title = "Ngân sách",
-                        subtitle = "Hạn mức chi theo tháng",
+                        title = stringResource(R.string.more_budgets_title),
+                        subtitle = stringResource(R.string.more_budgets_subtitle),
                         icon = Icons.Filled.Savings,
                         onClick = onBudgets,
                     )
@@ -861,8 +888,8 @@ fun AccountsScreen(
                         color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
                     )
                     BillLocketGroupItem(
-                        title = "Cài đặt",
-                        subtitle = "Giao diện, widget và dữ liệu",
+                        title = stringResource(R.string.more_settings_title),
+                        subtitle = stringResource(R.string.more_settings_subtitle),
                         icon = Icons.Filled.Settings,
                         onClick = onSettings,
                     )
@@ -873,10 +900,10 @@ fun AccountsScreen(
     state.archiveTarget?.let { target ->
         AlertDialog(
             onDismissRequest = { viewModel.onAction(AccountsAction.AskArchive(null)) },
-            title = { Text("Lưu trữ tài khoản?") },
-            text = { Text("${target.name} sẽ không dùng cho giao dịch mới. Lịch sử và số dư vẫn được giữ nguyên.") },
-            confirmButton = { TextButton(onClick = { viewModel.onAction(AccountsAction.ConfirmArchive) }) { Text("Lưu trữ") } },
-            dismissButton = { TextButton(onClick = { viewModel.onAction(AccountsAction.AskArchive(null)) }) { Text("Hủy") } },
+            title = { Text(stringResource(R.string.accounts_archive_dialog_title)) },
+            text = { Text(stringResource(R.string.accounts_archive_dialog_message, target.name)) },
+            confirmButton = { TextButton(onClick = { viewModel.onAction(AccountsAction.ConfirmArchive) }) { Text(stringResource(R.string.accounts_archive)) } },
+            dismissButton = { TextButton(onClick = { viewModel.onAction(AccountsAction.AskArchive(null)) }) { Text(stringResource(R.string.action_cancel)) } },
         )
     }
 }
@@ -886,21 +913,26 @@ fun AccountsScreen(
 fun AccountEditorScreen(onBack: () -> Unit, viewModel: AccountEditorViewModel = hiltViewModel()) {
     val state by viewModel.state.collectUiState()
     CollectEffects(viewModel.effects) { onBack() }
-    Scaffold(topBar = { TopAppBar(title = { Text(if (state.id == null) "Thêm tài khoản" else "Sửa tài khoản") }, navigationIcon = { BackButton(onBack) }) }) { padding ->
+    Scaffold(topBar = { TopAppBar(title = { Text(if (state.id == null) stringResource(R.string.accounts_edit_title_new) else stringResource(R.string.accounts_edit_title_edit)) }, navigationIcon = { BackButton(onBack) }) }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            OutlinedTextField(state.name, { viewModel.onAction(AccountEditorAction.NameChanged(it)) }, label = { Text("Tên tài khoản") }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(state.name, { viewModel.onAction(AccountEditorAction.NameChanged(it)) }, label = { Text(stringResource(R.string.accounts_field_name)) }, modifier = Modifier.fillMaxWidth())
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 AccountType.entries.forEach { type -> FilterChip(state.type == type, { viewModel.onAction(AccountEditorAction.TypeChanged(type)) }, { Text(accountType(type)) }) }
             }
             OutlinedTextField(
                 state.openingBalanceText,
                 { viewModel.onAction(AccountEditorAction.OpeningBalanceChanged(it)) },
-                label = { Text("Số dư ban đầu") },
+                label = { Text(stringResource(R.string.accounts_field_balance)) },
                 enabled = state.id == null,
                 modifier = Modifier.fillMaxWidth(),
             )
-            state.errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-            Button(onClick = { viewModel.onAction(AccountEditorAction.Save) }, enabled = !state.isSaving, modifier = Modifier.fillMaxWidth()) { Text("Lưu") }
+            state.errorMessage?.let { msg ->
+                val localized = localizeFinancialError(msg)
+                if (localized != null) {
+                    Text(localized, color = MaterialTheme.colorScheme.error)
+                }
+            }
+            Button(onClick = { viewModel.onAction(AccountEditorAction.Save) }, enabled = !state.isSaving, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.action_save)) }
         }
     }
 }
@@ -909,7 +941,7 @@ fun AccountEditorScreen(onBack: () -> Unit, viewModel: AccountEditorViewModel = 
 @OptIn(ExperimentalMaterial3Api::class)
 fun AccountDetailScreen(onBack: () -> Unit, onEdit: (AccountId) -> Unit, viewModel: AccountDetailViewModel = hiltViewModel()) {
     val details by viewModel.state.collectAsState()
-    Scaffold(topBar = { TopAppBar(title = { Text("Chi tiết tài khoản") }, navigationIcon = { BackButton(onBack) }) }) { padding ->
+    Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.destination_account_detail)) }, navigationIcon = { BackButton(onBack) }) }) { padding ->
         val value = details
         if (value == null) Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
         else Column(Modifier.fillMaxSize().padding(padding).padding(18.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -921,13 +953,13 @@ fun AccountDetailScreen(onBack: () -> Unit, onEdit: (AccountId) -> Unit, viewMod
                 Column(Modifier.fillMaxWidth().padding(20.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(accountType(value.account.type).uppercase(), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                     Text(value.account.name, style = MaterialTheme.typography.headlineMedium)
-                    Text("Số dư hiện tại", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.account_detail_current_balance), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(money(value.balance.minorUnits), style = MaterialTheme.typography.headlineLarge)
                 }
             }
-            BillLocketSectionCard { Text("Số dư ban đầu", style = MaterialTheme.typography.labelMedium); Text(money(value.account.openingBalance.minorUnits), style = MaterialTheme.typography.titleMedium) }
-            if (value.account.isArchived) AssistChip(onClick = {}, label = { Text("Đã lưu trữ") })
-            Button(onClick = { onEdit(value.account.id) }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp)) { Text("Chỉnh sửa tài khoản") }
+            BillLocketSectionCard { Text(stringResource(R.string.accounts_field_balance), style = MaterialTheme.typography.labelMedium); Text(money(value.account.openingBalance.minorUnits), style = MaterialTheme.typography.titleMedium) }
+            if (value.account.isArchived) AssistChip(onClick = {}, label = { Text(stringResource(R.string.account_detail_archived)) })
+            Button(onClick = { onEdit(value.account.id) }, modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(18.dp)) { Text(stringResource(R.string.account_detail_edit)) }
         }
     }
 }
@@ -1051,7 +1083,7 @@ fun CategoriesScreen(onBack: () -> Unit, viewModel: CategoriesViewModel = hiltVi
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Danh mục", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.categories_title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) },
                 navigationIcon = { BackButton(onBack) },
                 actions = {
                     Surface(
@@ -1064,7 +1096,7 @@ fun CategoriesScreen(onBack: () -> Unit, viewModel: CategoriesViewModel = hiltVi
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
                                 Icons.Filled.Add,
-                                contentDescription = "Thêm danh mục",
+                                contentDescription = stringResource(R.string.categories_create),
                                 tint = Color(0xFFFFB800),
                                 modifier = Modifier.size(20.dp),
                             )
@@ -1095,7 +1127,7 @@ fun CategoriesScreen(onBack: () -> Unit, viewModel: CategoriesViewModel = hiltVi
                 ) {
                     Box(modifier = Modifier.padding(horizontal = 24.dp), contentAlignment = Alignment.Center) {
                         Text(
-                            text = "Chi",
+                            text = stringResource(R.string.home_expense),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = if (isExpense) FontWeight.Bold else FontWeight.Medium,
                             color = if (isExpense) Color(0xFFFFB800) else Color(0xFF8E8B85),
@@ -1113,7 +1145,7 @@ fun CategoriesScreen(onBack: () -> Unit, viewModel: CategoriesViewModel = hiltVi
                 ) {
                     Box(modifier = Modifier.padding(horizontal = 24.dp), contentAlignment = Alignment.Center) {
                         Text(
-                            text = "Thu",
+                            text = stringResource(R.string.home_income),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = if (isIncome) FontWeight.Bold else FontWeight.Medium,
                             color = if (isIncome) Color(0xFFFFB800) else Color(0xFF8E8B85),
@@ -1122,13 +1154,16 @@ fun CategoriesScreen(onBack: () -> Unit, viewModel: CategoriesViewModel = hiltVi
                 }
             }
 
-            state.errorMessage?.let {
-                Text(
-                    text = it,
-                    color = MaterialTheme.colorScheme.error,
-                    style = MaterialTheme.typography.bodySmall,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                )
+            state.errorMessage?.let { msg ->
+                val localized = localizeFinancialError(msg)
+                if (localized != null) {
+                    Text(
+                        text = localized,
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                    )
+                }
             }
 
             val activeCategories = remember(state.items) {
@@ -1147,9 +1182,9 @@ fun CategoriesScreen(onBack: () -> Unit, viewModel: CategoriesViewModel = hiltVi
                     item {
                         BillLocketEmptyState(
                             Icons.Filled.Category,
-                            "Chưa có danh mục",
-                            "Tạo danh mục để phân loại giao dịch.",
-                            actionLabel = "Thêm danh mục",
+                            stringResource(R.string.categories_empty_title),
+                            stringResource(R.string.categories_empty_message),
+                            actionLabel = stringResource(R.string.categories_create),
                             onAction = { viewModel.onAction(CategoriesAction.Edit(null)) },
                         )
                     }
@@ -1197,7 +1232,7 @@ fun CategoriesScreen(onBack: () -> Unit, viewModel: CategoriesViewModel = hiltVi
                                     overflow = TextOverflow.Ellipsis,
                                 )
                                 Text(
-                                    text = if (category.isDefault) "Mặc định" else "Tùy chỉnh",
+                                    text = if (category.isDefault) stringResource(R.string.categories_default_badge) else stringResource(R.string.categories_custom_badge),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = Color(0xFF8E8B85),
                                 )
@@ -1217,7 +1252,7 @@ fun CategoriesScreen(onBack: () -> Unit, viewModel: CategoriesViewModel = hiltVi
                                     Box(contentAlignment = Alignment.Center) {
                                         Icon(
                                             Icons.Filled.KeyboardArrowUp,
-                                            contentDescription = "Đưa lên",
+                                            contentDescription = stringResource(R.string.accounts_move_up),
                                             tint = if (index > 0) Color(0xFFCCCCCC) else Color(0xFF555555),
                                             modifier = Modifier.size(18.dp),
                                         )
@@ -1233,7 +1268,7 @@ fun CategoriesScreen(onBack: () -> Unit, viewModel: CategoriesViewModel = hiltVi
                                     Box(contentAlignment = Alignment.Center) {
                                         Icon(
                                             Icons.Filled.KeyboardArrowDown,
-                                            contentDescription = "Đưa xuống",
+                                            contentDescription = stringResource(R.string.accounts_move_down),
                                             tint = if (index < activeCategories.lastIndex) Color(0xFFCCCCCC) else Color(0xFF555555),
                                             modifier = Modifier.size(18.dp),
                                         )
@@ -1249,7 +1284,7 @@ fun CategoriesScreen(onBack: () -> Unit, viewModel: CategoriesViewModel = hiltVi
                                     Box(contentAlignment = Alignment.Center) {
                                         Icon(
                                             Icons.Filled.Edit,
-                                            contentDescription = "Sửa",
+                                            contentDescription = stringResource(R.string.action_edit),
                                             tint = Color(0xFFCCCCCC),
                                             modifier = Modifier.size(16.dp),
                                         )
@@ -1265,7 +1300,7 @@ fun CategoriesScreen(onBack: () -> Unit, viewModel: CategoriesViewModel = hiltVi
                                     Box(contentAlignment = Alignment.Center) {
                                         Icon(
                                             Icons.Filled.Archive,
-                                            contentDescription = "Lưu trữ",
+                                            contentDescription = stringResource(R.string.accounts_archive),
                                             tint = Color(0xFFCCCCCC),
                                             modifier = Modifier.size(16.dp),
                                         )
@@ -1279,7 +1314,7 @@ fun CategoriesScreen(onBack: () -> Unit, viewModel: CategoriesViewModel = hiltVi
                 if (archivedCategories.isNotEmpty()) {
                     item {
                         Text(
-                            text = "Đã lưu trữ (${archivedCategories.size})",
+                            text = stringResource(R.string.categories_archived_count, archivedCategories.size),
                             style = MaterialTheme.typography.titleMedium,
                             color = Color(0xFF8E8B85),
                             modifier = Modifier.padding(top = 16.dp, bottom = 4.dp),
@@ -1316,7 +1351,7 @@ fun CategoriesScreen(onBack: () -> Unit, viewModel: CategoriesViewModel = hiltVi
                                     color = Color(0xFF75726B),
                                     modifier = Modifier.weight(1f),
                                 )
-                                Text("Đã ẩn", style = MaterialTheme.typography.labelSmall, color = Color(0xFF555555))
+                                Text(stringResource(R.string.categories_archived_hidden), style = MaterialTheme.typography.labelSmall, color = Color(0xFF555555))
                             }
                         }
                     }
@@ -1335,17 +1370,17 @@ fun CategoriesScreen(onBack: () -> Unit, viewModel: CategoriesViewModel = hiltVi
             containerColor = Color(0xFF1E1D19),
             titleContentColor = Color.White,
             textContentColor = Color(0xFFCCCCCC),
-            title = { Text("Lưu trữ danh mục?") },
-            text = { Text("${target.name} sẽ bị ẩn khỏi giao dịch mới nhưng lịch sử và số liệu cũ vẫn được giữ nguyên.") },
+            title = { Text(stringResource(R.string.categories_archive_dialog_title)) },
+            text = { Text(stringResource(R.string.categories_archive_dialog_message, target.name)) },
             confirmButton = {
                 Button(
                     onClick = { viewModel.onAction(CategoriesAction.ConfirmArchive) },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFB800), contentColor = Color.Black),
-                ) { Text("Lưu trữ") }
+                ) { Text(stringResource(R.string.accounts_archive)) }
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.onAction(CategoriesAction.AskArchive(null)) }) {
-                    Text("Hủy", color = Color(0xFF8E8B85))
+                    Text(stringResource(R.string.action_cancel), color = Color(0xFF8E8B85))
                 }
             },
         )
@@ -1386,7 +1421,7 @@ private fun CategoryEditorSheet(state: CategoriesState, onAction: (CategoriesAct
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = if (state.editing == null) "Thêm danh mục" else "Sửa danh mục",
+                    text = if (state.editing == null) stringResource(R.string.categories_edit_title_new) else stringResource(R.string.categories_edit_title_edit),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = Color.White,
@@ -1398,7 +1433,7 @@ private fun CategoryEditorSheet(state: CategoriesState, onAction: (CategoriesAct
                     modifier = Modifier.size(32.dp),
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Icon(Icons.Filled.Close, contentDescription = "Đóng", tint = Color(0xFFCCCCCC), modifier = Modifier.size(16.dp))
+                        Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_close), tint = Color(0xFFCCCCCC), modifier = Modifier.size(16.dp))
                     }
                 }
             }
@@ -1423,7 +1458,7 @@ private fun CategoryEditorSheet(state: CategoriesState, onAction: (CategoriesAct
                     )
                 }
                 Text(
-                    text = state.name.ifBlank { "Tên danh mục" },
+                    text = state.name.ifBlank { stringResource(R.string.categories_field_name) },
                     style = MaterialTheme.typography.bodyLarge,
                     fontWeight = FontWeight.SemiBold,
                     color = if (state.name.isBlank()) Color(0xFF666666) else Color.White,
@@ -1482,12 +1517,12 @@ private fun CategoryEditorSheet(state: CategoriesState, onAction: (CategoriesAct
             OutlinedTextField(
                 value = state.name,
                 onValueChange = { onAction(CategoriesAction.NameChanged(it)) },
-                label = { Text("Tên danh mục") },
+                label = { Text(stringResource(R.string.categories_field_name)) },
                 singleLine = true,
                 trailingIcon = {
                     if (state.name.isNotEmpty()) {
                         IconButton(onClick = { onAction(CategoriesAction.NameChanged("")) }) {
-                            Icon(Icons.Filled.Close, "Xóa", modifier = Modifier.size(18.dp), tint = Color(0xFF8E8B85))
+                            Icon(Icons.Filled.Close, stringResource(R.string.action_delete), modifier = Modifier.size(18.dp), tint = Color(0xFF8E8B85))
                         }
                     }
                 },
@@ -1507,7 +1542,7 @@ private fun CategoryEditorSheet(state: CategoriesState, onAction: (CategoriesAct
             // Color Palette Section
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    text = "Màu sắc",
+                    text = stringResource(R.string.categories_field_color),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
                     color = Color(0xFFCCCCCC),
@@ -1541,7 +1576,7 @@ private fun CategoryEditorSheet(state: CategoriesState, onAction: (CategoriesAct
             // Icon Picker Section
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    text = "Biểu tượng",
+                    text = stringResource(R.string.categories_field_icon),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
                     color = Color(0xFFCCCCCC),
@@ -1587,7 +1622,7 @@ private fun CategoryEditorSheet(state: CategoriesState, onAction: (CategoriesAct
                         .height(48.dp),
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Text("Hủy", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                        Text(stringResource(R.string.action_cancel), color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
                     }
                 }
 
@@ -1605,7 +1640,7 @@ private fun CategoryEditorSheet(state: CategoriesState, onAction: (CategoriesAct
                         .weight(1f)
                         .height(48.dp),
                 ) {
-                    Text("Lưu", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    Text(stringResource(R.string.action_save), fontWeight = FontWeight.Bold, fontSize = 15.sp)
                 }
             }
         }
@@ -1622,11 +1657,18 @@ fun TransfersScreen(onBack: () -> Unit, onCreate: () -> Unit, onEdit: (TransferI
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
-    Scaffold(topBar = { TopAppBar(title = { Text("Chuyển tiền") }, navigationIcon = { BackButton(onBack) }, actions = { IconButton(onClick = onCreate) { Icon(Icons.Filled.Add, "Thêm chuyển tiền") } }) }) { padding ->
+    Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.transfers_title)) }, navigationIcon = { BackButton(onBack) }, actions = { IconButton(onClick = onCreate) { Icon(Icons.Filled.Add, stringResource(R.string.transfers_create)) } }) }) { padding ->
         LazyColumn(Modifier.fillMaxSize().padding(padding), contentPadding = PaddingValues(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (state.isLoading) item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
-            state.errorMessage?.let { item { BillLocketErrorBanner(it) } }
-            if (!state.isLoading && state.items.isEmpty()) item { BillLocketEmptyState(Icons.Filled.SwapHoriz, "Chưa có chuyển tiền", "Chuyển tiền giữa hai tài khoản mà không làm thay đổi thu chi.", actionLabel = "Tạo chuyển tiền", onAction = onCreate) }
+            state.errorMessage?.let { msg ->
+                item {
+                    val localized = localizeFinancialError(msg)
+                    if (localized != null) {
+                        BillLocketErrorBanner(localized)
+                    }
+                }
+            }
+            if (!state.isLoading && state.items.isEmpty()) item { BillLocketEmptyState(Icons.Filled.SwapHoriz, stringResource(R.string.transfers_empty_title), stringResource(R.string.transfers_empty_message), actionLabel = stringResource(R.string.transfers_create), onAction = onCreate) }
             items(state.items, key = { it.transfer.id.value }) { item ->
                 Surface(
                     Modifier.fillMaxWidth().clickable { onEdit(item.transfer.id) },
@@ -1636,7 +1678,7 @@ fun TransfersScreen(onBack: () -> Unit, onCreate: () -> Unit, onEdit: (TransferI
                 ) {
                     Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f), contentColor = MaterialTheme.colorScheme.primary) { Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) { Icon(Icons.Filled.SwapHoriz, null) } }
-                        Column(Modifier.weight(1f)) { Text("${item.fromName} → ${item.toName}", style = MaterialTheme.typography.titleSmall); Text(item.transfer.note ?: Instant.ofEpochMilli(item.transfer.occurred.epochMillis).atZone(ZoneId.of(item.transfer.occurred.zoneId)).format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                        Column(Modifier.weight(1f)) { Text("${item.fromName} → ${item.toName}", style = MaterialTheme.typography.titleSmall); Text(item.transfer.note ?: BillLocketFormatters.formatDateTime(item.transfer.occurred.epochMillis, ZoneId.of(item.transfer.occurred.zoneId), activeAppLocale()), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                         Text(money(item.transfer.amount.minorUnits), style = MaterialTheme.typography.labelLarge)
                     }
                 }
@@ -1650,19 +1692,28 @@ fun TransfersScreen(onBack: () -> Unit, onCreate: () -> Unit, onEdit: (TransferI
 fun TransferEditorScreen(onBack: () -> Unit, viewModel: TransferEditorViewModel = hiltViewModel()) {
     val state by viewModel.state.collectUiState()
     CollectEffects(viewModel.effects) { onBack() }
-    Scaffold(topBar = { TopAppBar(title = { Text(if (state.id == null) "Thêm chuyển tiền" else "Sửa chuyển tiền") }, navigationIcon = { BackButton(onBack) }) }) { padding ->
+    Scaffold(topBar = { TopAppBar(title = { Text(if (state.id == null) stringResource(R.string.transfers_edit_title_new) else stringResource(R.string.transfers_edit_title_edit)) }, navigationIcon = { BackButton(onBack) }) }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Từ tài khoản")
+            Text(stringResource(R.string.transfers_from_account))
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { state.accounts.forEach { account -> FilterChip(state.fromId == account.id, { viewModel.onAction(TransferEditorAction.FromChanged(account.id)) }, { Text(account.name) }) } }
-            Text("Đến tài khoản")
+            Text(stringResource(R.string.transfers_to_account))
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { state.accounts.forEach { account -> FilterChip(state.toId == account.id, { viewModel.onAction(TransferEditorAction.ToChanged(account.id)) }, { Text(account.name) }) } }
-            OutlinedTextField(state.amountText, { viewModel.onAction(TransferEditorAction.AmountChanged(it)) }, label = { Text("Số tiền") }, modifier = Modifier.fillMaxWidth())
-            OutlinedTextField(state.note, { viewModel.onAction(TransferEditorAction.NoteChanged(it)) }, label = { Text("Ghi chú") }, modifier = Modifier.fillMaxWidth())
-            state.errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-            Button(onClick = { viewModel.onAction(TransferEditorAction.Save) }, enabled = !state.isSaving, modifier = Modifier.fillMaxWidth()) { Text("Lưu chuyển tiền") }
+            OutlinedTextField(state.amountText, { viewModel.onAction(TransferEditorAction.AmountChanged(it)) }, label = { Text(stringResource(R.string.transaction_amount_label)) }, modifier = Modifier.fillMaxWidth())
+            OutlinedTextField(state.note, { viewModel.onAction(TransferEditorAction.NoteChanged(it)) }, label = { Text(stringResource(R.string.transaction_note_hint)) }, modifier = Modifier.fillMaxWidth())
+            state.errorMessage?.let { msg ->
+                val localized = localizeFinancialError(msg)
+                if (localized != null) {
+                    Text(localized, color = MaterialTheme.colorScheme.error)
+                }
+            }
+            Button(onClick = { viewModel.onAction(TransferEditorAction.Save) }, enabled = !state.isSaving, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.transfers_save_button)) }
         }
     }
 }
 
-@Composable private fun BackButton(onBack: () -> Unit) = IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Quay lại") }
-private fun accountType(type: AccountType) = when (type) { AccountType.CASH -> "Tiền mặt"; AccountType.BANK -> "Ngân hàng"; AccountType.EWALLET -> "Ví điện tử" }
+@Composable private fun BackButton(onBack: () -> Unit) = IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.action_back)) }
+@Composable private fun accountType(type: AccountType) = when (type) {
+    AccountType.CASH -> stringResource(R.string.accounts_type_cash)
+    AccountType.BANK -> stringResource(R.string.accounts_type_bank)
+    AccountType.EWALLET -> stringResource(R.string.accounts_type_ewallet)
+}

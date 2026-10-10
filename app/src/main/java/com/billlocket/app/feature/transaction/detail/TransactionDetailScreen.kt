@@ -26,23 +26,28 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil3.compose.AsyncImage
+import com.billlocket.app.R
 import com.billlocket.app.domain.model.DraftId
 import com.billlocket.app.domain.model.TransactionId
 import com.billlocket.app.domain.model.TransactionImageId
 import com.billlocket.app.domain.model.TransactionType
 import com.billlocket.app.feature.finance.categoryIcon
 import com.billlocket.app.feature.map.BILLLOCKET_DARK_MAP_STYLE_JSON
+import com.billlocket.app.locale.BillLocketFormatters
+import com.billlocket.app.locale.activeAppLocale
 import com.billlocket.app.ui.common.BillLocketEmptyState
 import com.billlocket.app.ui.common.BillLocketErrorBanner
 import com.billlocket.app.ui.common.BillLocketLoadingState
 import com.billlocket.app.ui.common.CollectEffects
 import com.billlocket.app.ui.common.collectUiState
+import androidx.compose.ui.res.stringResource
 import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.MapStyleOptions
@@ -69,13 +74,14 @@ fun TransactionDetailScreen(
     val state by viewModel.state.collectUiState()
     val snackbar = remember { SnackbarHostState() }
 
+    val context = LocalContext.current
     CollectEffects(viewModel.effects) { effect ->
         when (effect) {
             is TransactionDetailEffect.NavigateEdit -> onNavigateEdit(effect.transactionId, effect.draftId)
             is TransactionDetailEffect.ShowUndo -> {
                 val result = snackbar.showSnackbar(
-                    message = "Đã xóa giao dịch",
-                    actionLabel = "Hoàn tác",
+                    message = context.getString(R.string.transaction_deleted),
+                    actionLabel = context.getString(R.string.action_undo),
                     duration = SnackbarDuration.Short,
                 )
                 if (result == SnackbarResult.ActionPerformed) {
@@ -94,7 +100,7 @@ fun TransactionDetailScreen(
             TopAppBar(
                 title = {
                     Text(
-                        "Chi tiết giao dịch",
+                        stringResource(R.string.detail_title),
                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                         color = Color.White,
                     )
@@ -103,7 +109,7 @@ fun TransactionDetailScreen(
                     IconButton(onClick = { viewModel.onAction(TransactionDetailAction.Back) }) {
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Quay lại",
+                            contentDescription = stringResource(R.string.action_back),
                             tint = Color(0xFFFFB800),
                         )
                     }
@@ -113,14 +119,14 @@ fun TransactionDetailScreen(
                         IconButton(onClick = { viewModel.onAction(TransactionDetailAction.Edit) }) {
                             Icon(
                                 Icons.Filled.Edit,
-                                contentDescription = "Chỉnh sửa giao dịch",
+                                contentDescription = stringResource(R.string.action_edit),
                                 tint = Color(0xFFFFB800),
                             )
                         }
                         IconButton(onClick = { viewModel.onAction(TransactionDetailAction.RequestDelete) }) {
                             Icon(
                                 Icons.Filled.Delete,
-                                contentDescription = "Xóa giao dịch",
+                                contentDescription = stringResource(R.string.detail_delete_title),
                                 tint = Color(0xFFFFB800),
                             )
                         }
@@ -132,9 +138,10 @@ fun TransactionDetailScreen(
             )
         },
     ) { padding ->
+        val locale = activeAppLocale()
         when {
-            state.isLoading -> Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) { BillLocketLoadingState("Đang tải giao dịch") }
-            state.notFound -> Box(Modifier.fillMaxSize().padding(padding).padding(18.dp), contentAlignment = Alignment.Center) { BillLocketEmptyState(Icons.AutoMirrored.Filled.ReceiptLong, "Không tìm thấy giao dịch", "Giao dịch có thể đã bị xóa hoặc đường dẫn không còn hợp lệ.") }
+            state.isLoading -> Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) { BillLocketLoadingState("BillLocket") }
+            state.notFound -> Box(Modifier.fillMaxSize().padding(padding).padding(18.dp), contentAlignment = Alignment.Center) { BillLocketEmptyState(Icons.AutoMirrored.Filled.ReceiptLong, stringResource(R.string.destination_not_found), stringResource(R.string.destination_not_found_message)) }
             else -> state.transaction?.let { transaction ->
                 val primaryLocation = state.selectedLocation
 
@@ -146,12 +153,12 @@ fun TransactionDetailScreen(
                         .padding(horizontal = 16.dp, vertical = 6.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                 ) {
-                    val amountFormatted = NumberFormat.getNumberInstance(Locale("vi", "VN")).format(transaction.amount.minorUnits)
-                    val amountText = (if (transaction.type == TransactionType.EXPENSE) "-$amountFormatted" else "+$amountFormatted") + " " + transaction.amount.currency.value
+                    val amountFormatted = BillLocketFormatters.formatMoney(transaction.amount.minorUnits, locale)
+                    val amountText = (if (transaction.type == TransactionType.EXPENSE) "-$amountFormatted" else "+$amountFormatted")
 
                     // Hero Photo & Amount section matching Image 2
                     if (state.images.isEmpty()) {
-                        BillLocketEmptyState(Icons.AutoMirrored.Filled.ReceiptLong, "Giao dịch không có ảnh", "Thông tin tài chính vẫn được lưu đầy đủ.")
+                        BillLocketEmptyState(Icons.AutoMirrored.Filled.ReceiptLong, stringResource(R.string.home_no_photos_attached), "")
                         Text(
                             amountText,
                             style = MaterialTheme.typography.headlineLarge.copy(fontWeight = FontWeight.Bold),
@@ -214,7 +221,7 @@ fun TransactionDetailScreen(
                             verticalArrangement = Arrangement.spacedBy(16.dp),
                         ) {
                             Text(
-                                text = "Thông tin",
+                                text = stringResource(R.string.detail_title),
                                 style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                                 color = Color.White,
                             )
@@ -222,24 +229,24 @@ fun TransactionDetailScreen(
                             // Row 1: Thời gian
                             InfoItemRow(
                                 icon = Icons.Filled.Schedule,
-                                label = "Thời gian",
-                                value = time.format(DateTimeFormatter.ofPattern("HH:mm, dd/MM/yyyy")),
+                                label = stringResource(R.string.detail_field_time),
+                                value = BillLocketFormatters.formatDateTime(transaction.occurred.epochMillis, ZoneId.of(transaction.occurred.zoneId), locale),
                             )
 
                             // Row 2: Địa chỉ
                             val addressValue = when {
-                                state.isResolvingAddress -> "Đang xác định địa chỉ…"
+                                state.isResolvingAddress -> stringResource(R.string.map_resolving_address)
                                 state.address != null -> state.address?.fullAddress.orEmpty()
                                 primaryLocation != null -> {
                                     primaryLocation.placeName?.takeIf { !it.matches(Regex("^[\\d\\.\\,\\-\\s]+$")) }
                                         ?: String.format(Locale.US, "%.4f, %.4f", primaryLocation.point.latitude, primaryLocation.point.longitude)
                                 }
-                                else -> "Không có vị trí"
+                                else -> stringResource(R.string.map_no_location)
                             }
 
                             InfoItemRow(
                                 icon = Icons.Filled.Place,
-                                label = "Địa chỉ",
+                                label = stringResource(R.string.detail_field_location),
                                 value = addressValue,
                                 hasTrailingChevron = primaryLocation != null,
                                 onClick = if (primaryLocation != null) { { onNavigateMap(transaction.id, state.selectedImageId) } } else null,
@@ -249,7 +256,7 @@ fun TransactionDetailScreen(
                             state.address?.detailLocation?.let { detail ->
                                 InfoItemRow(
                                     icon = Icons.Filled.Map,
-                                    label = "Vị trí chi tiết",
+                                    label = stringResource(R.string.destination_image_location),
                                     value = detail,
                                 )
                             }
@@ -258,7 +265,7 @@ fun TransactionDetailScreen(
                             transaction.note?.takeIf { it.isNotBlank() }?.let { note ->
                                 InfoItemRow(
                                     icon = Icons.AutoMirrored.Filled.ReceiptLong,
-                                    label = "Ghi chú",
+                                    label = stringResource(R.string.detail_field_note),
                                     value = note,
                                 )
                             }
@@ -288,7 +295,7 @@ fun TransactionDetailScreen(
                                         modifier = Modifier.size(20.dp),
                                     )
                                     Text(
-                                        text = "Vị trí trên bản đồ",
+                                        text = stringResource(R.string.map_title),
                                         style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                                         color = Color.White,
                                     )
@@ -374,7 +381,7 @@ fun TransactionDetailScreen(
                                                 modifier = Modifier.size(16.dp),
                                             )
                                             Text(
-                                                text = "Xem trên bản đồ",
+                                                text = stringResource(R.string.map_title),
                                                 style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                                                 color = Color(0xFFFFB800),
                                             )
@@ -385,7 +392,10 @@ fun TransactionDetailScreen(
                         }
                     }
 
-                    state.errorMessage?.let { BillLocketErrorBanner(it) }
+                    state.errorMessage?.let { msg ->
+                        val text = if (msg == "Không thể xóa giao dịch") stringResource(R.string.tx_detail_error_delete_failed) else msg
+                        BillLocketErrorBanner(text)
+                    }
                     Spacer(Modifier.height(16.dp))
                 }
             }
@@ -395,10 +405,10 @@ fun TransactionDetailScreen(
     if (state.showDeleteConfirmation) {
         AlertDialog(
             onDismissRequest = { viewModel.onAction(TransactionDetailAction.CancelDelete) },
-            title = { Text("Xóa giao dịch?") },
-            text = { Text("Bạn có vài giây để hoàn tác sau khi xóa.") },
-            confirmButton = { TextButton(onClick = { viewModel.onAction(TransactionDetailAction.ConfirmDelete) }) { Text("Xóa") } },
-            dismissButton = { TextButton(onClick = { viewModel.onAction(TransactionDetailAction.CancelDelete) }) { Text("Hủy") } },
+            title = { Text(stringResource(R.string.detail_delete_title)) },
+            text = { Text(stringResource(R.string.detail_delete_message)) },
+            confirmButton = { TextButton(onClick = { viewModel.onAction(TransactionDetailAction.ConfirmDelete) }) { Text(stringResource(R.string.detail_delete_confirm)) } },
+            dismissButton = { TextButton(onClick = { viewModel.onAction(TransactionDetailAction.CancelDelete) }) { Text(stringResource(R.string.detail_delete_cancel)) } },
         )
     }
 }
@@ -483,7 +493,7 @@ private fun HeroImageCard(
         if (item.exists) {
             AsyncImage(
                 model = item.image.mediaUri,
-                contentDescription = "Ảnh giao dịch",
+                contentDescription = stringResource(R.string.tx_detail_photo_cd),
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop,
             )
@@ -495,7 +505,7 @@ private fun HeroImageCard(
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Icon(Icons.Filled.HideImage, null, Modifier.size(36.dp))
-                    Text("Ảnh không còn khả dụng")
+                    Text(stringResource(R.string.tx_detail_photo_unavailable))
                 }
             }
         }

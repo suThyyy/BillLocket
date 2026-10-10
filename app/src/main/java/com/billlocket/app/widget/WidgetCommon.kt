@@ -25,7 +25,8 @@ import dagger.hilt.EntryPoint
 import dagger.hilt.InstallIn
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
-import java.text.NumberFormat
+import com.billlocket.app.locale.BillLocketFormatters
+import com.billlocket.app.locale.localizedContext
 import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
@@ -74,7 +75,7 @@ data class TodayRecapWidgetData(
     val calendarIcon: Bitmap? = null,
 )
 
-fun generateDynamicCalendarBitmap(date: LocalDate): Bitmap {
+fun generateDynamicCalendarBitmap(date: LocalDate, locale: Locale = Locale.getDefault()): Bitmap {
     val sizePx = 96
     val bitmap = Bitmap.createBitmap(sizePx, sizePx, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bitmap)
@@ -112,12 +113,12 @@ fun generateDynamicCalendarBitmap(date: LocalDate): Bitmap {
 
     // 3. Month text (e.g. "Th 10" or "OCT")
     val monthText = runCatching {
-        if (Locale.getDefault().language == "vi") {
+        if (locale.language == "vi") {
             "Th ${date.monthValue}"
         } else {
             date.month.name.take(3)
         }
-    }.getOrDefault("Th ${date.monthValue}").uppercase(Locale.getDefault())
+    }.getOrDefault("Th ${date.monthValue}").uppercase(locale)
 
     val monthPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         color = android.graphics.Color.WHITE
@@ -173,23 +174,23 @@ fun widgetIntent(context: Context, action: String, id: String?): Intent =
         id?.let { putExtra(WIDGET_ID_EXTRA, it) }
     }
 
-fun formatWidgetAmount(amountMinor: Long): String =
-    NumberFormat.getNumberInstance(Locale("vi", "VN")).format(amountMinor) + "đ"
+/** BL-045: Formats using the current active locale instead of hard-coded vi-VN. */
+fun formatWidgetAmount(amountMinor: Long, locale: Locale = Locale.getDefault()): String =
+    BillLocketFormatters.formatMoney(amountMinor, locale)
 
-fun formatWidgetTime(occurredAtMillis: Long): String {
-    if (occurredAtMillis <= 0) return ""
-    return runCatching {
-        val dateTime = Instant.ofEpochMilli(occurredAtMillis).atZone(ZoneId.systemDefault())
-        val today = LocalDate.now()
-        val txDate = dateTime.toLocalDate()
-        val timeStr = DateTimeFormatter.ofPattern("HH:mm").format(dateTime)
-        when {
-            txDate == today -> "Hôm nay $timeStr"
-            txDate == today.minusDays(1) -> "Hôm qua $timeStr"
-            else -> DateTimeFormatter.ofPattern("dd/MM HH:mm").format(dateTime)
-        }
-    }.getOrDefault("")
-}
+/**
+ * BL-045: Formats using the current active locale.
+ * Callers must supply [todayLabel] and [yesterdayLabel] from localized string resources.
+ */
+fun formatWidgetTime(
+    occurredAtMillis: Long,
+    todayLabel: String,
+    yesterdayLabel: String,
+    zone: ZoneId = ZoneId.systemDefault(),
+    locale: Locale = Locale.getDefault(),
+): String = BillLocketFormatters.formatWidgetRelativeTime(
+    occurredAtMillis, zone, locale, todayLabel, yesterdayLabel,
+)
 
 suspend fun decodeWidgetBitmap(media: MediaStorePort, uri: String, maxEdge: Int = 320): Bitmap? = runCatching {
     val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
@@ -236,6 +237,8 @@ suspend fun selectEligibleWidgetPhoto(
 ): WidgetPhoto? = candidates.firstOrNull { exists(it.mediaUri) }
 
 suspend fun loadLatestTransactionData(context: Context): LatestTransactionWidgetData = runCatching {
+    val locContext = context.localizedContext()
+    val defaultCategoryName = locContext.getString(com.billlocket.app.R.string.home_transactions_header)
     val now = System.currentTimeMillis()
     val entry = EntryPointAccessors.fromApplication(context.applicationContext, WidgetEntryPoint::class.java)
     val candidates = entry.projectionDao().widgetCandidates(15).filter { it.occurredAt <= now }
@@ -247,7 +250,7 @@ suspend fun loadLatestTransactionData(context: Context): LatestTransactionWidget
             val catName = recentTx.transaction.categoryId?.let { entry.categoryDao().findById(it)?.name }.orEmpty()
             LatestTransactionWidgetData(
                 transactionId = recentTx.transaction.id,
-                categoryName = catName.ifBlank { "Giao dịch" },
+                categoryName = catName.ifBlank { defaultCategoryName },
                 amountMinor = recentTx.transaction.amountMinor,
                 isExpense = recentTx.transaction.type != "INCOME",
                 occurredAt = recentTx.transaction.occurredAt,
@@ -271,7 +274,7 @@ suspend fun loadLatestTransactionData(context: Context): LatestTransactionWidget
         val isExpense = txEntity?.type != "INCOME"
         LatestTransactionWidgetData(
             transactionId = eligible.transactionId,
-            categoryName = eligible.categoryName.ifBlank { "Giao dịch" },
+            categoryName = eligible.categoryName.ifBlank { defaultCategoryName },
             amountMinor = eligible.amountMinor,
             isExpense = isExpense,
             occurredAt = eligible.occurredAt,
@@ -309,7 +312,8 @@ suspend fun loadTodayRecapData(context: Context): TodayRecapWidgetData = runCatc
     val bitmaps = candidateUris.mapNotNull {
         decodeWidgetBitmap(entry.media(), it, maxEdge = 200)
     }
-    val calendarIcon = generateDynamicCalendarBitmap(today)
+    val appLocale = com.billlocket.app.locale.resolveAppLocale(context)
+    val calendarIcon = generateDynamicCalendarBitmap(today, appLocale)
     TodayRecapWidgetData(
         todayEpochDay = todayEpoch,
         transactionCount = count,
@@ -319,12 +323,13 @@ suspend fun loadTodayRecapData(context: Context): TodayRecapWidgetData = runCatc
     )
 }.getOrElse {
     val today = LocalDate.now()
+    val appLocale = com.billlocket.app.locale.resolveAppLocale(context)
     TodayRecapWidgetData(
         todayEpochDay = today.toEpochDay(),
         transactionCount = 0,
         totalExpenseMinor = 0L,
         images = emptyList(),
-        calendarIcon = generateDynamicCalendarBitmap(today),
+        calendarIcon = generateDynamicCalendarBitmap(today, appLocale),
     )
 }
 

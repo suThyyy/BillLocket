@@ -37,6 +37,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -47,6 +48,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil3.compose.AsyncImage
+import com.billlocket.app.R
 import com.billlocket.app.domain.model.DraftId
 import com.billlocket.app.feature.transaction.draft.DraftImage
 import com.billlocket.app.ui.common.CollectEffects
@@ -201,7 +203,7 @@ fun CaptureScreen(
                 }
                 state.errorMessage?.let {
                     Spacer(Modifier.height(8.dp))
-                    Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                    Text(localizeCaptureError(it), color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                 }
             }
             CaptureBottomControls(
@@ -219,10 +221,10 @@ fun CaptureScreen(
     if (state.showDiscardConfirmation) {
         AlertDialog(
             onDismissRequest = { viewModel.onAction(CaptureAction.KeepDraft) },
-            title = { Text("Bỏ bản nháp?") },
-            text = { Text("Các ảnh chưa lưu sẽ bị xóa.") },
-            confirmButton = { TextButton(onClick = { viewModel.onAction(CaptureAction.DiscardDraft) }) { Text("Bỏ") } },
-            dismissButton = { TextButton(onClick = { viewModel.onAction(CaptureAction.KeepDraft) }) { Text("Tiếp tục chỉnh sửa") } },
+            title = { Text(stringResource(R.string.capture_discard_title)) },
+            text = { Text(stringResource(R.string.capture_discard_message)) },
+            confirmButton = { TextButton(onClick = { viewModel.onAction(CaptureAction.DiscardDraft) }) { Text(stringResource(R.string.capture_discard_confirm)) } },
+            dismissButton = { TextButton(onClick = { viewModel.onAction(CaptureAction.KeepDraft) }) { Text(stringResource(R.string.capture_continue_editing)) } },
         )
     }
 
@@ -230,10 +232,10 @@ fun CaptureScreen(
         AlertDialog(
             onDismissRequest = { viewModel.onAction(CaptureAction.DisableAutomaticLocation) },
             icon = { Icon(Icons.Filled.LocationOn, null, tint = MaterialTheme.colorScheme.primary) },
-            title = { Text("Tự động lưu vị trí ảnh?") },
-            text = { Text("BillLocket chỉ gắn vị trí hiện tại vào ảnh bạn chụp sau khi bạn đồng ý. Ảnh nhập từ thư viện không dùng vị trí hiện tại và bạn luôn có thể sửa hoặc xóa vị trí sau.") },
-            confirmButton = { Button(onClick = { viewModel.onAction(CaptureAction.EnableAutomaticLocation) }) { Text("Bật vị trí") } },
-            dismissButton = { TextButton(onClick = { viewModel.onAction(CaptureAction.DisableAutomaticLocation) }) { Text("Không, vẫn chụp") } },
+            title = { Text(stringResource(R.string.capture_location_consent_title)) },
+            text = { Text(stringResource(R.string.capture_location_consent_message)) },
+            confirmButton = { Button(onClick = { viewModel.onAction(CaptureAction.EnableAutomaticLocation) }) { Text(stringResource(R.string.capture_location_enable)) } },
+            dismissButton = { TextButton(onClick = { viewModel.onAction(CaptureAction.DisableAutomaticLocation) }) { Text(stringResource(R.string.capture_location_skip)) } },
         )
     }
 }
@@ -255,7 +257,7 @@ private fun CaptureTopBar(imageCount: Int, autoLocationEnabled: Boolean, onBack:
             contentColor = Color.White,
         ) {
             Text(
-                "Hủy",
+                stringResource(R.string.capture_cancel),
                 Modifier.padding(horizontal = 18.dp, vertical = 8.dp),
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.SemiBold,
@@ -277,7 +279,7 @@ private fun CaptureTopBar(imageCount: Int, autoLocationEnabled: Boolean, onBack:
                         horizontalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
                         Icon(Icons.Filled.LocationOn, null, Modifier.size(14.dp))
-                        Text("Vị trí bật", style = MaterialTheme.typography.labelSmall)
+                        Text(stringResource(R.string.capture_location_on), style = MaterialTheme.typography.labelSmall)
                     }
                 }
             }
@@ -330,7 +332,7 @@ private fun CameraStage(
                 Box(Modifier.align(Alignment.TopStart).padding(16.dp)) {
                     CameraAction(
                         icon = if (state.flashEnabled) Icons.Filled.FlashOn else Icons.Filled.FlashOff,
-                        description = "Đèn flash",
+                        description = stringResource(R.string.capture_flash_desc),
                         active = state.flashEnabled,
                     ) { onAction(CaptureAction.ToggleFlash) }
                 }
@@ -339,7 +341,7 @@ private fun CameraStage(
                 Box(Modifier.align(Alignment.TopEnd).padding(16.dp)) {
                     CameraAction(
                         icon = Icons.Filled.Cameraswitch,
-                        description = "Đổi camera",
+                        description = stringResource(R.string.capture_switch_camera_desc),
                     ) { onAction(CaptureAction.ToggleLens) }
                 }
             }
@@ -374,16 +376,16 @@ private fun CameraStage(
                     }
                 }
                 Spacer(Modifier.height(14.dp))
-                Text("Bật camera để chụp hóa đơn", style = MaterialTheme.typography.titleMedium, color = Color.White)
+                Text(stringResource(R.string.capture_permission_prompt), style = MaterialTheme.typography.titleMedium, color = Color.White)
                 Spacer(Modifier.height(4.dp))
-                Text("Bạn vẫn có thể chọn ảnh từ thư viện hoặc tiếp tục.", style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.6f))
+                Text(stringResource(R.string.capture_permission_sub), style = MaterialTheme.typography.bodySmall, color = Color.White.copy(alpha = 0.6f))
                 Spacer(Modifier.height(16.dp))
                 Button(
                     onClick = { onAction(CaptureAction.RequestCameraPermission) },
                     shape = RoundedCornerShape(16.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                 ) {
-                    Text(if (state.permission == CameraPermissionState.DENIED_PERMANENTLY) "Mở cài đặt" else "Cấp quyền camera", color = Color(0xFF1E1400), fontWeight = FontWeight.Bold)
+                    Text(if (state.permission == CameraPermissionState.DENIED_PERMANENTLY) stringResource(R.string.capture_open_settings) else stringResource(R.string.capture_grant_permission), color = Color(0xFF1E1400), fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -467,7 +469,7 @@ private fun CaptureBottomControls(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Icon(Icons.Filled.PhotoLibrary, null, Modifier.size(18.dp), tint = Color.White)
-                Text("Chọn ảnh", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, color = Color.White)
+                Text(stringResource(R.string.capture_pick_photos), style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, color = Color.White)
             }
         }
 
@@ -477,7 +479,7 @@ private fun CaptureBottomControls(
                 enabled = !state.isProcessing,
             ) {
                 Text(
-                    "Bỏ qua ảnh",
+                    stringResource(R.string.capture_skip_photos),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
                 )
@@ -496,7 +498,7 @@ private fun CaptureBottomControls(
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
                     Text(
-                        "Tiếp tục (${state.images.size})",
+                        stringResource(R.string.capture_continue_count, state.images.size),
                         style = MaterialTheme.typography.labelLarge,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF1E1400),
@@ -513,13 +515,13 @@ private fun LocketDraftStrip(images: List<DraftImage>, onRemove: (String) -> Uni
     LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 2.dp)) {
         itemsIndexed(images, key = { _, image -> image.id }) { index, image ->
             Box(Modifier.size(76.dp).clip(RoundedCornerShape(19.dp)).border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(19.dp))) {
-                AsyncImage(image.previewUri, "Ảnh giao dịch ${index + 1}", Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                AsyncImage(image.previewUri, stringResource(R.string.capture_photo_desc, index + 1), Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                 Surface(onClick = { onRemove(image.id) }, modifier = Modifier.align(Alignment.TopEnd).padding(3.dp), shape = CircleShape, color = Color.Black.copy(alpha = 0.7f), contentColor = Color.White) {
-                    Box(Modifier.size(24.dp), contentAlignment = Alignment.Center) { Icon(Icons.Filled.Close, "Xóa ảnh", Modifier.size(14.dp)) }
+                    Box(Modifier.size(24.dp), contentAlignment = Alignment.Center) { Icon(Icons.Filled.Close, stringResource(R.string.capture_delete_photo), Modifier.size(14.dp)) }
                 }
                 Row(Modifier.align(Alignment.BottomCenter).fillMaxWidth().background(Color.Black.copy(alpha = 0.58f)), horizontalArrangement = Arrangement.SpaceBetween) {
-                    IconButton(onClick = { onMove(index, index - 1) }, enabled = index > 0, modifier = Modifier.size(28.dp)) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, "Sang trái", Modifier.size(16.dp), tint = Color.White) }
-                    IconButton(onClick = { onMove(index, index + 1) }, enabled = index < images.lastIndex, modifier = Modifier.size(28.dp)) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Sang phải", Modifier.size(16.dp), tint = Color.White) }
+                    IconButton(onClick = { onMove(index, index - 1) }, enabled = index > 0, modifier = Modifier.size(28.dp)) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, stringResource(R.string.capture_move_left), Modifier.size(16.dp), tint = Color.White) }
+                    IconButton(onClick = { onMove(index, index + 1) }, enabled = index < images.lastIndex, modifier = Modifier.size(28.dp)) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, stringResource(R.string.capture_move_right), Modifier.size(16.dp), tint = Color.White) }
                 }
             }
         }

@@ -1,12 +1,6 @@
 <resources>
+    <!-- App & Navigation -->
     <string name="app_name">BillLocket</string>
-    <string name="widget_description">Ảnh giao dịch gần đây và lối tắt chụp hóa đơn</string>
-    <string name="widget_latest_transaction_name">Giao dịch gần nhất (2x1)</string>
-    <string name="widget_latest_transaction_desc">Ảnh và số tiền của giao dịch gần nhất cùng phím tắt chụp ảnh</string>
-    <string name="widget_today_recap_name">Tổng kết hôm nay (2x2)</string>
-    <string name="widget_today_recap_desc">Ảnh giao dịch và tổng chi tiêu trong ngày hôm nay</string>
-    <string name="widget_weekly_recap_name">Tổng quan tuần (4x2)</string>
-    <string name="widget_weekly_recap_desc">Tổng quan chi tiêu, phân loại danh mục và ảnh giao dịch tuần này</string>
     <string name="setting">Cài đặt</string>
     <string name="nav_home">Trang chủ</string>
     <string name="nav_statistics">Thống kê</string>
@@ -14,6 +8,8 @@
     <string name="nav_map">Bản đồ</string>
     <string name="nav_accounts">Tài khoản</string>
     <string name="nav_more">Thêm</string>
+
+    <!-- Destinations -->
     <string name="destination_day">Giao dịch trong ngày</string>
     <string name="destination_capture">Ghi lại giao dịch</string>
     <string name="destination_transaction_editor">Nhập giao dịch</string>
@@ -32,7 +28,536 @@
     <string name="destination_backup_settings">Sao lưu và khôi phục</string>
     <string name="destination_not_found">Không tìm thấy nội dung</string>
     <string name="destination_not_found_message">Nội dung này không tồn tại hoặc không còn khả dụng.</string>
+
+    <!-- Actions -->
     <string name="action_back">Quay lại</string>
+    <string name="action_close">Đóng</string>
+    <string name="action_cancel">Hủy</string>
+    <string name="action_save">Lưu</string>
+    <string name="action_delete">Xóa</string>
+    <string name="action_edit">Chỉnh sửa</string>
+    <string name="action_create">Tạo</string>
+    <string name="action_confirm">Xác nhận</string>
     <string name="action_go_home">Về trang chủ</string>
     <string name="action_search_transactions">Tìm giao dịch</string>
+    <string name="action_undo">Hoàn tác</string>
+
+    <!-- Home -->
+    <string name="home_badge">NHẬT KÝ CHI TIÊU HÌNH ẢNH</string>
+    <string name="home_tagline">Nhật ký chi tiêu qua hình ảnh</string>
+    <string name="home_search">Tìm giao dịch</string>
+    <string name="home_month_expense_total">TỔNG CHI THÁNG NÀY</string>
+    <string name="home_total_spent">Tổng đã chi</string>
+    <string name="home_hide_amount">Ẩn số tiền</string>
+    <string name="home_show_amount">Hiện số tiền</string>
+    <string name="home_income">Thu</string>
+    <string name="home_expense">Chi</string>
+    <string name="home_filter_all">Tất cả</string>
+    <string name="home_today">Hôm nay</string>
+    <string name="home_previous_month">Tháng trước</string>
+    <string name="home_next_month">Tháng sau</string>
+    <string name="home_day_photo_desc">Ảnh giao dịch ngày %1$d</string>
+    <string name="home_transactions_header">Giao dịch</string>
+    <string name="home_memories">Kỷ niệm</string>
+    <string name="home_view_all">Xem tất cả</string>
+    <string name="home_create_transaction">Tạo giao dịch</string>
+    <string name="home_create_for_selected_day">Tạo giao dịch cho ngày đã chọn</string>
+    <string name="home_future_day">Ngày trong tương lai</string>
+    <string name="home_no_transactions_for_day">Ngày này chưa có giao dịch</string>
+    <string name="home_future_day_hint">Không thể thêm giao dịch cho ngày tương lai</string>
+    <string name="home_tap_to_record_hint">Chạm để lưu một khoảnh khắc chi tiêu</string>
+    <string name="home_photo_memory">Ảnh kỷ niệm</string>
+    <string name="home_close">Đóng</string>
+    <string name="home_tap_photo_for_details">Chạm vào ảnh để xem chi tiết →</string>
+    <string name="home_no_photos_attached">Ngày này không có ảnh đính kèm</string>
+    <string name="home_month_summary_title">Tổng trong tháng</string>
+    <string name="home_recap_banner_title">TỔNG KẾT THÁNG %1$d</string>
+    <string name="home_recap_banner_photos_count">Nhìn lại %1$d khoảnh khắc và câu chuyện chi tiêu của bạn</string>
+    <string name="home_recap_banner_no_photos">Nhìn lại câu chuyện chi tiêu của bạn</string>
+    <string name="home_recap_banner_interim">Tạm tính đến hôm nay</string>
+    <string name="home_recap_banner_full">Xem lại trọn vẹn tháng</string>
+    <string name="home_recap_banner_action">Xem tổng kết</string>
+    <string name="home_empty_title">Chưa có giao dịch</string>
+    <string name="home_empty_message">Chạm vào nút chụp ảnh để ghi lại giao dịch đầu tiên.</string>
+
+    <!-- Capture -->
+    <string name="capture_title">Ghi lại giao dịch</string>
+    <string name="capture_permission_camera">Cần cấp quyền máy ảnh để chụp hóa đơn</string>
+    <string name="capture_open_settings">Mở cài đặt</string>
+    <string name="capture_cancel">Hủy</string>
+    <string name="capture_location_on">Vị trí bật</string>
+    <string name="capture_discard_title">Bỏ bản nháp?</string>
+    <string name="capture_discard_message">Các ảnh chưa lưu sẽ bị xóa.</string>
+    <string name="capture_discard_confirm">Bỏ</string>
+    <string name="capture_continue_editing">Tiếp tục chỉnh sửa</string>
+    <string name="capture_location_consent_title">Tự động lưu vị trí ảnh?</string>
+    <string name="capture_location_consent_message">BillLocket chỉ gắn vị trí hiện tại vào ảnh bạn chụp sau khi bạn đồng ý. Ảnh nhập từ thư viện không dùng vị trí hiện tại và bạn luôn có thể sửa hoặc xóa vị trí sau.</string>
+    <string name="capture_location_enable">Bật vị trí</string>
+    <string name="capture_location_skip">Không, vẫn chụp</string>
+    <string name="capture_flash_desc">Đèn flash</string>
+    <string name="capture_flash_toggle_desc">Bật hoặc tắt đèn flash</string>
+    <string name="capture_switch_camera_desc">Đổi camera</string>
+    <string name="capture_permission_prompt">Bật camera để chụp hóa đơn</string>
+    <string name="capture_permission_sub">Bạn vẫn có thể chọn ảnh từ thư viện hoặc tiếp tục.</string>
+    <string name="capture_permission_fallback_msg">Bạn có thể cấp quyền camera, chọn ảnh hoặc tiếp tục không có ảnh.</string>
+    <string name="capture_grant_permission">Cấp quyền camera</string>
+    <string name="capture_pick_photos">Chọn ảnh</string>
+    <string name="capture_take_photo">Chụp ảnh</string>
+    <string name="capture_skip_photos">Bỏ qua ảnh</string>
+    <string name="capture_no_photos">Không dùng ảnh</string>
+    <string name="capture_continue">Tiếp tục</string>
+    <string name="capture_continue_count">Tiếp tục (%1$d)</string>
+    <string name="capture_photo_desc">Ảnh giao dịch %1$d</string>
+    <string name="capture_delete_photo">Xóa ảnh</string>
+    <string name="capture_move_left">Sang trái</string>
+    <string name="capture_move_right">Sang phải</string>
+    <string name="capture_has_location_hint">Có gợi ý vị trí</string>
+
+    <!-- Transaction Editor -->
+    <string name="editor_title_new">Nhập giao dịch</string>
+    <string name="editor_title_edit">Chỉnh sửa giao dịch</string>
+    <string name="editor_discard_title">Bỏ thay đổi?</string>
+    <string name="editor_discard_message">Các thay đổi chưa lưu sẽ không được áp dụng.</string>
+    <string name="editor_discard_confirm">Bỏ thay đổi</string>
+    <string name="editor_continue_editing">Tiếp tục chỉnh sửa</string>
+    <string name="editor_type_expense">Chi tiêu</string>
+    <string name="editor_type_income">Thu nhập</string>
+    <string name="editor_save_transaction">Lưu giao dịch</string>
+    <string name="editor_update_transaction">Cập nhật giao dịch</string>
+    <string name="editor_saving">Đang lưu…</string>
+    <string name="editor_add_photo">Thêm ảnh</string>
+    <string name="editor_missing_image">Ảnh bị thiếu</string>
+    <string name="editor_location_view">Xem vị trí</string>
+    <string name="editor_location_add">Gắn vị trí</string>
+    <string name="editor_relative_today">Hôm nay</string>
+    <string name="editor_relative_yesterday">Hôm qua</string>
+    <string name="editor_time_label">Giờ</string>
+    <string name="editor_photos_label">Hình ảnh</string>
+    <string name="editor_error_amount">Số tiền phải lớn hơn 0</string>
+    <string name="editor_error_account">Hãy chọn tài khoản</string>
+    <string name="editor_error_category">Hãy chọn danh mục phù hợp</string>
+    <string name="editor_error_date">Ngày giờ không hợp lệ</string>
+    <string name="editor_error_future_date">Ngày giao dịch không thể lớn hơn hôm nay.</string>
+    <string name="editor_error_missing_images">Hãy xóa ảnh bị thiếu trước khi lưu</string>
+    <string name="editor_error_save_failed">Không thể lưu giao dịch. Vui lòng thử lại.</string>
+
+    <!-- Transaction Detail -->
+    <string name="detail_title">Chi tiết giao dịch</string>
+    <string name="detail_delete_title">Xóa giao dịch?</string>
+    <string name="detail_delete_message">Giao dịch này và các ảnh liên quan sẽ bị xóa vĩnh viễn.</string>
+    <string name="detail_delete_confirm">Xóa</string>
+    <string name="detail_delete_cancel">Hủy</string>
+    <string name="detail_field_category">Danh mục</string>
+    <string name="detail_field_account">Tài khoản</string>
+    <string name="detail_field_time">Thời gian</string>
+    <string name="detail_field_note">Ghi chú</string>
+    <string name="detail_field_location">Vị trí</string>
+    <string name="detail_photos_count">Ảnh (%1$d)</string>
+    <string name="detail_no_note">Không có ghi chú</string>
+    <string name="tx_detail_photo_unavailable">Ảnh không còn khả dụng</string>
+    <string name="tx_detail_photo_cd">Ảnh giao dịch</string>
+
+    <!-- Transaction Common -->
+    <string name="transaction_expense">Chi tiêu</string>
+    <string name="transaction_income">Thu nhập</string>
+    <string name="transaction_note_hint">Ghi chú (tùy chọn)</string>
+    <string name="transaction_amount_label">Số tiền</string>
+    <string name="transaction_category_label">Danh mục</string>
+    <string name="transaction_account_label">Tài khoản</string>
+    <string name="transaction_date_label">Ngày</string>
+    <string name="transaction_saved">Đã lưu giao dịch</string>
+    <string name="transaction_deleted">Đã xóa giao dịch</string>
+
+    <!-- Transaction Search -->
+    <string name="search_title">Tìm kiếm giao dịch</string>
+    <string name="search_hint">Tìm theo ghi chú, danh mục, tài khoản…</string>
+    <string name="search_filter_all">Tất cả</string>
+    <string name="search_filter_expense">Chi</string>
+    <string name="search_filter_income">Thu</string>
+    <string name="search_no_results">Không tìm thấy giao dịch nào</string>
+    <string name="search_no_results_hint">Thử tìm kiếm với từ khóa khác</string>
+    <string name="search_results_count">%1$d kết quả</string>
+
+    <!-- More -->
+    <string name="more_title">Của bạn</string>
+    <string name="more_subtitle">Quản lý tiền theo cách riêng</string>
+    <string name="more_tagline">Tài chính của bạn, lưu bằng ảnh</string>
+    <string name="more_section_manage">Quản lý</string>
+    <string name="more_section_manage_settings">Quản lý &amp; Cài đặt</string>
+    <string name="more_accounts_title">Tài khoản</string>
+    <string name="more_accounts_subtitle">Số dư và thứ tự tài khoản</string>
+    <string name="more_categories_title">Danh mục</string>
+    <string name="more_categories_subtitle">Danh mục thu và chi</string>
+    <string name="more_transfers_title">Chuyển tiền</string>
+    <string name="more_transfers_subtitle">Lịch sử chuyển giữa tài khoản</string>
+    <string name="more_budgets_title">Ngân sách</string>
+    <string name="more_budgets_subtitle">Hạn mức chi theo tháng</string>
+    <string name="more_settings_title">Cài đặt</string>
+    <string name="more_settings_subtitle">Giao diện, quyền riêng tư và dữ liệu</string>
+
+    <!-- Accounts -->
+    <string name="accounts_title">Tài khoản</string>
+    <string name="accounts_subtitle">Quản lý số dư và các tài khoản của bạn</string>
+    <string name="accounts_options">Tùy chọn</string>
+    <string name="accounts_create">Thêm tài khoản</string>
+    <string name="accounts_total_balance">Tổng số dư</string>
+    <string name="accounts_active_count">%1$d tài khoản đang hoạt động</string>
+    <string name="accounts_your_accounts">Tài khoản của bạn (%1$d)</string>
+    <string name="accounts_reorder_done">Xong</string>
+    <string name="accounts_reorder_action">Sắp xếp</string>
+    <string name="accounts_empty_title">Chưa có tài khoản</string>
+    <string name="accounts_empty_message">Tạo tài khoản để theo dõi tiền mặt, ngân hàng hoặc ví.</string>
+    <string name="accounts_archived_count">Đã lưu trữ (%1$d)</string>
+    <string name="accounts_move_up">Đưa lên</string>
+    <string name="accounts_move_down">Đưa xuống</string>
+    <string name="accounts_archive">Lưu trữ</string>
+    <string name="accounts_archive_dialog_title">Lưu trữ tài khoản?</string>
+    <string name="accounts_archive_dialog_message">%1$s sẽ bị ẩn khỏi giao dịch mới nhưng lịch sử và số liệu cũ vẫn được giữ nguyên.</string>
+    <string name="accounts_edit_title_new">Thêm tài khoản</string>
+    <string name="accounts_edit_title_edit">Sửa tài khoản</string>
+    <string name="accounts_field_name">Tên tài khoản</string>
+    <string name="accounts_field_type">Loại tài khoản</string>
+    <string name="accounts_field_balance">Số dư ban đầu</string>
+    <string name="accounts_type_cash">Tiền mặt</string>
+    <string name="accounts_type_bank">Ngân hàng</string>
+    <string name="accounts_type_ewallet">Ví điện tử</string>
+    <string name="account_detail_current_balance">Số dư hiện tại</string>
+    <string name="account_detail_edit">Chỉnh sửa tài khoản</string>
+    <string name="account_detail_archived">Đã lưu trữ</string>
+
+    <!-- Categories -->
+    <string name="categories_title">Danh mục</string>
+    <string name="categories_create">Thêm danh mục</string>
+    <string name="categories_empty_title">Chưa có danh mục</string>
+    <string name="categories_empty_message">Tạo danh mục để phân loại giao dịch.</string>
+    <string name="categories_default_badge">Mặc định</string>
+    <string name="categories_custom_badge">Tùy chỉnh</string>
+    <string name="categories_archived_count">Đã lưu trữ (%1$d)</string>
+    <string name="categories_archived_hidden">Đã ẩn</string>
+    <string name="categories_archive_dialog_title">Lưu trữ danh mục?</string>
+    <string name="categories_archive_dialog_message">%1$s sẽ bị ẩn khỏi giao dịch mới nhưng lịch sử và số liệu cũ vẫn được giữ nguyên.</string>
+    <string name="categories_edit_title_new">Thêm danh mục</string>
+    <string name="categories_edit_title_edit">Sửa danh mục</string>
+    <string name="categories_field_name">Tên danh mục</string>
+    <string name="categories_field_color">Màu sắc</string>
+    <string name="categories_field_icon">Biểu tượng</string>
+
+    <!-- Transfers -->
+    <string name="transfers_title">Chuyển tiền</string>
+    <string name="transfers_create">Thêm chuyển tiền</string>
+    <string name="transfers_empty_title">Chưa có chuyển tiền</string>
+    <string name="transfers_empty_message">Chuyển tiền giữa hai tài khoản mà không làm thay đổi thu chi.</string>
+    <string name="transfers_edit_title_new">Thêm chuyển tiền</string>
+    <string name="transfers_edit_title_edit">Sửa chuyển tiền</string>
+    <string name="transfers_from_account">Từ tài khoản</string>
+    <string name="transfers_to_account">Đến tài khoản</string>
+    <string name="transfers_save_button">Lưu chuyển tiền</string>
+
+    <!-- Budgets -->
+    <string name="budgets_title">Ngân sách</string>
+    <string name="budgets_add">Thêm ngân sách</string>
+    <string name="budgets_create">Tạo ngân sách</string>
+    <string name="budgets_empty_title">Chưa có ngân sách</string>
+    <string name="budgets_empty_message">Tạo ngân sách để theo dõi chi tiêu trong tháng.</string>
+    <string name="budgets_empty_hint_1">Theo dõi ngân sách vẫn hoạt động khi không có giao dịch.</string>
+    <string name="budgets_empty_hint_2">Đặt hạn mức chi tiêu để kiểm soát tài chính tốt hơn.</string>
+    <string name="budgets_notifications_off">Thông báo chưa được bật.</string>
+    <string name="budgets_enable_warning">Bật cảnh báo ngưỡng</string>
+    <string name="budgets_total_expense">Tổng chi</string>
+    <string name="budgets_delete_title">Xóa ngân sách</string>
+    <string name="budgets_spent_ratio">%1$d%% đã dùng</string>
+    <string name="budgets_warning_at">Cảnh báo ở %1$d%%</string>
+    <string name="budgets_edit_title_new">Thêm ngân sách</string>
+    <string name="budgets_edit_title_edit">Sửa ngân sách</string>
+    <string name="budgets_field_scope">Phạm vi</string>
+    <string name="budgets_field_limit">Hạn mức</string>
+    <string name="budgets_field_limit_hint">Nhập số tiền hạn mức (chỉ nhập số)</string>
+    <string name="budgets_field_warning_percent">Cảnh báo (%)</string>
+    <string name="budgets_field_warning_hint">Nhận thông báo khi chi tiêu đạt đến mức này.</string>
+
+    <!-- Insights -->
+    <string name="insights_tab_day">Ngày</string>
+    <string name="insights_tab_week">Tuần</string>
+    <string name="insights_tab_month">Tháng</string>
+    <string name="insights_tab_year">Năm</string>
+    <string name="insights_spending_trends">Xu hướng chi tiêu</string>
+    <string name="insights_spending_by_category">Chi theo danh mục</string>
+    <string name="insights_filter_all_accounts">Tất cả tài khoản</string>
+    <string name="insights_no_trend_data">Chưa có dữ liệu xu hướng</string>
+    <string name="insights_no_transactions">Không có giao dịch</string>
+    <string name="insights_recent_transactions">Giao dịch gần đây</string>
+    <string name="insights_view_all">Xem tất cả</string>
+    <string name="insights_no_transactions_period">Không có giao dịch nào trong kỳ này.</string>
+    <string name="insights_compare_increase">So với kỳ trước, chi tiêu tăng %1$s.</string>
+    <string name="insights_compare_decrease">So với kỳ trước, chi tiêu giảm %1$s.</string>
+    <string name="insights_compare_unchanged">So với kỳ trước, chi tiêu không đổi.</string>
+    <string name="insights_compare_no_data">Chưa có dữ liệu kỳ trước để so sánh.</string>
+
+    <!-- Map -->
+    <string name="map_title">Bản đồ giao dịch</string>
+    <string name="map_no_location">Chưa có giao dịch có vị trí</string>
+    <string name="map_theme_dark">Tối</string>
+    <string name="map_theme_light">Sáng</string>
+    <string name="map_theme_system">Theo hệ thống</string>
+    <string name="map_photos_count">%1$d ảnh giao dịch</string>
+    <string name="map_current_location">Vị trí hiện tại</string>
+    <string name="map_showing_nearby">Đang hiển thị quanh đây</string>
+    <string name="map_tap_to_locate">Nhấn để định vị</string>
+    <string name="map_locate_current">Định vị hiện tại</string>
+    <string name="map_style_selector">Kiểu bản đồ</string>
+    <string name="map_selected_location">Vị trí đã chọn</string>
+    <string name="map_load_failed">Không tải được bản đồ</string>
+    <string name="map_retry">Thử lại</string>
+    <string name="map_empty_title">Chưa có ảnh trên bản đồ</string>
+    <string name="map_empty_message">Các ảnh giao dịch có vị trí đã xác nhận sẽ xuất hiện tại đây.</string>
+    <string name="map_all">Tất cả</string>
+    <string name="map_all_categories">Mọi danh mục</string>
+    <string name="map_details">Chi tiết</string>
+    <string name="map_resolving_address">Đang xác định địa chỉ…</string>
+    <string name="map_open_transaction">Mở giao dịch</string>
+    <string name="map_calendar">Lịch</string>
+
+    <!-- Monthly Recap -->
+    <string name="recap_title">Tổng kết tháng</string>
+    <string name="recap_total_spent">Tổng chi tiêu</string>
+    <string name="recap_top_categories">Danh mục chi tiêu nhiều nhất</string>
+    <string name="recap_memories_title">Kỷ niệm chi tiêu của bạn</string>
+    <string name="recap_memories_subtitle">Mỗi bức ảnh lưu lại một câu chuyện và bài học chi tiêu ý nghĩa.</string>
+    <string name="recap_moments_count">khoảnh khắc</string>
+    <string name="recap_transactions_count">giao dịch</string>
+    <string name="recap_moments_recorded">Bạn đã ghi lại %1$d khoảnh khắc chi tiêu trong tháng.</string>
+    <string name="recap_no_transactions">Chưa có giao dịch nào được ghi lại trong tháng này.</string>
+    <string name="recap_month_title">THÁNG %1$d CỦA BẠN</string>
+    <string name="recap_remaining">Còn lại</string>
+    <string name="recap_daily_spending">Chi tiêu theo ngày</string>
+    <string name="recap_most_active_day">Ngày chi nhiều nhất</string>
+    <string name="recap_most_active_day_format">%1$d tháng %2$d (%3$d GD)</string>
+    <string name="recap_top_categories_header">Bạn dành nhiều nhất cho...</string>
+    <string name="recap_category_spent_format">%1$s • %2$d%% tổng chi</string>
+    <string name="recap_no_category_data">Chưa có dữ liệu danh mục chi tiêu trong tháng.</string>
+    <string name="recap_perspective_title">GÓC NHÌN CỦA BILLLOCKET</string>
+    <string name="recap_perspective_ratio">Cứ 10 đồng bạn chi trong tháng này, khoảng %1$s đồng dành cho %2$s.</string>
+    <string name="recap_perspective_keep_recording">Hãy tiếp tục duy trì ghi chép để nhận các góc nhìn chi tiêu thông minh.</string>
+    <string name="recap_places_title">Những nơi bạn đã đi qua</string>
+    <string name="recap_places_subtitle">Mỗi địa điểm là một câu chuyện, mỗi lần quay lại là một kỷ niệm đẹp.</string>
+    <string name="recap_no_places_title">Chưa có địa điểm đã xác nhận</string>
+    <string name="recap_no_places_subtitle">Các ảnh giao dịch có vị trí đã xác nhận sẽ xuất hiện tại đây khi bạn lưu vị trí cho ảnh.</string>
+    <string name="recap_saved_location">Vị trí đã lưu</string>
+    <string name="recap_saved_locations_monthly">Vị trí đã lưu trong tháng</string>
+    <string name="recap_place_occurred">Nơi xuất hiện trong tháng này</string>
+    <string name="recap_place_moments_count">%1$d khoảnh khắc</string>
+    <string name="recap_photos_overview_title">Tháng %1$d qua những bức ảnh</string>
+    <string name="recap_photos_overview_subtitle">%1$d ảnh • %2$d giao dịch</string>
+    <string name="recap_no_photos_title">Tháng này chưa có ảnh giao dịch</string>
+    <string name="recap_no_photos_subtitle">Hãy chụp ảnh hóa đơn hoặc khoảnh khắc chi tiêu để lưu lại kỷ niệm vào tháng sau nhé!</string>
+    <string name="recap_view_calendar">Xem lại trên lịch -></string>
+    <string name="recap_preview_share_title">Xem trước &amp; chia sẻ</string>
+    <string name="recap_preview_share_subtitle">Tùy chỉnh thông tin hiển thị trong ảnh tổng kết trước khi chia sẻ.</string>
+    <string name="recap_review_month_header">Nhìn lại tháng %1$d/%2$d</string>
+    <string name="recap_spent_amount">Đã chi: %1$s</string>
+    <string name="recap_amount_hidden">Đã ẩn số tiền</string>
+    <string name="recap_tagline_private">Kỷ niệm chi tiêu, chỉ thuộc về bạn</string>
+    <string name="recap_toggle_amount">Hiện tổng chi &amp; số tiền</string>
+    <string name="recap_toggle_notes">Hiện ghi chú giao dịch</string>
+    <string name="recap_toggle_locations">Hiện địa điểm đã lưu</string>
+    <string name="recap_generating_image">Đang tạo ảnh...</string>
+    <string name="recap_generate_and_share">Tạo ảnh &amp; Chia sẻ</string>
+    <string name="recap_compiling_story">Đang tổng hợp câu chuyện tháng...</string>
+    <string name="recap_retry">Thử lại</string>
+    <string name="recap_start_viewing">Bắt đầu xem</string>
+    <string name="recap_next">Tiếp theo</string>
+    <string name="recap_continue">Tiếp tục</string>
+    <string name="recap_continue_viewing">Tiếp tục xem</string>
+    <string name="recap_cover_title">THÁNG %1$d / %2$d</string>
+    <string name="recap_cover_subtitle">Một tháng\ncủa bạn</string>
+    <string name="recap_spent_amount_label">Đã chi</string>
+    <string name="recap_income_amount_label">Đã thu %1$s</string>
+    <string name="recap_most_label">Nhiều nhất: %1$s</string>
+    <string name="recap_cannot_read_photo">Không đọc được ảnh</string>
+
+    <!-- Photo Location -->
+    <string name="image_location_title">Vị trí ảnh</string>
+    <string name="image_location_exif_hint">Dùng gợi ý EXIF: %1$f, %2$f</string>
+    <string name="image_location_latitude">Vĩ độ</string>
+    <string name="image_location_longitude">Kinh độ</string>
+    <string name="image_location_place_name">Tên địa điểm (không bắt buộc)</string>
+    <string name="image_location_current">Hiện tại</string>
+    <string name="image_location_remove">Xóa vị trí</string>
+    <string name="image_location_confirm">Xác nhận</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Cài đặt</string>
+    <string name="settings_personalization">Cá nhân hóa</string>
+    <string name="settings_personalization_sub">Giao diện, riêng tư và dữ liệu</string>
+    <string name="settings_appearance">Giao diện</string>
+    <string name="settings_language">Ngôn ngữ</string>
+    <string name="settings_language_system">Hệ thống</string>
+    <string name="settings_language_vietnamese">Tiếng Việt</string>
+    <string name="settings_language_english">English</string>
+    <string name="settings_theme_system">Hệ thống</string>
+    <string name="settings_theme_light">Sáng</string>
+    <string name="settings_theme_dark">Tối</string>
+    <string name="settings_amount_visibility">Hiển thị số tiền</string>
+    <string name="settings_amount_show">Hiện</string>
+    <string name="settings_amount_hide">Ẩn</string>
+    <string name="settings_amount_obscure">Che</string>
+    <string name="settings_currency_format">Tiền tệ: %1$s</string>
+    <string name="settings_permissions">Quyền ứng dụng</string>
+    <string name="settings_permission_camera">Máy ảnh</string>
+    <string name="settings_permission_location">Vị trí</string>
+    <string name="settings_permission_notifications">Thông báo</string>
+    <string name="settings_permission_granted">Đã cấp</string>
+    <string name="settings_permission_on_demand">Chỉ được hỏi khi bạn dùng tính năng</string>
+    <string name="settings_photo_picker_hint">Ảnh dùng Photo Picker nên BillLocket không cần đọc toàn bộ thư viện.</string>
+    <string name="settings_open_system_settings">Mở cài đặt quyền hệ thống</string>
+    <string name="settings_widget">Widget</string>
+    <string name="settings_widget_sub">Ảnh, quyền riêng tư và thao tác khi chạm</string>
+    <string name="settings_storage_backup">Lưu trữ và sao lưu</string>
+    <string name="settings_storage_backup_sub">Dung lượng, xuất và khôi phục dữ liệu</string>
+    <string name="settings_storage_cleanup_button">Dọn tệp mồ côi an toàn</string>
+    <string name="settings_storage_export_full">Xuất đầy đủ</string>
+    <string name="settings_storage_export_private">Xuất riêng tư (không ảnh/vị trí)</string>
+    <string name="settings_storage_restore_file">Khôi phục từ tệp</string>
+    <string name="settings_storage_replace_dialog_title">Thay thế toàn bộ dữ liệu?</string>
+    <string name="settings_storage_replace_dialog_message">Bản sao có %1$d giao dịch và %2$d ảnh. Dữ liệu BillLocket hiện tại sẽ bị thay thế.</string>
+    <string name="settings_storage_sensitive_dialog_title">Dữ liệu nhạy cảm</string>
+    <string name="settings_storage_sensitive_dialog_message">Tệp xuất có thể chứa ảnh hóa đơn, số tiền và vị trí. Chỉ lưu ở nơi bạn tin cậy.</string>
+    <string name="settings_storage_choose_location">Chọn nơi lưu</string>
+    <string name="settings_storage_restore_confirm">Khôi phục</string>
+    <string name="settings_storage_usage_format">Ảnh gốc: %1$s\nTạm thời / khôi phục: %2$s\nBộ nhớ đệm: %3$s</string>
+
+    <!-- Widget Settings -->
+    <string name="widget_settings_title">Widget</string>
+    <string name="widget_settings_privacy">Quyền riêng tư</string>
+    <string name="widget_settings_show_amount">Hiển thị số tiền</string>
+    <string name="widget_settings_show_amount_sub">Tắt để ẩn số tiền trên màn hình chính</string>
+    <string name="widget_settings_show_category">Hiển thị danh mục</string>
+    <string name="widget_settings_show_category_sub">Có thể ẩn hoàn toàn thông tin phân loại</string>
+    <string name="widget_settings_on_tap">Khi chạm vào ảnh</string>
+    <string name="widget_settings_open_detail">Mở chi tiết giao dịch</string>
+    <string name="widget_settings_open_capture">Chụp nhanh hóa đơn</string>
+    <string name="widget_settings_note">Nút ＋ trên widget luôn mở chụp nhanh. Nếu ảnh đã bị xóa hoặc không đọc được, widget tự chuyển sang ảnh hợp lệ khác.</string>
+
+    <!-- Widgets -->
+    <string name="widget_description">Ảnh giao dịch gần đây và lối tắt chụp hóa đơn</string>
+    <string name="widget_latest_transaction_name">Giao dịch gần nhất (2x1)</string>
+    <string name="widget_latest_transaction_desc">Ảnh và số tiền của giao dịch gần nhất cùng phím tắt chụp ảnh</string>
+    <string name="widget_today_recap_name">Tổng kết hôm nay (2x2)</string>
+    <string name="widget_today_recap_desc">Ảnh giao dịch và tổng chi tiêu trong ngày hôm nay</string>
+    <string name="widget_weekly_recap_name">Tổng quan tuần (4x2)</string>
+    <string name="widget_weekly_recap_desc">Tổng quan chi tiêu, phân loại danh mục và ảnh giao dịch tuần này</string>
+    <string name="widget_relative_today">Hôm nay</string>
+    <string name="widget_relative_yesterday">Hôm qua</string>
+    <string name="widget_no_transactions">Chưa có giao dịch</string>
+    <string name="widget_latest_photo_desc">Ảnh giao dịch gần nhất</string>
+    <string name="widget_no_photo">Chưa có ảnh</string>
+    <string name="widget_latest_title">Giao dịch gần nhất</string>
+    <string name="widget_add_new">Thêm giao dịch mới</string>
+    <string name="widget_today_no_transactions">Hôm nay chưa có giao dịch</string>
+    <string name="widget_today_photo_desc">Ảnh giao dịch hôm nay</string>
+    <string name="widget_calendar_today_desc">Lịch hôm nay</string>
+    <string name="widget_today_title">Hôm nay</string>
+    <string name="widget_today_transactions_count">%1$d giao dịch</string>
+    <string name="widget_today_spent">Đã chi</string>
+    <string name="widget_weekly_title">Tổng quan tuần</string>
+    <string name="widget_this_week">Tuần này</string>
+    <string name="widget_weekly_top_category">%1$s nhiều nhất • %2$d%%</string>
+    <string name="widget_weekly_no_spending">Chưa có chi tiêu tuần này</string>
+    <string name="widget_weekly_no_photos">Chưa có ảnh tuần này</string>
+    <string name="widget_weekly_photo_desc">Ảnh giao dịch tuần này</string>
+
+    <!-- Notifications -->
+    <string name="notification_budget_channel">Cảnh báo ngân sách</string>
+    <string name="notification_budget_channel_desc">Thông báo khi chi tiêu chạm ngưỡng ngân sách</string>
+    <string name="notification_budget_warning_title">Cảnh báo ngân sách</string>
+    <string name="notification_budget_exceeded">Bạn đã dùng hết ngân sách tháng.</string>
+    <string name="notification_budget_used_format">Bạn đã dùng %1$d%% ngân sách tháng.</string>
+
+    <!-- BL-045 Corrective Strings -->
+    <!-- Storage messages -->
+    <string name="settings_storage_msg_currency_blocked">Không thể đổi tiền tệ khi đã có dữ liệu tài chính</string>
+    <string name="settings_storage_msg_measure_failed">Không đọc được dung lượng</string>
+    <string name="settings_storage_msg_cleanup_succeeded">Đã dọn %1$d tệp không còn dùng</string>
+    <string name="settings_storage_msg_cleanup_failed">Không thể dọn lưu trữ</string>
+    <string name="settings_storage_msg_export_succeeded">Đã xuất bản sao lưu</string>
+    <string name="settings_storage_msg_export_failed">Xuất bản sao lưu thất bại</string>
+    <string name="settings_storage_msg_invalid_backup">Tệp sao lưu không hợp lệ</string>
+    <string name="settings_storage_msg_restore_succeeded">Khôi phục thành công</string>
+    <string name="settings_storage_msg_restore_failed">Khôi phục thất bại; dữ liệu cũ được giữ nguyên</string>
+
+    <!-- Map Feature -->
+    <string name="map_showing_around_here">Đang hiển thị quanh đây</string>
+    <string name="map_recenter_cd">Định vị hiện tại</string>
+    <string name="map_style_cd">Kiểu bản đồ</string>
+    <string name="map_selected_point_title">Vị trí đã chọn</string>
+    <string name="map_calendar_cd">Lịch</string>
+    <string name="map_detail_cd">Chi tiết</string>
+    <string name="map_error_load_photos">Không thể tải ảnh có vị trí</string>
+    <string name="map_error_current_location">Không lấy được vị trí hiện tại</string>
+
+    <!-- Insights & Budgets -->
+    <string name="insights_net">Ròng</string>
+    <string name="insights_comparison_format">%1$d%% so với kỳ trước</string>
+    <string name="insights_period_week">Tuần</string>
+    <string name="insights_period_month">Tháng</string>
+    <string name="insights_period_year">Năm</string>
+    <string name="insights_delta_increased">So với kỳ trước, chi tiêu tăng %1$s.</string>
+    <string name="insights_delta_decreased">So với kỳ trước, chi tiêu giảm %1$s.</string>
+    <string name="insights_delta_unchanged">So với kỳ trước, chi tiêu không đổi.</string>
+    <string name="budgets_scope_all_expense">Tổng chi</string>
+    <string name="budgets_spent_out_of">%1$s đã dùng %2$s trên %3$s</string>
+    <string name="budgets_ratio_used">%1$d%% đã dùng</string>
+    <string name="budgets_edit_title">Sửa ngân sách</string>
+    <string name="budgets_limit_hint">Nhập số tiền hạn mức (chỉ nhập số)</string>
+    <string name="budgets_field_warning">Cảnh báo (%)</string>
+    <string name="action_clear">Xóa</string>
+
+    <!-- Accounts -->
+    <string name="accounts_toggle_balance_cd">Ẩn/hiện số dư</string>
+    <string name="accounts_tab_this_month">Tháng này</string>
+    <string name="accounts_tab_this_year">Năm nay</string>
+    <string name="accounts_tab_all">Tất cả</string>
+
+    <!-- Location Feature Errors -->
+    <string name="location_error_no_image_in_draft">Không tìm thấy ảnh trong bản nháp</string>
+    <string name="location_error_current_location_fallback">Không lấy được vị trí hiện tại; bạn vẫn có thể chọn trên bản đồ</string>
+    <string name="location_error_select_location">Hãy chọn một vị trí</string>
+
+    <!-- Recap Errors -->
+    <string name="recap_error_load_failed">Không thể tải tổng kết tháng</string>
+    <string name="recap_error_export_failed">Không thể tạo ảnh tổng kết</string>
+
+    <!-- Transaction Errors -->
+    <string name="tx_detail_error_delete_failed">Không thể xóa giao dịch</string>
+    <string name="search_error_load_failed">Không thể tải giao dịch</string>
+
+    <!-- Home Errors -->
+    <string name="home_error_load_calendar">Không thể tải lịch</string>
+    <string name="home_error_future_date">Không thể thêm giao dịch cho ngày tương lai.</string>
+    <string name="home_error_load_day_tx">Không thể tải giao dịch trong ngày</string>
+    <string name="home_error_load_tx">Không thể tải giao dịch</string>
+
+    <!-- Finance Errors -->
+    <string name="accounts_error_load">Không thể tải tài khoản</string>
+    <string name="accounts_error_archive">Không thể lưu trữ tài khoản</string>
+    <string name="accounts_error_reorder">Không thể sắp xếp tài khoản</string>
+    <string name="accounts_error_invalid_input">Vui lòng nhập tên và số dư hợp lệ</string>
+    <string name="accounts_error_save_exists">Không thể lưu tài khoản; tên có thể đã tồn tại</string>
+    <string name="categories_error_name_required">Vui lòng nhập tên danh mục</string>
+    <string name="categories_error_save_exists">Không thể lưu danh mục; tên có thể đã tồn tại</string>
+    <string name="transfers_error_load">Không thể tải lịch sử chuyển tiền</string>
+    <string name="transfers_error_invalid_input">Chọn hai tài khoản khác nhau và nhập số tiền lớn hơn 0</string>
+    <string name="transfers_error_save">Không thể lưu chuyển tiền</string>
+
+    <!-- Insights & Budgets Errors -->
+    <string name="insights_error_load">Không thể tải thống kê</string>
+    <string name="budgets_error_invalid_input">Hạn mức phải lớn hơn 0 và ngưỡng từ 1 đến 99</string>
+    <string name="budgets_error_save">Không thể lưu ngân sách</string>
+
+    <!-- Capture Errors -->
+    <string name="capture_error_permission_denied">Không có quyền vị trí; ảnh vẫn được lưu bình thường</string>
+    <string name="capture_error_take_photo">Không thể chụp ảnh</string>
+    <string name="capture_error_prepare_photo">Không thể chuẩn bị ảnh</string>
+    <string name="capture_error_invalid_or_large">Ảnh không hợp lệ hoặc quá lớn</string>
+    <string name="capture_error_location_inaccurate">Không lấy được vị trí chính xác; ảnh vẫn được lưu bình thường</string>
 </resources>

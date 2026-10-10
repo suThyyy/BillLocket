@@ -1,8 +1,8 @@
 # BillLocket — Voice, Localization and On-device AI Delivery Plan
 
-Last updated: 2026-10-09
+Last updated: 2026-10-10
 
-Status: approved planning baseline; implementation has not started.
+Status: BL-045 implementation and automated validation complete; physical-device acceptance remains pending and is retained in the BL-048 release gate.
 
 ## 1. Authority and safe baseline
 
@@ -81,7 +81,7 @@ test: complete smart-assistance regression gate
 |---|---|---|---|
 | BL-043 | Monthly photo recap | Complete | Complete |
 | BL-044 | Preserve report-ready baseline and approve extension plan | Complete | Low |
-| BL-045 | Vietnamese/English localization foundation | BL-044 | Medium |
+| BL-045 | Vietnamese/English localization foundation | BL-044 | Implemented; automated gate passed, device acceptance pending |
 | BL-046 | Optional voice-to-text for transaction notes | BL-045 | Medium |
 | BL-047 | On-device photo category suggestion | BL-045 | Medium |
 | BL-048 | Combined regression, device acceptance and release decision | BL-046, BL-047 | Medium |
@@ -105,7 +105,17 @@ BL-046 and BL-047 are technically independent after BL-045, but they should be d
 - The known-good APK can be rebuilt without any new voice or AI dependency.
 - No uncommitted application change is hidden in the baseline.
 
-## 7. BL-045 — Vietnamese and English localization
+## 7. BL-045 — Vietnamese and English localization — implementation complete, device acceptance pending
+
+### Implementation checkpoint — 2026-10-10
+
+- Added AndroidX per-app locale handling for `System`, `vi-VN`, and `en-US` through `AppCompatDelegate`, `AppCompatActivity`, `locale_config`, and AndroidX automatic locale storage for API 26–32.
+- Migrated normal V1 product copy, accessibility descriptions, widgets, notifications, validation feedback, and presentation errors into matching Vietnamese fallback and English resources. Both resource sets contain 495 matching string keys.
+- Centralized locale-aware VND, date, time, percentage, distance, relative-time, month, and weekday presentation formatting without changing stored money, timestamps, coordinates, user-entered text, or the Room schema.
+- Preserved custom category, account, and note text. Existing seeded names are not rewritten because V1 storage cannot safely distinguish every untouched system label from a user customization.
+- Added focused locale mapping, formatter, and resource-parity unit tests.
+- Independently verified under JDK 17: `test`, `assembleDebug`, `assembleDebugAndroidTest`, `assembleRelease`, `lint`, and `git diff --check` all pass.
+- Physical-device validation was unavailable because the Realme RMX3370 was not connected over ADB. The implementation is committed as a recoverable task checkpoint, while language switching, restart persistence, widget refresh, draft preservation, and layout inspection on the real device remain mandatory before the BL-048 merge decision.
 
 ### Goal
 

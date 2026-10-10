@@ -24,6 +24,9 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextAlign
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
+import com.billlocket.app.R
+import com.billlocket.app.locale.localizedContext
+import com.billlocket.app.locale.resolveAppLocale
 
 class WeeklyRecapWidget : GlanceAppWidget() {
     override val sizeMode = SizeMode.Exact
@@ -38,6 +41,8 @@ class WeeklyRecapWidget : GlanceAppWidget() {
 
 @Composable
 fun WeeklyRecapContent(context: Context, data: WeeklyRecapWidgetData) {
+    val locCtx = context.localizedContext()
+    val locale = resolveAppLocale(context)
     val openWeeklyIntent = widgetIntent(context, WIDGET_ACTION_WEEKLY, null)
 
     // Outer subtle warm border (1.5dp)
@@ -88,10 +93,10 @@ fun WeeklyRecapContent(context: Context, data: WeeklyRecapWidgetData) {
                                     color = ColorProvider(Color.White),
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
-                                ),
+                                )
                             )
                             Text(
-                                text = "Tổng quan tuần",
+                                text = locCtx.getString(R.string.widget_weekly_title),
                                 style = TextStyle(
                                     color = ColorProvider(Color(0xFF9E9487)),
                                     fontSize = 9.sp,
@@ -112,7 +117,7 @@ fun WeeklyRecapContent(context: Context, data: WeeklyRecapWidgetData) {
 
                     // Headline: EXACTLY "Tuần này" (No sparkle, no emoji)
                     Text(
-                        text = "Tuần này",
+                        text = locCtx.getString(R.string.widget_this_week),
                         style = TextStyle(
                             color = ColorProvider(Color(0xFFFFB800)),
                             fontSize = 11.sp,
@@ -120,7 +125,7 @@ fun WeeklyRecapContent(context: Context, data: WeeklyRecapWidgetData) {
                         ),
                     )
                     Text(
-                        text = "${data.weekTransactionCount} giao dịch",
+                        text = locCtx.getString(R.string.widget_today_transactions_count, data.weekTransactionCount),
                         style = TextStyle(
                             color = ColorProvider(Color.White),
                             fontSize = 18.sp,
@@ -135,7 +140,7 @@ fun WeeklyRecapContent(context: Context, data: WeeklyRecapWidgetData) {
                         Text(text = "💳", style = TextStyle(fontSize = 11.sp))
                         Spacer(GlanceModifier.width(3.dp))
                         Text(
-                            text = formatWidgetAmount(data.totalExpenseMinor),
+                            text = formatWidgetAmount(data.totalExpenseMinor, locale),
                             style = TextStyle(
                                 color = ColorProvider(Color(0xFFFFB800)),
                                 fontSize = 14.sp,
@@ -161,9 +166,9 @@ fun WeeklyRecapContent(context: Context, data: WeeklyRecapWidgetData) {
                             Text(text = "📊", style = TextStyle(fontSize = 10.sp))
                             Spacer(GlanceModifier.width(4.dp))
                             val insightText = if (data.topCategoryName != null && data.topCategoryPercent > 0) {
-                                "${data.topCategoryName} nhiều nhất • ${data.topCategoryPercent}%"
+                                locCtx.getString(R.string.widget_weekly_top_category, data.topCategoryName, data.topCategoryPercent)
                             } else {
-                                "Chưa có chi tiêu tuần này"
+                                locCtx.getString(R.string.widget_weekly_no_spending)
                             }
                             Text(
                                 text = insightText,
@@ -206,7 +211,7 @@ fun WeeklyRecapContent(context: Context, data: WeeklyRecapWidgetData) {
                                 Text(text = "📸", style = TextStyle(fontSize = 22.sp))
                                 Spacer(GlanceModifier.height(4.dp))
                                 Text(
-                                    text = "Chưa có ảnh tuần này",
+                                    text = locCtx.getString(R.string.widget_weekly_no_photos),
                                     style = TextStyle(
                                         color = ColorProvider(Color(0xFF9E9487)),
                                         fontSize = 10.sp,
@@ -218,7 +223,7 @@ fun WeeklyRecapContent(context: Context, data: WeeklyRecapWidgetData) {
                         1 -> {
                             Image(
                                 provider = ImageProvider(data.images[0]),
-                                contentDescription = "Ảnh giao dịch tuần này",
+                                contentDescription = locCtx.getString(R.string.widget_weekly_photo_desc),
                                 contentScale = ContentScale.Crop,
                                 modifier = GlanceModifier.fillMaxSize().cornerRadius(12.dp),
                             )
@@ -227,14 +232,14 @@ fun WeeklyRecapContent(context: Context, data: WeeklyRecapWidgetData) {
                             Row(modifier = GlanceModifier.fillMaxSize()) {
                                 Image(
                                     provider = ImageProvider(data.images[0]),
-                                    contentDescription = "Ảnh 1",
+                                    contentDescription = locCtx.getString(R.string.widget_weekly_photo_desc),
                                     contentScale = ContentScale.Crop,
                                     modifier = GlanceModifier.defaultWeight().fillMaxHeight().cornerRadius(10.dp),
                                 )
                                 Spacer(GlanceModifier.width(3.dp))
                                 Image(
                                     provider = ImageProvider(data.images[1]),
-                                    contentDescription = "Ảnh 2",
+                                    contentDescription = locCtx.getString(R.string.widget_weekly_photo_desc),
                                     contentScale = ContentScale.Crop,
                                     modifier = GlanceModifier.defaultWeight().fillMaxHeight().cornerRadius(10.dp),
                                 )
@@ -244,7 +249,7 @@ fun WeeklyRecapContent(context: Context, data: WeeklyRecapWidgetData) {
                             Row(modifier = GlanceModifier.fillMaxSize()) {
                                 Image(
                                     provider = ImageProvider(data.images[0]),
-                                    contentDescription = "Ảnh chính",
+                                    contentDescription = locCtx.getString(R.string.widget_weekly_photo_desc),
                                     contentScale = ContentScale.Crop,
                                     modifier = GlanceModifier.defaultWeight().fillMaxHeight().cornerRadius(10.dp),
                                 )
@@ -252,14 +257,14 @@ fun WeeklyRecapContent(context: Context, data: WeeklyRecapWidgetData) {
                                 Column(modifier = GlanceModifier.defaultWeight().fillMaxHeight()) {
                                     Image(
                                         provider = ImageProvider(data.images[1]),
-                                        contentDescription = "Ảnh 2",
+                                        contentDescription = locCtx.getString(R.string.widget_weekly_photo_desc),
                                         contentScale = ContentScale.Crop,
                                         modifier = GlanceModifier.fillMaxWidth().defaultWeight().cornerRadius(8.dp),
                                     )
                                     Spacer(GlanceModifier.height(3.dp))
                                     Image(
                                         provider = ImageProvider(data.images[2]),
-                                        contentDescription = "Ảnh 3",
+                                        contentDescription = locCtx.getString(R.string.widget_weekly_photo_desc),
                                         contentScale = ContentScale.Crop,
                                         modifier = GlanceModifier.fillMaxWidth().defaultWeight().cornerRadius(8.dp),
                                     )
@@ -270,7 +275,7 @@ fun WeeklyRecapContent(context: Context, data: WeeklyRecapWidgetData) {
                             Row(modifier = GlanceModifier.fillMaxSize()) {
                                 Image(
                                     provider = ImageProvider(data.images[0]),
-                                    contentDescription = "Ảnh chính",
+                                    contentDescription = locCtx.getString(R.string.widget_weekly_photo_desc),
                                     contentScale = ContentScale.Crop,
                                     modifier = GlanceModifier.defaultWeight().fillMaxHeight().cornerRadius(10.dp),
                                 )
@@ -278,7 +283,7 @@ fun WeeklyRecapContent(context: Context, data: WeeklyRecapWidgetData) {
                                 Column(modifier = GlanceModifier.defaultWeight().fillMaxHeight()) {
                                     Image(
                                         provider = ImageProvider(data.images[1]),
-                                        contentDescription = "Ảnh 2",
+                                        contentDescription = locCtx.getString(R.string.widget_weekly_photo_desc),
                                         contentScale = ContentScale.Crop,
                                         modifier = GlanceModifier.fillMaxWidth().defaultWeight().cornerRadius(8.dp),
                                     )
@@ -286,14 +291,14 @@ fun WeeklyRecapContent(context: Context, data: WeeklyRecapWidgetData) {
                                     Row(modifier = GlanceModifier.fillMaxWidth().defaultWeight()) {
                                         Image(
                                             provider = ImageProvider(data.images[2]),
-                                            contentDescription = "Ảnh 3",
+                                            contentDescription = locCtx.getString(R.string.widget_weekly_photo_desc),
                                             contentScale = ContentScale.Crop,
                                             modifier = GlanceModifier.defaultWeight().fillMaxHeight().cornerRadius(7.dp),
                                         )
                                         Spacer(GlanceModifier.width(3.dp))
                                         Image(
                                             provider = ImageProvider(data.images[3]),
-                                            contentDescription = "Ảnh 4",
+                                            contentDescription = locCtx.getString(R.string.widget_weekly_photo_desc),
                                             contentScale = ContentScale.Crop,
                                             modifier = GlanceModifier.defaultWeight().fillMaxHeight().cornerRadius(7.dp),
                                         )
@@ -305,7 +310,7 @@ fun WeeklyRecapContent(context: Context, data: WeeklyRecapWidgetData) {
                             Row(modifier = GlanceModifier.fillMaxSize()) {
                                 Image(
                                     provider = ImageProvider(data.images[0]),
-                                    contentDescription = "Ảnh chính",
+                                    contentDescription = locCtx.getString(R.string.widget_weekly_photo_desc),
                                     contentScale = ContentScale.Crop,
                                     modifier = GlanceModifier.defaultWeight().fillMaxHeight().cornerRadius(10.dp),
                                 )
@@ -314,14 +319,14 @@ fun WeeklyRecapContent(context: Context, data: WeeklyRecapWidgetData) {
                                     Row(modifier = GlanceModifier.fillMaxWidth().defaultWeight()) {
                                         Image(
                                             provider = ImageProvider(data.images[1]),
-                                            contentDescription = "Ảnh 2",
+                                            contentDescription = locCtx.getString(R.string.widget_weekly_photo_desc),
                                             contentScale = ContentScale.Crop,
                                             modifier = GlanceModifier.defaultWeight().fillMaxHeight().cornerRadius(7.dp),
                                         )
                                         Spacer(GlanceModifier.width(3.dp))
                                         Image(
                                             provider = ImageProvider(data.images[2]),
-                                            contentDescription = "Ảnh 3",
+                                            contentDescription = locCtx.getString(R.string.widget_weekly_photo_desc),
                                             contentScale = ContentScale.Crop,
                                             modifier = GlanceModifier.defaultWeight().fillMaxHeight().cornerRadius(7.dp),
                                         )
@@ -330,14 +335,14 @@ fun WeeklyRecapContent(context: Context, data: WeeklyRecapWidgetData) {
                                     Row(modifier = GlanceModifier.fillMaxWidth().defaultWeight()) {
                                         Image(
                                             provider = ImageProvider(data.images[3]),
-                                            contentDescription = "Ảnh 4",
+                                            contentDescription = locCtx.getString(R.string.widget_weekly_photo_desc),
                                             contentScale = ContentScale.Crop,
                                             modifier = GlanceModifier.defaultWeight().fillMaxHeight().cornerRadius(7.dp),
                                         )
                                         Spacer(GlanceModifier.width(3.dp))
                                         Image(
                                             provider = ImageProvider(data.images[4]),
-                                            contentDescription = "Ảnh 5",
+                                            contentDescription = locCtx.getString(R.string.widget_weekly_photo_desc),
                                             contentScale = ContentScale.Crop,
                                             modifier = GlanceModifier.defaultWeight().fillMaxHeight().cornerRadius(7.dp),
                                         )

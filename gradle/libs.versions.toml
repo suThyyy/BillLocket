@@ -1,5 +1,6 @@
 [versions]
 agp = "8.9.0"
+appcompat = "1.7.0"
 cameraView = "1.4.2"
 coilCompose = "3.0.4"
 coreSplashscreen = "1.2.0-alpha02"
@@ -27,6 +28,7 @@ glance = "1.1.1"
 secretsGradlePlugin = "2.0.1"
 
 [libraries]
+androidx-appcompat = { module = "androidx.appcompat:appcompat", version.ref = "appcompat" }
 androidx-camera-camera2 = { module = "androidx.camera:camera-camera2", version.ref = "cameraView" }
 androidx-camera-lifecycle = { module = "androidx.camera:camera-lifecycle", version.ref = "cameraView" }
 androidx-camera-view = { module = "androidx.camera:camera-view", version.ref = "cameraView" }

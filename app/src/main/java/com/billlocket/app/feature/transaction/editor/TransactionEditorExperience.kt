@@ -57,10 +57,14 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil3.compose.AsyncImage
+import com.billlocket.app.R
 import com.billlocket.app.domain.model.*
 import com.billlocket.app.feature.transaction.draft.DraftImage
+import com.billlocket.app.locale.BillLocketFormatters
+import com.billlocket.app.locale.activeAppLocale
 import com.billlocket.app.ui.common.CollectEffects
 import com.billlocket.app.ui.common.collectUiState
+import androidx.compose.ui.res.stringResource
 import java.text.NumberFormat
 import java.time.Instant
 import java.time.LocalDate
@@ -136,7 +140,8 @@ fun TransactionEditorScreen(
     Scaffold(containerColor = Color(0xFF0F0E0D)) { padding ->
         if (state.fatalError != null) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                Text(state.fatalError.orEmpty(), color = Color.White)
+                val errorMsg = if (state.fatalError == "Không tìm thấy giao dịch") stringResource(R.string.destination_not_found) else state.fatalError.orEmpty()
+                Text(errorMsg, color = Color.White)
             }
         } else {
             Column(
@@ -219,8 +224,18 @@ fun TransactionEditorScreen(
 
                     // Field error banner if any
                     state.fieldErrors.values.firstOrNull()?.let {
+                        val message = when (it) {
+                            "Hãy chọn tài khoản" -> stringResource(R.string.editor_error_account)
+                            "Hãy chọn danh mục phù hợp" -> stringResource(R.string.editor_error_category)
+                            "Ngày giao dịch không thể lớn hơn hôm nay." -> stringResource(R.string.editor_error_future_date)
+                            "Không thể lưu giao dịch. Vui lòng thử lại." -> stringResource(R.string.editor_error_save_failed)
+                            "Số tiền phải lớn hơn 0" -> stringResource(R.string.editor_error_amount)
+                            "Ngày giờ không hợp lệ" -> stringResource(R.string.editor_error_date)
+                            "Hãy xóa ảnh bị thiếu trước khi lưu" -> stringResource(R.string.editor_error_missing_images)
+                            else -> it
+                        }
                         Text(
-                            text = it,
+                            text = message,
                             color = MaterialTheme.colorScheme.error,
                             style = MaterialTheme.typography.bodySmall,
                             modifier = Modifier.padding(horizontal = 4.dp),
@@ -246,16 +261,16 @@ fun TransactionEditorScreen(
     if (state.showDiscardConfirmation) {
         AlertDialog(
             onDismissRequest = { viewModel.onAction(TransactionEditorAction.KeepEditing) },
-            title = { Text("Bỏ thay đổi?") },
-            text = { Text("Các thay đổi chưa lưu sẽ không được áp dụng.") },
+            title = { Text(stringResource(R.string.editor_discard_title)) },
+            text = { Text(stringResource(R.string.editor_discard_message)) },
             confirmButton = {
                 TextButton(onClick = { viewModel.onAction(TransactionEditorAction.Discard) }) {
-                    Text("Bỏ thay đổi", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.editor_discard_confirm), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.onAction(TransactionEditorAction.KeepEditing) }) {
-                    Text("Tiếp tục chỉnh sửa")
+                    Text(stringResource(R.string.editor_continue_editing))
                 }
             },
         )
@@ -278,11 +293,11 @@ private fun EditorHeader(isEditing: Boolean, onBack: () -> Unit) {
             contentColor = Color.White,
         ) {
             Box(Modifier.size(38.dp), contentAlignment = Alignment.Center) {
-                Icon(Icons.Filled.Close, "Đóng", Modifier.size(18.dp))
+                Icon(Icons.Filled.Close, stringResource(R.string.action_close), Modifier.size(18.dp))
             }
         }
         Text(
-            if (isEditing) "Chỉnh sửa" else "Ghi chép",
+            if (isEditing) stringResource(R.string.action_edit) else stringResource(R.string.editor_title_new),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.SemiBold,
             color = Color.White,
@@ -410,7 +425,7 @@ private fun HeroCard(
                         }
                     }
                     Text(
-                        category?.name ?: (if (isExpense) "Chi tiêu" else "Thu nhập"),
+                        category?.name ?: (if (isExpense) stringResource(R.string.editor_type_expense) else stringResource(R.string.editor_type_income)),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = Color.White,
@@ -418,6 +433,7 @@ private fun HeroCard(
                 }
 
                 // Center: VERY LARGE HERO AMOUNT (Dominant visual element, live formatted with seamless first-focus replacement)
+                val editorLocale = activeAppLocale()
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -483,7 +499,7 @@ private fun HeroCard(
                             keyboardActions = KeyboardActions(onDone = { onDone() }),
                             singleLine = true,
                             cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                            visualTransformation = remember { VndAmountVisualTransformation() },
+                            visualTransformation = remember(editorLocale) { VndAmountVisualTransformation(editorLocale) },
                             decorationBox = { innerTextField ->
                                 Box(contentAlignment = Alignment.Center) {
                                     if (amountTextFieldValue.text.isEmpty()) {
@@ -535,7 +551,7 @@ private fun HeroCard(
                             Box(contentAlignment = Alignment.CenterStart) {
                                 if (state.note.isEmpty()) {
                                     Text(
-                                        "Thêm ghi chú...",
+                                        stringResource(R.string.transaction_note_hint),
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = Color.White.copy(alpha = 0.45f),
                                     )
@@ -571,7 +587,7 @@ private fun CategoryAndAccountSelectors(
             SelectorPill(
                 icon = categoryIcon(currentCategory?.name.orEmpty(), currentCategory?.iconKey),
                 iconTint = animatedTint,
-                label = currentCategory?.name ?: "Danh mục",
+                label = currentCategory?.name ?: stringResource(R.string.transaction_category_label),
                 onClick = { categoryMenuExpanded = true },
             )
             DropdownMenu(
@@ -616,7 +632,7 @@ private fun CategoryAndAccountSelectors(
             SelectorPill(
                 icon = accountIcon(currentAccount?.type ?: AccountType.CASH),
                 iconTint = MaterialTheme.colorScheme.primary,
-                label = currentAccount?.name ?: "Tài khoản",
+                label = currentAccount?.name ?: stringResource(R.string.transaction_account_label),
                 onClick = { accountMenuExpanded = true },
             )
             DropdownMenu(
@@ -662,6 +678,10 @@ private fun TypeAndDateSelectors(
     onTypeChanged: (TransactionType) -> Unit,
     onPickDate: () -> Unit,
 ) {
+    val locale = activeAppLocale()
+    val todayLabel = stringResource(R.string.editor_relative_today)
+    val yesterdayLabel = stringResource(R.string.editor_relative_yesterday)
+
     Row(
         Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
@@ -682,14 +702,14 @@ private fun TypeAndDateSelectors(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 TypeSegment(
-                    label = "Chi",
+                    label = stringResource(R.string.home_expense),
                     selected = state.type == TransactionType.EXPENSE,
                     selectedColor = Color(0xFFFF6B6B),
                     modifier = Modifier.weight(1f),
                 ) { onTypeChanged(TransactionType.EXPENSE) }
 
                 TypeSegment(
-                    label = "Thu",
+                    label = stringResource(R.string.home_income),
                     selected = state.type == TransactionType.INCOME,
                     selectedColor = Color(0xFF4ECDC4),
                     modifier = Modifier.weight(1f),
@@ -699,15 +719,15 @@ private fun TypeAndDateSelectors(
 
         // Date Selector Pill
         val zoned = state.occurred?.let { Instant.ofEpochMilli(it.epochMillis).atZone(ZoneId.of(it.zoneId)) }
-        val dateText = remember(zoned) {
-            if (zoned == null) "Hôm nay"
+        val dateText = remember(zoned, locale, todayLabel, yesterdayLabel) {
+            if (zoned == null) todayLabel
             else {
                 val today = LocalDate.now(zoned.zone)
                 val date = zoned.toLocalDate()
                 when (date) {
-                    today -> "Hôm nay"
-                    today.minusDays(1) -> "Hôm qua"
-                    else -> date.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+                    today -> todayLabel
+                    today.minusDays(1) -> yesterdayLabel
+                    else -> BillLocketFormatters.formatDate(date, locale)
                 }
             }
         }
@@ -832,7 +852,7 @@ private fun CompactPhotoStrip(
                         contentColor = Color.White,
                     ) {
                         Box(Modifier.size(16.dp), contentAlignment = Alignment.Center) {
-                            Icon(Icons.Filled.Close, "Xóa", Modifier.size(10.dp))
+                            Icon(Icons.Filled.Close, stringResource(R.string.action_delete), Modifier.size(10.dp))
                         }
                     }
                     if (image.confirmedLocation != null) {
@@ -846,7 +866,7 @@ private fun CompactPhotoStrip(
                             contentColor = Color(0xFF1E1400),
                         ) {
                             Box(Modifier.size(16.dp), contentAlignment = Alignment.Center) {
-                                Icon(Icons.Filled.LocationOn, "Vị trí", Modifier.size(10.dp))
+                                Icon(Icons.Filled.LocationOn, stringResource(R.string.destination_image_location), Modifier.size(10.dp))
                             }
                         }
                     }
@@ -860,7 +880,7 @@ private fun CompactPhotoStrip(
             contentColor = Color.White,
         ) {
             Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) {
-                Icon(Icons.Filled.AddAPhoto, "Thêm ảnh", Modifier.size(18.dp))
+                Icon(Icons.Filled.AddAPhoto, stringResource(R.string.editor_add_photo), Modifier.size(18.dp))
             }
         }
     }
@@ -892,10 +912,10 @@ private fun BottomActionRow(
                 contentColor = Color.White,
             ) {
                 Box(Modifier.size(52.dp), contentAlignment = Alignment.Center) {
-                    Icon(Icons.Filled.Close, "Hủy", Modifier.size(22.dp))
+                    Icon(Icons.Filled.Close, stringResource(R.string.action_cancel), Modifier.size(22.dp))
                 }
             }
-            Text("Hủy", style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.7f))
+            Text(stringResource(R.string.action_cancel), style = MaterialTheme.typography.labelSmall, color = Color.White.copy(alpha = 0.7f))
         }
 
         // Dominant Save circle button (~72dp)
@@ -917,7 +937,7 @@ private fun BottomActionRow(
                 } else {
                     Icon(
                         Icons.Filled.Check,
-                        "Lưu giao dịch",
+                        stringResource(R.string.editor_save_transaction),
                         Modifier.size(34.dp),
                     )
                 }
@@ -948,13 +968,13 @@ private fun accountIcon(type: AccountType): ImageVector = when (type) {
     AccountType.EWALLET -> Icons.Filled.Wallet
 }
 
-private fun formatVndDisplay(digits: String): String {
+private fun formatVndDisplay(digits: String, locale: Locale): String {
     val clean = digits.filter(Char::isDigit)
     val num = clean.toLongOrNull() ?: return "0"
-    return NumberFormat.getNumberInstance(Locale("vi", "VN")).format(num)
+    return NumberFormat.getNumberInstance(locale).format(num)
 }
 
-class VndAmountVisualTransformation : VisualTransformation {
+class VndAmountVisualTransformation(private val locale: Locale) : VisualTransformation {
     override fun filter(text: AnnotatedString): TransformedText {
         val raw = text.text
         if (raw.isEmpty()) {
@@ -964,7 +984,7 @@ class VndAmountVisualTransformation : VisualTransformation {
         if (clean.isEmpty()) {
             return TransformedText(text, OffsetMapping.Identity)
         }
-        val formatted = formatVndDisplay(clean)
+        val formatted = formatVndDisplay(clean, locale)
 
         val offsetMapping = object : OffsetMapping {
             override fun originalToTransformed(offset: Int): Int {
@@ -972,12 +992,12 @@ class VndAmountVisualTransformation : VisualTransformation {
                 var digitCount = 0
                 var transIndex = 0
                 while (transIndex < formatted.length && digitCount < clamped) {
-                    if (formatted[transIndex] != '.') {
+                    if (formatted[transIndex].isDigit()) {
                         digitCount++
                     }
                     transIndex++
                 }
-                while (transIndex < formatted.length && formatted[transIndex] == '.') {
+                while (transIndex < formatted.length && !formatted[transIndex].isDigit()) {
                     transIndex++
                 }
                 return transIndex.coerceIn(0, formatted.length)
@@ -987,7 +1007,7 @@ class VndAmountVisualTransformation : VisualTransformation {
                 val clamped = offset.coerceIn(0, formatted.length)
                 var digitCount = 0
                 for (i in 0 until clamped) {
-                    if (formatted[i] != '.') {
+                    if (formatted[i].isDigit()) {
                         digitCount++
                     }
                 }

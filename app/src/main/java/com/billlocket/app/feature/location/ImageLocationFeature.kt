@@ -20,9 +20,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import com.billlocket.app.R
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
@@ -326,21 +328,30 @@ fun ImageLocationScreen(onBack: () -> Unit, viewModel: ImageLocationViewModel = 
             ImageLocationEffect.Saved -> onBack()
         }
     }
-    Scaffold(topBar = { TopAppBar(title = { Text("Vị trí ảnh") }, navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Quay lại") } }) }) { padding ->
+    Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.image_location_title)) }, navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.action_back)) } }) }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             if (state.isLoading) LinearProgressIndicator(Modifier.fillMaxWidth())
-            state.candidate?.let { candidate -> AssistChip(onClick = { viewModel.onAction(ImageLocationAction.ConfirmCandidate) }, label = { Text("Dùng gợi ý EXIF: ${candidate.latitude}, ${candidate.longitude}") }) }
+            state.candidate?.let { candidate -> AssistChip(onClick = { viewModel.onAction(ImageLocationAction.ConfirmCandidate) }, label = { Text(stringResource(R.string.image_location_exif_hint, candidate.latitude, candidate.longitude)) }) }
             OpenPointPicker(state.point, { viewModel.onAction(ImageLocationAction.PointChanged(it)) }, Modifier.fillMaxWidth().weight(1f))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(state.latitudeText, { viewModel.onAction(ImageLocationAction.LatitudeChanged(it)) }, label = { Text("Vĩ độ") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.weight(1f))
-                OutlinedTextField(state.longitudeText, { viewModel.onAction(ImageLocationAction.LongitudeChanged(it)) }, label = { Text("Kinh độ") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.weight(1f))
+                OutlinedTextField(state.latitudeText, { viewModel.onAction(ImageLocationAction.LatitudeChanged(it)) }, label = { Text(stringResource(R.string.image_location_latitude)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.weight(1f))
+                OutlinedTextField(state.longitudeText, { viewModel.onAction(ImageLocationAction.LongitudeChanged(it)) }, label = { Text(stringResource(R.string.image_location_longitude)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.weight(1f))
             }
-            OutlinedTextField(state.placeName, { viewModel.onAction(ImageLocationAction.PlaceChanged(it)) }, label = { Text("Tên địa điểm (không bắt buộc)") }, modifier = Modifier.fillMaxWidth())
-            state.errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            OutlinedTextField(state.placeName, { viewModel.onAction(ImageLocationAction.PlaceChanged(it)) }, label = { Text(stringResource(R.string.image_location_place_name)) }, modifier = Modifier.fillMaxWidth())
+            state.errorMessage?.let { msg ->
+                val text = when (msg) {
+                    "Không tìm thấy ảnh trong bản nháp" -> stringResource(R.string.location_error_no_image_in_draft)
+                    "Không lấy được vị trí hiện tại; bạn vẫn có thể chọn thủ công",
+                    "Không lấy được vị trí hiện tại; bạn vẫn có thể chọn trên bản đồ" -> stringResource(R.string.location_error_current_location_fallback)
+                    "Hãy chọn một vị trí" -> stringResource(R.string.location_error_select_location)
+                    else -> msg
+                }
+                Text(text, color = MaterialTheme.colorScheme.error)
+            }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = { viewModel.onAction(ImageLocationAction.UseCurrent) }, modifier = Modifier.weight(1f)) { Icon(Icons.Filled.MyLocation, null); Text(" Hiện tại") }
-                OutlinedButton(onClick = { viewModel.onAction(ImageLocationAction.Remove) }, modifier = Modifier.weight(1f)) { Icon(Icons.Filled.LocationOff, null); Text(" Xóa vị trí") }
-                Button(onClick = { viewModel.onAction(ImageLocationAction.Save) }, modifier = Modifier.weight(1f)) { Text("Xác nhận") }
+                OutlinedButton(onClick = { viewModel.onAction(ImageLocationAction.UseCurrent) }, modifier = Modifier.weight(1f)) { Icon(Icons.Filled.MyLocation, null); Text(" " + stringResource(R.string.image_location_current)) }
+                OutlinedButton(onClick = { viewModel.onAction(ImageLocationAction.Remove) }, modifier = Modifier.weight(1f)) { Icon(Icons.Filled.LocationOff, null); Text(" " + stringResource(R.string.image_location_remove)) }
+                Button(onClick = { viewModel.onAction(ImageLocationAction.Save) }, modifier = Modifier.weight(1f)) { Text(stringResource(R.string.image_location_confirm)) }
             }
         }
     }

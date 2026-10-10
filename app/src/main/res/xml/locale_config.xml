@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    BL-045 — Locale configuration for per-app language settings (Android 13+, API 33+).
+
+    Declares the locales that this app explicitly supports so that:
+    - On Android 13+, the system Settings > Language > App Language UI shows only supported choices.
+    - The system knows which resource qualifiers this app has packaged.
+
+    "vi" covers vi-VN; "en" covers en-US.
+    The app is authored primarily in Vietnamese (values/), with English translation (values-en/).
+    "vi" is listed first as the primary supported locale matching the default resources.
+-->
+<locale-config xmlns:android="http://schemas.android.com/apk/res/android">
+    <locale android:name="vi"/>
+    <locale android:name="en"/>
+</locale-config>

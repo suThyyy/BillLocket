@@ -6,10 +6,10 @@
  */
 package com.billlocket.app
 
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
-import android.content.Intent
-import androidx.activity.ComponentActivity
+import androidx.appcompat.app.AppCompatActivity
 import androidx.activity.compose.setContent
 import androidx.annotation.RequiresApi
 import androidx.annotation.RestrictTo
@@ -35,9 +35,15 @@ import com.billlocket.app.widget.WIDGET_ID_EXTRA
 data class WidgetLaunch(val action: String, val stableId: String?, val token: Long)
 
 @AndroidEntryPoint
-class MainActivity : ComponentActivity() {
+class MainActivity : AppCompatActivity() {
     @Inject lateinit var settingsRepository: SettingsRepository
+    @Inject lateinit var appLocaleController: com.billlocket.app.locale.AppLocaleController
     private val widgetLaunch = mutableStateOf<WidgetLaunch?>(null)
+
+    override fun onStart() {
+        super.onStart()
+        appLocaleController.syncFromSystem()
+    }
 
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {

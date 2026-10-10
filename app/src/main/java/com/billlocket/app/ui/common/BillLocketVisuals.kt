@@ -13,6 +13,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import com.billlocket.app.locale.BillLocketFormatters
 
 @Composable
 fun BillLocketEmptyState(
@@ -164,6 +165,10 @@ fun BillLocketGroupItem(
     }
 }
 
-fun formatVnd(value: Long): String {
-    return java.text.NumberFormat.getNumberInstance(java.util.Locale("vi", "VN")).format(value) + " ₫"
-}
+/**
+ * BL-045: Locale-aware VND formatter. Delegates to [BillLocketFormatters.formatMoney]
+ * using [locale] instead of hard-coded vi-VN. Retained for call-site compatibility;
+ * new code should call BillLocketFormatters directly.
+ */
+fun formatVnd(value: Long, locale: java.util.Locale = BillLocketFormatters.LOCALE_VI): String =
+    BillLocketFormatters.formatMoney(value, locale)

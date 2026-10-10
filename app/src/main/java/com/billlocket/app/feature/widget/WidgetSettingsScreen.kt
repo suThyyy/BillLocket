@@ -11,6 +11,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.compose.ui.res.stringResource
+import com.billlocket.app.R
 import com.billlocket.app.domain.model.WidgetOpenAction
 import com.billlocket.app.domain.model.WidgetSettings
 import com.billlocket.app.domain.port.WidgetUpdatePort
@@ -39,20 +41,20 @@ class WidgetSettingsViewModel @Inject constructor(
 @OptIn(ExperimentalMaterial3Api::class)
 fun WidgetSettingsScreen(onBack: () -> Unit, viewModel: WidgetSettingsViewModel = hiltViewModel()) {
     val value by viewModel.settings.collectAsState()
-    Scaffold(topBar = { TopAppBar(title = { Text("Widget") }, navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Quay lại") } }) }) { padding ->
+    Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.widget_settings_title)) }, navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.action_back)) } }) }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding).padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Text("Quyền riêng tư", style = MaterialTheme.typography.titleMedium)
-            SettingSwitch("Hiển thị số tiền", "Tắt để ẩn số tiền trên màn hình chính", value.showAmount) { viewModel.update(value.copy(showAmount = it)) }
-            SettingSwitch("Hiển thị danh mục", "Có thể ẩn hoàn toàn thông tin phân loại", value.showCategory) { viewModel.update(value.copy(showCategory = it)) }
+            Text(stringResource(R.string.widget_settings_privacy), style = MaterialTheme.typography.titleMedium)
+            SettingSwitch(stringResource(R.string.widget_settings_show_amount), stringResource(R.string.widget_settings_show_amount_sub), value.showAmount) { viewModel.update(value.copy(showAmount = it)) }
+            SettingSwitch(stringResource(R.string.widget_settings_show_category), stringResource(R.string.widget_settings_show_category_sub), value.showCategory) { viewModel.update(value.copy(showCategory = it)) }
             HorizontalDivider()
-            Text("Khi chạm vào ảnh", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.widget_settings_on_tap), style = MaterialTheme.typography.titleMedium)
             WidgetOpenAction.entries.forEach { action ->
                 Row(Modifier.fillMaxWidth().clickable { viewModel.update(value.copy(openAction = action)) }.padding(vertical = 10.dp)) {
                     RadioButton(action == value.openAction, { viewModel.update(value.copy(openAction = action)) })
-                    Text(if (action == WidgetOpenAction.TRANSACTION_DETAIL) "Mở chi tiết giao dịch" else "Chụp nhanh hóa đơn", Modifier.padding(top = 12.dp))
+                    Text(if (action == WidgetOpenAction.TRANSACTION_DETAIL) stringResource(R.string.widget_settings_open_detail) else stringResource(R.string.widget_settings_open_capture), Modifier.padding(top = 12.dp))
                 }
             }
-            Text("Nút ＋ trên widget luôn mở chụp nhanh. Nếu ảnh đã bị xóa hoặc không đọc được, widget tự chuyển sang ảnh hợp lệ khác.", style = MaterialTheme.typography.bodySmall)
+            Text(stringResource(R.string.widget_settings_note), style = MaterialTheme.typography.bodySmall)
         }
     }
 }
@@ -67,10 +69,10 @@ fun WidgetSettingsScreen(onBack: () -> Unit, viewModel: WidgetSettingsViewModel 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
 fun SettingsHubScreen(onBack: () -> Unit, onWidget: () -> Unit, onStorage: () -> Unit) {
-    Scaffold(topBar = { TopAppBar(title = { Text("Cài đặt") }, navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Quay lại") } }) }) { padding ->
+    Scaffold(topBar = { TopAppBar(title = { Text(stringResource(R.string.settings_title)) }, navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.action_back)) } }) }) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
-            ListItem({ Text("Widget") }, supportingContent = { Text("Ảnh, quyền riêng tư và thao tác khi chạm") }, modifier = Modifier.clickable(onClick = onWidget))
-            ListItem({ Text("Lưu trữ và sao lưu") }, supportingContent = { Text("Dung lượng, xuất và khôi phục dữ liệu") }, modifier = Modifier.clickable(onClick = onStorage))
+            ListItem({ Text(stringResource(R.string.settings_widget)) }, supportingContent = { Text(stringResource(R.string.settings_widget_sub)) }, modifier = Modifier.clickable(onClick = onWidget))
+            ListItem({ Text(stringResource(R.string.settings_storage_backup)) }, supportingContent = { Text(stringResource(R.string.settings_storage_backup_sub)) }, modifier = Modifier.clickable(onClick = onStorage))
         }
     }
 }

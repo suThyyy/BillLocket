@@ -9,11 +9,13 @@ import android.graphics.Paint
 import android.graphics.Rect
 import android.net.Uri
 import androidx.core.content.FileProvider
+import com.billlocket.app.R
+import com.billlocket.app.locale.BillLocketFormatters
+import com.billlocket.app.locale.localizedContext
+import com.billlocket.app.locale.resolveAppLocale
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.io.File
 import java.io.FileOutputStream
-import java.text.NumberFormat
-import java.time.format.DateTimeFormatter
 import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -39,6 +41,8 @@ class AndroidMonthlyRecapExporter @Inject constructor(
     }
 
     private fun render(recap: ShareableMonthlyRecap): Bitmap {
+        val localizedCtx = context.localizedContext()
+        val locale = resolveAppLocale(context)
         val bitmap = Bitmap.createBitmap(WIDTH, HEIGHT, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
         canvas.drawColor(BACKGROUND)
@@ -47,35 +51,35 @@ class AndroidMonthlyRecapExporter @Inject constructor(
         val body = paint(Color.WHITE, 30f)
         val muted = paint(MUTED, 25f)
         canvas.drawText("BillLocket", PADDING.toFloat(), 100f, gold)
-        canvas.drawText("Nhìn lại tháng ${recap.month.format(DateTimeFormatter.ofPattern("MM/yyyy"))}", PADDING.toFloat(), 180f, title)
-        canvas.drawText("${recap.transactionCount} giao dịch", PADDING.toFloat(), 235f, muted)
+        canvas.drawText(localizedCtx.getString(R.string.recap_review_month_header, recap.month.monthValue, recap.month.year), PADDING.toFloat(), 180f, title)
+        canvas.drawText("${recap.transactionCount} " + localizedCtx.getString(R.string.recap_transactions_count), PADDING.toFloat(), 235f, muted)
 
         var y = 310f
         recap.expense?.let {
-            canvas.drawText("Đã chi", PADDING.toFloat(), y, muted)
-            canvas.drawText(formatMoney(it.minorUnits), PADDING.toFloat(), y + 55f, paint(EXPENSE, 48f, true))
+            canvas.drawText(localizedCtx.getString(R.string.recap_spent_amount_label), PADDING.toFloat(), y, muted)
+            canvas.drawText(formatMoney(it.minorUnits, locale), PADDING.toFloat(), y + 55f, paint(EXPENSE, 48f, true))
             y += 105f
         }
         recap.income?.let {
-            canvas.drawText("Đã thu ${formatMoney(it.minorUnits)}", PADDING.toFloat(), y, body)
+            canvas.drawText(localizedCtx.getString(R.string.recap_income_amount_label, formatMoney(it.minorUnits, locale)), PADDING.toFloat(), y, body)
             y += 55f
         }
         recap.topCategoryName?.takeIf { it.isNotBlank() }?.let {
-            canvas.drawText("Nhiều nhất: $it", PADDING.toFloat(), y, body)
+            canvas.drawText(localizedCtx.getString(R.string.recap_most_label, it), PADDING.toFloat(), y, body)
             y += 60f
         }
 
         val imagesTop = maxOf(500, y.toInt() + 20)
-        drawPhotos(canvas, recap.photos, imagesTop)
-        canvas.drawText("Kỷ niệm chi tiêu, chỉ thuộc về bạn", PADDING.toFloat(), HEIGHT - 54f, muted)
+        drawPhotos(canvas, recap.photos, imagesTop, localizedCtx, locale)
+        canvas.drawText(localizedCtx.getString(R.string.recap_tagline_private), PADDING.toFloat(), HEIGHT - 54f, muted)
         return bitmap
     }
 
-    private fun drawPhotos(canvas: Canvas, photos: List<ShareableRecapPhoto>, top: Int) {
+    private fun drawPhotos(canvas: Canvas, photos: List<ShareableRecapPhoto>, top: Int, localizedCtx: Context, locale: Locale) {
         val selected = photos.take(4)
         if (selected.isEmpty()) {
             val emptyPaint = paint(MUTED, 30f)
-            canvas.drawText("Tháng này chưa có ảnh giao dịch", PADDING.toFloat(), top + 100f, emptyPaint)
+            canvas.drawText(localizedCtx.getString(R.string.recap_no_photos_title), PADDING.toFloat(), top + 100f, emptyPaint)
             return
         }
         val gap = 18
@@ -91,11 +95,11 @@ class AndroidMonthlyRecapExporter @Inject constructor(
                 decoded.recycle()
             } else {
                 canvas.drawRoundRect(rect.left.toFloat(), rect.top.toFloat(), rect.right.toFloat(), rect.bottom.toFloat(), 28f, 28f, paint(SURFACE, 1f))
-                canvas.drawText("Không đọc được ảnh", rect.left + 24f, rect.centerY().toFloat(), paint(MUTED, 24f))
+                canvas.drawText(localizedCtx.getString(R.string.recap_cannot_read_photo), rect.left + 24f, rect.centerY().toFloat(), paint(MUTED, 24f))
             }
             canvas.drawRect(rect.left.toFloat(), rect.bottom - 112f, rect.right.toFloat(), rect.bottom.toFloat(), paint(0xC9000000.toInt(), 1f))
-            canvas.drawText(photo.categoryName.ifBlank { "Giao dịch" }, rect.left + 18f, rect.bottom - 76f, paint(Color.WHITE, 24f, true))
-            photo.amount?.let { canvas.drawText(formatMoney(it.minorUnits), rect.left + 18f, rect.bottom - 48f, paint(GOLD, 21f, true)) }
+            canvas.drawText(photo.categoryName.ifBlank { localizedCtx.getString(R.string.home_transactions_header) }, rect.left + 18f, rect.bottom - 76f, paint(Color.WHITE, 24f, true))
+            photo.amount?.let { canvas.drawText(formatMoney(it.minorUnits, locale), rect.left + 18f, rect.bottom - 48f, paint(GOLD, 21f, true)) }
             val privateContext = listOfNotNull(photo.note, photo.placeName)
                 .joinToString(" • ")
                 .take(38)
@@ -137,7 +141,7 @@ class AndroidMonthlyRecapExporter @Inject constructor(
         typeface = if (bold) android.graphics.Typeface.DEFAULT_BOLD else android.graphics.Typeface.DEFAULT
     }
 
-    private fun formatMoney(value: Long): String = NumberFormat.getNumberInstance(Locale("vi", "VN")).format(value) + " đ"
+    private fun formatMoney(value: Long, locale: Locale): String = BillLocketFormatters.formatMoney(value, locale)
 
     private inline fun <T> Bitmap.useBitmap(block: (Bitmap) -> T): T = try {
         block(this)

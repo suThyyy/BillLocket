@@ -47,11 +47,15 @@ import androidx.lifecycle.viewModelScope
 import coil3.compose.AsyncImage
 import com.billlocket.app.domain.model.*
 import com.billlocket.app.domain.repository.*
+import com.billlocket.app.R
 import com.billlocket.app.domain.result.Outcome
 import com.billlocket.app.feature.location.DeviceLocationPort
+import com.billlocket.app.locale.BillLocketFormatters
+import com.billlocket.app.locale.activeAppLocale
 import com.billlocket.app.ui.common.BillLocketEmptyState
 import com.billlocket.app.ui.common.CollectEffects
 import com.billlocket.app.ui.common.collectUiState
+import androidx.compose.ui.res.stringResource
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.CameraPosition
@@ -200,10 +204,10 @@ const val BILLLOCKET_DARK_MAP_STYLE_JSON = """
 
 enum class MapProviderState { LOADING, READY, UNAVAILABLE }
 enum class MapSheetState { COLLAPSED, HALF_EXPANDED, EXPANDED }
-enum class MapThemeMode(val title: String) {
-    DARK("Tối"),
-    LIGHT("Sáng"),
-    SYSTEM("Theo hệ thống"),
+enum class MapThemeMode(val titleRes: Int) {
+    DARK(R.string.map_theme_dark),
+    LIGHT(R.string.map_theme_light),
+    SYSTEM(R.string.map_theme_system),
 }
 
 data class MapState(
@@ -506,7 +510,7 @@ fun OpenPhotoMap(
                     icon = descriptor,
                     zIndex = if (isSelected) 2f else 1f,
                     anchor = Offset(0.5f, 1.0f),
-                    title = if (cluster.photos.size == 1) cluster.photos.first().categoryName else "${cluster.photos.size} ảnh giao dịch",
+                    title = if (cluster.photos.size == 1) cluster.photos.first().categoryName else stringResource(R.string.map_photos_count, cluster.photos.size),
                     snippet = cluster.photos.firstOrNull()?.location?.placeName,
                     onClick = {
                         onPhotoSelected(cluster.photos.first())
@@ -559,12 +563,12 @@ fun OpenPhotoMap(
                 }
                 Column {
                     Text(
-                        "Vị trí hiện tại",
+                        stringResource(R.string.map_current_location),
                         style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                         color = Color.White,
                     )
                     Text(
-                        if (focus != null) "Đang hiển thị quanh đây" else "Nhấn để định vị",
+                        if (focus != null) stringResource(R.string.map_showing_around_here) else stringResource(R.string.map_tap_to_locate),
                         style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
                         color = Color(0xFF9E9D98),
                     )
@@ -591,7 +595,7 @@ fun OpenPhotoMap(
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         Icons.Filled.MyLocation,
-                        contentDescription = "Định vị hiện tại",
+                        contentDescription = stringResource(R.string.map_recenter_cd),
                         tint = Color(0xFFFFB800),
                         modifier = Modifier.size(20.dp),
                     )
@@ -612,7 +616,7 @@ fun OpenPhotoMap(
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             Icons.Filled.Layers,
-                            contentDescription = "Kiểu bản đồ",
+                            contentDescription = stringResource(R.string.map_style_cd),
                             tint = Color(0xFFFFB800),
                             modifier = Modifier.size(20.dp),
                         )
@@ -628,7 +632,7 @@ fun OpenPhotoMap(
                         DropdownMenuItem(
                             text = {
                                 Text(
-                                    mode.title,
+                                    stringResource(mode.titleRes),
                                     color = if (themeMode == mode) Color(0xFFFFB800) else Color.White,
                                     fontWeight = if (themeMode == mode) FontWeight.Bold else FontWeight.Normal,
                                 )
@@ -725,9 +729,10 @@ fun OpenPointPicker(
         },
     ) {
         point?.let {
+            val pointTitle = stringResource(R.string.map_selected_point_title)
             Marker(
                 state = markerState,
-                title = "Vị trí đã chọn",
+                title = pointTitle,
             )
         }
     }
@@ -820,9 +825,9 @@ fun MapScreen(
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Icon(Icons.Filled.Map, null, tint = Color(0xFFFFB800))
                         Spacer(Modifier.height(8.dp))
-                        Text("Không tải được bản đồ", color = Color.White)
+                        Text(stringResource(R.string.map_load_failed), color = Color.White)
                         TextButton(onClick = { viewModel.onAction(MapAction.ProviderChanged(true)) }) {
-                            Text("Thử lại", color = Color(0xFFFFB800))
+                            Text(stringResource(R.string.map_retry), color = Color(0xFFFFB800))
                         }
                     }
                 }
@@ -836,8 +841,8 @@ fun MapScreen(
                 ) {
                     BillLocketEmptyState(
                         icon = Icons.Filled.LocationOff,
-                        title = "Chưa có ảnh trên bản đồ",
-                        message = "Các ảnh giao dịch có vị trí đã xác nhận sẽ xuất hiện tại đây.",
+                        title = stringResource(R.string.map_empty_title),
+                        message = stringResource(R.string.map_empty_message),
                     )
                 }
             }
@@ -1035,7 +1040,7 @@ private fun MapHeaderAndFilters(
             ) {
                 Icon(
                     Icons.Filled.ChevronLeft,
-                    contentDescription = "Tháng trước",
+                    contentDescription = stringResource(R.string.home_previous_month),
                     tint = Color(0xFFFFB800),
                 )
             }
@@ -1045,7 +1050,7 @@ private fun MapHeaderAndFilters(
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 Text(
-                    "Tháng ${state.month.monthValue}/${state.month.year}",
+                    BillLocketFormatters.formatMonthYear(state.month, activeAppLocale()),
                     style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
                     color = Color.White,
                 )
@@ -1067,7 +1072,7 @@ private fun MapHeaderAndFilters(
                 ) {
                     Icon(
                         Icons.Filled.ChevronRight,
-                        contentDescription = "Tháng sau",
+                        contentDescription = stringResource(R.string.home_next_month),
                         tint = Color(0xFFFFB800),
                     )
                 }
@@ -1081,7 +1086,7 @@ private fun MapHeaderAndFilters(
                     Box(contentAlignment = Alignment.Center) {
                         Icon(
                             Icons.Filled.CalendarMonth,
-                            contentDescription = "Lịch",
+                            contentDescription = stringResource(R.string.map_calendar_cd),
                             tint = Color(0xFFFFB800),
                             modifier = Modifier.size(18.dp),
                         )
@@ -1097,21 +1102,21 @@ private fun MapHeaderAndFilters(
         ) {
             item {
                 CustomFilterChip(
-                    label = "Tất cả",
+                    label = stringResource(R.string.home_filter_all),
                     selected = state.type == null,
                     onClick = { onAction(MapAction.TypeChanged(null)) },
                 )
             }
             item {
                 CustomFilterChip(
-                    label = "Chi",
+                    label = stringResource(R.string.home_expense),
                     selected = state.type == TransactionType.EXPENSE,
                     onClick = { onAction(MapAction.TypeChanged(TransactionType.EXPENSE)) },
                 )
             }
             item {
                 CustomFilterChip(
-                    label = "Thu",
+                    label = stringResource(R.string.home_income),
                     selected = state.type == TransactionType.INCOME,
                     onClick = { onAction(MapAction.TypeChanged(TransactionType.INCOME)) },
                 )
@@ -1135,7 +1140,7 @@ private fun MapHeaderAndFilters(
         ) {
             item {
                 CustomFilterChip(
-                    label = "Mọi danh mục",
+                    label = stringResource(R.string.map_all_categories),
                     selected = state.categoryId == null,
                     leadingIcon = Icons.Filled.GridView,
                     onClick = { onAction(MapAction.CategoryChanged(null)) },
@@ -1263,7 +1268,7 @@ private fun CarouselTransactionCard(
                     ) {
                         Icon(
                             imageVector = Icons.Filled.MoreHoriz,
-                            contentDescription = "Chi tiết",
+                            contentDescription = stringResource(R.string.map_detail_cd),
                             tint = Color(0xFFB5B3AC),
                             modifier = Modifier.size(20.dp),
                         )
@@ -1272,9 +1277,7 @@ private fun CarouselTransactionCard(
 
                 // Amount
                 Text(
-                    text = if (amountVisibility == AmountVisibility.SHOWN) {
-                        NumberFormat.getNumberInstance(Locale("vi", "VN")).format(photo.amount.minorUnits) + " đ"
-                    } else "••••",
+                    text = formatMoney(photo.amount.minorUnits, amountVisibility),
                     style = MaterialTheme.typography.titleLarge.copy(
                         fontWeight = FontWeight.Bold,
                         fontSize = 17.sp,
@@ -1318,10 +1321,11 @@ private fun CarouselTransactionCard(
                             .size(13.dp)
                             .padding(top = 2.dp),
                     )
+                    val resolvingAddressText = stringResource(R.string.map_resolving_address)
                     val addressText = when {
                         resolvedAddress != null -> resolvedAddress.shortAddress
                         photo.location.placeName != null && photo.location.placeName.isNotBlank() && !isCoordinateString(photo.location.placeName) -> photo.location.placeName
-                        else -> "Đang xác định địa chỉ…"
+                        else -> resolvingAddressText
                     }
                     Text(
                         text = addressText,
@@ -1375,9 +1379,7 @@ private fun CollapsedTransactionRow(
                     color = Color.White,
                 )
                 Text(
-                    if (amountVisibility == AmountVisibility.SHOWN) {
-                        NumberFormat.getNumberInstance(Locale("vi", "VN")).format(photo.amount.minorUnits) + " ₫"
-                    } else "••••",
+                    formatMoney(photo.amount.minorUnits, amountVisibility),
                     style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
                     color = Color(0xFFFFB800),
                 )
@@ -1461,9 +1463,7 @@ private fun ExpandedTransactionRow(
             }
             Column(horizontalAlignment = Alignment.End) {
                 Text(
-                    if (amountVisibility == AmountVisibility.SHOWN) {
-                        NumberFormat.getNumberInstance(Locale("vi", "VN")).format(photo.amount.minorUnits) + " ₫"
-                    } else "••••",
+                    formatMoney(photo.amount.minorUnits, amountVisibility),
                     style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold),
                     color = if (isSelected) Color(0xFFFFB800) else Color.White,
                 )
@@ -1481,7 +1481,7 @@ private fun ExpandedTransactionRow(
             ) {
                 Icon(
                     Icons.Filled.ArrowOutward,
-                    contentDescription = "Mở giao dịch",
+                    contentDescription = stringResource(R.string.destination_transaction_detail),
                     tint = Color(0xFFFFB800),
                     modifier = Modifier.size(16.dp),
                 )
@@ -1493,8 +1493,18 @@ private fun ExpandedTransactionRow(
 private fun isCoordinateString(text: String): Boolean =
     text.matches(Regex("^[\\d\\.\\,\\-\\s]+$"))
 
+@Composable
+private fun formatMoney(value: Long, visibility: AmountVisibility): String =
+    BillLocketFormatters.formatMoneyWithVisibility(
+        minorUnits = value,
+        locale = activeAppLocale(),
+        hidden = visibility == AmountVisibility.HIDDEN,
+        obscured = visibility == AmountVisibility.OBSCURED,
+    )
+
+@Composable
 private fun formatDateShort(value: InstantAtZone): String =
-    Instant.ofEpochMilli(value.epochMillis).atZone(ZoneId.of(value.zoneId)).format(DateTimeFormatter.ofPattern("dd/MM HH:mm"))
+    BillLocketFormatters.formatDateTimeShort(value.epochMillis, ZoneId.of(value.zoneId), activeAppLocale())
 
 private fun Double.formatCoordinate() = String.format(Locale.US, "%.4f", this)
 
@@ -1511,10 +1521,6 @@ private fun calculateDistanceMeters(p1: GeoPoint, p2: GeoPoint): Double {
     return r * c
 }
 
-private fun formatDistance(meters: Double): String {
-    return if (meters < 1000) {
-        "${meters.roundToInt()} m"
-    } else {
-        String.format(Locale.US, "%.1f km", meters / 1000)
-    }
-}
+@Composable
+private fun formatDistance(meters: Double): String =
+    BillLocketFormatters.formatDistance(meters, activeAppLocale())

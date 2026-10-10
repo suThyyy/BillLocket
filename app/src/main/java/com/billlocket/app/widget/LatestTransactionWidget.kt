@@ -24,6 +24,9 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
+import com.billlocket.app.R
+import com.billlocket.app.locale.localizedContext
+import com.billlocket.app.locale.resolveAppLocale
 
 class LatestTransactionWidget : GlanceAppWidget() {
     override val sizeMode = SizeMode.Exact
@@ -38,6 +41,8 @@ class LatestTransactionWidget : GlanceAppWidget() {
 
 @Composable
 fun LatestTransactionContent(context: Context, data: LatestTransactionWidgetData) {
+    val locCtx = context.localizedContext()
+    val locale = resolveAppLocale(context)
     val size = LocalSize.current
     val isCompact = size.width < 170.dp || size.height < 85.dp
     val captureIntent = widgetIntent(context, WIDGET_ACTION_CAPTURE, null)
@@ -82,7 +87,7 @@ fun LatestTransactionContent(context: Context, data: LatestTransactionWidgetData
                     if (data.image != null) {
                         Image(
                             provider = ImageProvider(data.image),
-                            contentDescription = "Ảnh giao dịch gần nhất",
+                            contentDescription = locCtx.getString(R.string.widget_latest_photo_desc),
                             contentScale = ContentScale.Crop,
                             modifier = GlanceModifier.fillMaxSize().cornerRadius(cornerRadius),
                         )
@@ -98,7 +103,7 @@ fun LatestTransactionContent(context: Context, data: LatestTransactionWidgetData
                             )
                             Spacer(GlanceModifier.height(1.dp))
                             Text(
-                                text = if (data.hasContent) "Chưa có ảnh" else "Chưa có giao dịch",
+                                text = if (data.hasContent) locCtx.getString(R.string.widget_no_photo) else locCtx.getString(R.string.widget_no_transactions),
                                 style = TextStyle(
                                     color = ColorProvider(Color(0xFF9E9487)),
                                     fontSize = 7.5.sp,
@@ -150,7 +155,7 @@ fun LatestTransactionContent(context: Context, data: LatestTransactionWidgetData
                                 )
                                 if (!isCompact) {
                                     Text(
-                                        text = "Giao dịch gần nhất",
+                                        text = locCtx.getString(R.string.widget_latest_title),
                                         style = TextStyle(
                                             color = ColorProvider(Color(0xFF9E9487)),
                                             fontSize = 7.5.sp,
@@ -203,7 +208,7 @@ fun LatestTransactionContent(context: Context, data: LatestTransactionWidgetData
                         }
                     } else if (!data.hasContent) {
                         Text(
-                            text = "Chưa có giao dịch",
+                            text = locCtx.getString(R.string.widget_no_transactions),
                             style = TextStyle(
                                 color = ColorProvider(Color(0xFFE8DFD3)),
                                 fontSize = if (isCompact) 9.5.sp else 10.sp,
@@ -219,7 +224,7 @@ fun LatestTransactionContent(context: Context, data: LatestTransactionWidgetData
                     if (data.hasContent) {
                         val sign = if (data.isExpense) "– " else "+ "
                         Text(
-                            text = sign + formatWidgetAmount(data.amountMinor),
+                            text = sign + formatWidgetAmount(data.amountMinor, locale),
                             style = TextStyle(
                                 color = ColorProvider(Color(0xFFFFB800)),
                                 fontSize = if (isCompact) 13.5.sp else 14.5.sp,
@@ -229,7 +234,7 @@ fun LatestTransactionContent(context: Context, data: LatestTransactionWidgetData
                         )
                     } else {
                         Text(
-                            text = "Thêm giao dịch mới",
+                            text = locCtx.getString(R.string.widget_add_new),
                             style = TextStyle(
                                 color = ColorProvider(Color(0xFFFFB800)),
                                 fontSize = if (isCompact) 10.sp else 11.sp,
@@ -249,7 +254,12 @@ fun LatestTransactionContent(context: Context, data: LatestTransactionWidgetData
                             )
                             Spacer(GlanceModifier.width(2.dp))
                             Text(
-                                text = formatWidgetTime(data.occurredAt),
+                                text = formatWidgetTime(
+                                    occurredAtMillis = data.occurredAt,
+                                    locale = locale,
+                                    todayLabel = locCtx.getString(R.string.widget_relative_today),
+                                    yesterdayLabel = locCtx.getString(R.string.widget_relative_yesterday),
+                                ),
                                 style = TextStyle(
                                     color = ColorProvider(Color(0xFF9E9487)),
                                     fontSize = if (isCompact) 8.sp else 8.5.sp,

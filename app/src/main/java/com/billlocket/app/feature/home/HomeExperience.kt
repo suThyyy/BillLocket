@@ -27,6 +27,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -35,10 +36,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil3.compose.AsyncImage
+import com.billlocket.app.R
 import com.billlocket.app.domain.model.*
+import com.billlocket.app.locale.BillLocketFormatters
+import com.billlocket.app.locale.activeAppLocale
 import com.billlocket.app.ui.common.CollectEffects
 import com.billlocket.app.ui.common.collectUiState
-import java.text.NumberFormat
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -114,12 +117,12 @@ fun HomeScreen(
 private fun HomeHeader(onSearch: () -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
-            Text("PHOTO MONEY JOURNAL", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.home_badge), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
             Text("BillLocket", style = MaterialTheme.typography.headlineLarge)
-            Text("Nhật ký chi tiêu qua hình ảnh", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.home_tagline), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Surface(onClick = onSearch, shape = CircleShape, color = MaterialTheme.colorScheme.surfaceVariant, border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)) {
-            Box(Modifier.size(46.dp), contentAlignment = Alignment.Center) { Icon(Icons.Filled.Search, "Tìm giao dịch", Modifier.size(22.dp)) }
+            Box(Modifier.size(46.dp), contentAlignment = Alignment.Center) { Icon(Icons.Filled.Search, stringResource(R.string.home_search), Modifier.size(22.dp)) }
         }
     }
 }
@@ -128,6 +131,7 @@ private fun HomeHeader(onSearch: () -> Unit) {
 private fun MonthTotalsCard(state: HomeState, onAction: (HomeAction) -> Unit) {
     val income = state.days.sumOf { it.income.minorUnits }
     val expense = state.days.sumOf { it.expense.minorUnits }
+    val locale = activeAppLocale()
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(26.dp),
@@ -136,20 +140,23 @@ private fun MonthTotalsCard(state: HomeState, onAction: (HomeAction) -> Unit) {
         Column(Modifier.fillMaxWidth().padding(18.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("TỔNG CHI THÁNG NÀY", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-                    Text(money(expense, state.amountVisibility), style = MaterialTheme.typography.displaySmall)
-                    Text("Tổng đã chi", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(stringResource(R.string.home_month_expense_total), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+                    Text(money(expense, state.amountVisibility, locale), style = MaterialTheme.typography.displaySmall)
+                    Text(stringResource(R.string.home_total_spent), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Surface(onClick = { onAction(HomeAction.ToggleTotals) }, shape = CircleShape, color = MaterialTheme.colorScheme.background.copy(alpha = 0.65f)) {
                     Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) {
-                        Icon(if (state.amountVisibility == AmountVisibility.SHOWN) Icons.Filled.Visibility else Icons.Filled.VisibilityOff, if (state.amountVisibility == AmountVisibility.SHOWN) "Ẩn số tiền" else "Hiện số tiền")
+                        Icon(
+                            if (state.amountVisibility == AmountVisibility.SHOWN) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
+                            stringResource(if (state.amountVisibility == AmountVisibility.SHOWN) R.string.home_hide_amount else R.string.home_show_amount),
+                        )
                     }
                 }
             }
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                TotalPill("Chi", expense, state.amountVisibility, Icons.Filled.ArrowUpward, Color(0xFFFF716D), Modifier.weight(1f))
-                TotalPill("Thu", income, state.amountVisibility, Icons.Filled.ArrowDownward, Color(0xFF66D19E), Modifier.weight(1f))
+                TotalPill(stringResource(R.string.home_expense), expense, state.amountVisibility, Icons.Filled.ArrowUpward, Color(0xFFFF716D), Modifier.weight(1f))
+                TotalPill(stringResource(R.string.home_income), income, state.amountVisibility, Icons.Filled.ArrowDownward, Color(0xFF66D19E), Modifier.weight(1f))
             }
         }
     }
@@ -157,13 +164,14 @@ private fun MonthTotalsCard(state: HomeState, onAction: (HomeAction) -> Unit) {
 
 @Composable
 private fun TotalPill(label: String, value: Long, visibility: AmountVisibility, icon: androidx.compose.ui.graphics.vector.ImageVector, accent: Color, modifier: Modifier) {
+    val locale = activeAppLocale()
     Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
         Surface(shape = CircleShape, color = accent.copy(alpha = 0.16f), contentColor = accent) {
             Box(Modifier.size(34.dp), contentAlignment = Alignment.Center) { Icon(icon, null, Modifier.size(17.dp)) }
         }
         Column {
             Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text(money(value, visibility), style = MaterialTheme.typography.titleSmall)
+            Text(money(value, visibility, locale), style = MaterialTheme.typography.titleSmall)
         }
     }
 }
@@ -171,9 +179,9 @@ private fun TotalPill(label: String, value: Long, visibility: AmountVisibility, 
 @Composable
 private fun HomeFilters(state: HomeState, onAction: (HomeAction) -> Unit) {
     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        item { BillFilterChip("Tất cả", state.typeFilter == null) { onAction(HomeAction.TypeFilterChanged(null)) } }
-        item { BillFilterChip("Chi", state.typeFilter == TransactionType.EXPENSE) { onAction(HomeAction.TypeFilterChanged(TransactionType.EXPENSE)) } }
-        item { BillFilterChip("Thu", state.typeFilter == TransactionType.INCOME) { onAction(HomeAction.TypeFilterChanged(TransactionType.INCOME)) } }
+        item { BillFilterChip(stringResource(R.string.home_filter_all), state.typeFilter == null) { onAction(HomeAction.TypeFilterChanged(null)) } }
+        item { BillFilterChip(stringResource(R.string.home_expense), state.typeFilter == TransactionType.EXPENSE) { onAction(HomeAction.TypeFilterChanged(TransactionType.EXPENSE)) } }
+        item { BillFilterChip(stringResource(R.string.home_income), state.typeFilter == TransactionType.INCOME) { onAction(HomeAction.TypeFilterChanged(TransactionType.INCOME)) } }
         items(state.accounts, key = { it.id.value }) { account ->
             BillFilterChip(account.name, state.accountFilter == account.id) { onAction(HomeAction.AccountFilterChanged(account.id.takeUnless { it == state.accountFilter })) }
         }
@@ -204,6 +212,7 @@ private fun BillFilterChip(label: String, selected: Boolean, onClick: () -> Unit
 
 @Composable
 private fun CalendarCard(state: HomeState, summaries: Map<Long, CalendarDaySummary>, onAction: (HomeAction) -> Unit) {
+    val locale = activeAppLocale()
     Card(
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         shape = RoundedCornerShape(26.dp),
@@ -216,22 +225,22 @@ private fun CalendarCard(state: HomeState, summaries: Map<Long, CalendarDaySumma
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text("Tháng ${state.month.monthValue}/${state.month.year}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(BillLocketFormatters.formatMonthYear(state.month, locale), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     TextButton(onClick = { onAction(HomeAction.Today) }, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)) {
-                        Text("Hôm nay", style = MaterialTheme.typography.labelSmall)
+                        Text(stringResource(R.string.home_today), style = MaterialTheme.typography.labelSmall)
                     }
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = { onAction(HomeAction.PreviousMonth) }, modifier = Modifier.size(34.dp)) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Tháng trước", modifier = Modifier.size(18.dp))
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.home_previous_month), modifier = Modifier.size(18.dp))
                     }
                     IconButton(onClick = { onAction(HomeAction.NextMonth) }, modifier = Modifier.size(34.dp)) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowForward, "Tháng sau", modifier = Modifier.size(18.dp))
+                        Icon(Icons.AutoMirrored.Filled.ArrowForward, stringResource(R.string.home_next_month), modifier = Modifier.size(18.dp))
                     }
                 }
             }
             Row(Modifier.fillMaxWidth()) {
-                listOf("T2", "T3", "T4", "T5", "T6", "T7", "CN").forEach {
+                BillLocketFormatters.weekdayAbbreviations(locale).forEach {
                     Text(
                         it,
                         Modifier.weight(1f),
@@ -278,7 +287,7 @@ private fun CalendarCell(date: LocalDate?, selectedEpochDay: Long, summary: Cale
             ),
     ) {
         summary?.thumbnailUris?.firstOrNull()?.let {
-            AsyncImage(it, "Ảnh giao dịch ngày ${date?.dayOfMonth}", Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+            AsyncImage(it, stringResource(R.string.home_day_photo_desc, date?.dayOfMonth ?: 0), Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
             Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.20f)))
         }
         if (date != null) {
@@ -315,10 +324,11 @@ private fun SelectedDayHeader(
     onOpenDay: () -> Unit,
     onAdd: () -> Unit,
 ) {
+    val locale = activeAppLocale()
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Column(Modifier.weight(1f)) {
-            Text("Giao dịch", style = MaterialTheme.typography.titleLarge)
-            Text(LocalDate.ofEpochDay(epochDay).format(DateTimeFormatter.ofPattern("dd 'tháng' MM, yyyy")), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(R.string.home_transactions_header), style = MaterialTheme.typography.titleLarge)
+            Text(BillLocketFormatters.formatDateWithMonthName(LocalDate.ofEpochDay(epochDay), locale), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         if (hasPhotos) {
             Surface(
@@ -333,11 +343,11 @@ private fun SelectedDayHeader(
                     horizontalArrangement = Arrangement.spacedBy(5.dp),
                 ) {
                     Icon(Icons.Filled.Collections, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
-                    Text("Kỷ niệm", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.home_memories), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.Bold)
                 }
             }
         } else {
-            TextButton(onClick = onOpenDay) { Text("Xem tất cả") }
+            TextButton(onClick = onOpenDay) { Text(stringResource(R.string.home_view_all)) }
         }
         FilledIconButton(
             onClick = onAdd,
@@ -349,7 +359,7 @@ private fun SelectedDayHeader(
                 disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.38f),
             ),
         ) {
-            Icon(Icons.Filled.Add, "Tạo giao dịch")
+            Icon(Icons.Filled.Add, stringResource(R.string.home_create_transaction))
         }
     }
 }
@@ -378,12 +388,12 @@ private fun EmptyDayCard(isFuture: Boolean, onAdd: () -> Unit) {
             }
             Column {
                 Text(
-                    text = if (isFuture) "Ngày trong tương lai" else "Ngày này chưa có giao dịch",
+                    text = stringResource(if (isFuture) R.string.home_future_day else R.string.home_no_transactions_for_day),
                     style = MaterialTheme.typography.titleSmall,
                     color = if (isFuture) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f) else MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
-                    text = if (isFuture) "Không thể thêm giao dịch cho ngày tương lai" else "Chạm để lưu một khoảnh khắc chi tiêu",
+                    text = stringResource(if (isFuture) R.string.home_future_day_hint else R.string.home_tap_to_record_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -394,6 +404,7 @@ private fun EmptyDayCard(isFuture: Boolean, onAdd: () -> Unit) {
 
 @Composable
 fun TransactionRow(item: TransactionSummary, visibility: AmountVisibility, onOpen: (TransactionId) -> Unit) {
+    val locale = activeAppLocale()
     Surface(
         modifier = Modifier.fillMaxWidth().clickable { onOpen(item.id) },
         shape = RoundedCornerShape(20.dp),
@@ -415,9 +426,9 @@ fun TransactionRow(item: TransactionSummary, visibility: AmountVisibility, onOpe
                 Text("${item.categoryName} • ${item.accountName}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
             }
             val amountStr = if (visibility == AmountVisibility.SHOWN) {
-                (if (item.type == TransactionType.EXPENSE) "−" else "+") + money(item.amount.minorUnits, visibility)
+                (if (item.type == TransactionType.EXPENSE) "−" else "+") + money(item.amount.minorUnits, visibility, locale)
             } else {
-                money(item.amount.minorUnits, visibility)
+                money(item.amount.minorUnits, visibility, locale)
             }
             Text(
                 amountStr,
@@ -428,8 +439,12 @@ fun TransactionRow(item: TransactionSummary, visibility: AmountVisibility, onOpe
     }
 }
 
-private fun money(value: Long, visibility: AmountVisibility): String = when (visibility) {
-    AmountVisibility.SHOWN -> NumberFormat.getNumberInstance(Locale("vi", "VN")).format(value) + " ₫"
+private fun money(
+    value: Long,
+    visibility: AmountVisibility,
+    locale: Locale = Locale.getDefault(),
+): String = when (visibility) {
+    AmountVisibility.SHOWN -> BillLocketFormatters.formatMoney(value, locale)
     AmountVisibility.HIDDEN -> "••••"
     AmountVisibility.OBSCURED -> "*** ₫"
 }
@@ -442,6 +457,7 @@ fun DayGalleryScreen(
     viewModel: DayGalleryViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectUiState()
+    val locale = activeAppLocale()
     CollectEffects(viewModel.effects) { if (it is DayGalleryEffect.OpenCapture) onOpenCapture(it.draftId) }
 
     val date = LocalDate.ofEpochDay(state.epochDay)
@@ -468,7 +484,7 @@ fun DayGalleryScreen(
                     contentColor = Color.White,
                 ) {
                     Box(Modifier.size(42.dp), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Filled.Close, contentDescription = "Đóng", modifier = Modifier.size(20.dp))
+                        Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.home_close), modifier = Modifier.size(20.dp))
                     }
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -478,7 +494,7 @@ fun DayGalleryScreen(
                         color = Color.White.copy(alpha = 0.60f),
                     )
                     Text(
-                        text = "$dayOfMonth tháng $monthValue",
+                        text = BillLocketFormatters.formatDayAndMonth(date, locale),
                         style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                         color = Color.White,
                     )
@@ -491,7 +507,7 @@ fun DayGalleryScreen(
                     contentColor = if (isFuture) Color.White.copy(alpha = 0.25f) else MaterialTheme.colorScheme.onPrimary,
                 ) {
                     Box(Modifier.size(42.dp), contentAlignment = Alignment.Center) {
-                        Icon(Icons.Filled.Add, contentDescription = "Tạo giao dịch", modifier = Modifier.size(22.dp))
+                        Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.home_create_transaction), modifier = Modifier.size(22.dp))
                     }
                 }
             }
@@ -566,7 +582,7 @@ fun DayGalleryScreen(
                         ) {
                             AsyncImage(
                                 model = photo.imageUri,
-                                contentDescription = "Ảnh kỷ niệm",
+                                contentDescription = stringResource(R.string.home_photo_memory),
                                 modifier = Modifier.fillMaxSize(),
                                 contentScale = ContentScale.Crop,
                             )
@@ -600,8 +616,8 @@ fun DayGalleryScreen(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
-                        val timeStr = formatInstantTime(activePhoto.occurred)
-                        val amountStr = (if (activePhoto.type == TransactionType.EXPENSE) "− " else "+ ") + money(activePhoto.amount.minorUnits, AmountVisibility.SHOWN)
+                        val timeStr = formatInstantTime(activePhoto.occurred, locale)
+                        val amountStr = (if (activePhoto.type == TransactionType.EXPENSE) "− " else "+ ") + money(activePhoto.amount.minorUnits, AmountVisibility.SHOWN, locale)
                         val amountColor = if (activePhoto.type == TransactionType.EXPENSE) Color(0xFFFF8A84) else Color(0xFF66D19E)
 
                         Row(
@@ -646,7 +662,7 @@ fun DayGalleryScreen(
                         }
 
                         Text(
-                            text = "Chạm vào ảnh để xem chi tiết →",
+                            text = stringResource(R.string.home_tap_photo_for_details),
                             style = MaterialTheme.typography.labelSmall,
                             color = Color.White.copy(alpha = 0.40f),
                             modifier = Modifier.padding(top = 2.dp),
@@ -672,7 +688,7 @@ fun DayGalleryScreen(
                                     style = MaterialTheme.typography.labelSmall,
                                     color = Color.White.copy(alpha = 0.70f),
                                     fontWeight = FontWeight.SemiBold,
-                                )
+                                    )
                             }
 
                             LazyRow(
@@ -726,7 +742,7 @@ fun DayGalleryScreen(
                             modifier = Modifier.fillMaxWidth().padding(bottom = 6.dp),
                         ) {
                             Text(
-                                text = "Ngày này không có ảnh đính kèm",
+                                text = stringResource(R.string.home_no_photos_attached),
                                 modifier = Modifier.padding(14.dp),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = Color.White.copy(alpha = 0.65f),
@@ -744,9 +760,9 @@ fun DayGalleryScreen(
     }
 }
 
-private fun formatInstantTime(instantAtZone: InstantAtZone): String = runCatching {
+private fun formatInstantTime(instantAtZone: InstantAtZone, locale: Locale = Locale.getDefault()): String = runCatching {
     val zone = runCatching { ZoneId.of(instantAtZone.zoneId) }.getOrElse { ZoneId.systemDefault() }
-    Instant.ofEpochMilli(instantAtZone.epochMillis).atZone(zone).format(DateTimeFormatter.ofPattern("HH:mm"))
+    BillLocketFormatters.formatTimeFromEpoch(instantAtZone.epochMillis, zone, locale)
 }.getOrElse { "--:--" }
 
 @Composable
@@ -776,20 +792,20 @@ private fun HomeMonthlyRecapBanner(
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 Text(
-                    text = "TỔNG KẾT THÁNG ${month.monthValue}",
+                    text = stringResource(R.string.home_recap_banner_title, month.monthValue),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
                     color = Color.White,
                 )
                 Text(
-                    text = if (photoCount > 0) "Nhìn lại $photoCount khoảnh khắc và câu chuyện chi tiêu của bạn" else "Nhìn lại câu chuyện chi tiêu của bạn",
+                    text = if (photoCount > 0) stringResource(R.string.home_recap_banner_photos_count, photoCount) else stringResource(R.string.home_recap_banner_no_photos),
                     style = MaterialTheme.typography.bodySmall,
                     color = Color(0xFFA8A39A),
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    text = if (isCurrentMonth) "Tạm tính đến hôm nay" else "Xem lại trọn vẹn tháng",
+                    text = stringResource(if (isCurrentMonth) R.string.home_recap_banner_interim else R.string.home_recap_banner_full),
                     style = MaterialTheme.typography.labelSmall,
                     color = Color(0xFF75736D),
                 )
@@ -799,7 +815,7 @@ private fun HomeMonthlyRecapBanner(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     Text(
-                        text = "Xem tổng kết",
+                        text = stringResource(R.string.home_recap_banner_action),
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFFFFB800),

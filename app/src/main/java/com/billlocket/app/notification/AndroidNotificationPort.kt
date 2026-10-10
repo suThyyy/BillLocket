@@ -16,6 +16,7 @@ import com.billlocket.app.R
 import com.billlocket.app.domain.port.NotificationPort
 import com.billlocket.app.domain.result.DomainFailure
 import com.billlocket.app.domain.result.Outcome
+import com.billlocket.app.locale.localizedContext
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -28,17 +29,22 @@ class AndroidNotificationPort @Inject constructor(
         if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
             return Outcome.Failure(DomainFailure.PermissionDenied("notifications", false))
         }
-        createChannel()
+        val locCtx = context.localizedContext()
+        createChannel(locCtx)
         val intent = PendingIntent.getActivity(
             context,
             budgetId.hashCode(),
             Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
-        val message = if (percent >= 100) "Bạn đã dùng hết ngân sách tháng." else "Bạn đã dùng $percent% ngân sách tháng."
+        val message = if (percent >= 100) {
+            locCtx.getString(R.string.notification_budget_exceeded)
+        } else {
+            locCtx.getString(R.string.notification_budget_used_format, percent)
+        }
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.mipmap.ic_launcher_default)
-            .setContentTitle("Cảnh báo ngân sách")
+            .setContentTitle(locCtx.getString(R.string.notification_budget_warning_title))
             .setContentText(message)
             .setStyle(NotificationCompat.BigTextStyle().bigText(message))
             .setContentIntent(intent)
@@ -51,11 +57,11 @@ class AndroidNotificationPort @Inject constructor(
         }.getOrElse { Outcome.Failure(DomainFailure.Unexpected("budget_notification")) }
     }
 
-    private fun createChannel() {
+    private fun createChannel(locCtx: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             context.getSystemService(NotificationManager::class.java).createNotificationChannel(
-                NotificationChannel(CHANNEL_ID, "Cảnh báo ngân sách", NotificationManager.IMPORTANCE_DEFAULT).apply {
-                    description = "Thông báo khi chi tiêu chạm ngưỡng ngân sách"
+                NotificationChannel(CHANNEL_ID, locCtx.getString(R.string.notification_budget_channel), NotificationManager.IMPORTANCE_DEFAULT).apply {
+                    description = locCtx.getString(R.string.notification_budget_channel_desc)
                 },
             )
         }

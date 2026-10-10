@@ -57,7 +57,10 @@ import com.google.maps.android.compose.MapUiSettings
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.rememberCameraPositionState
 import com.google.maps.android.compose.rememberMarkerState
-import java.text.NumberFormat
+import androidx.compose.ui.res.stringResource
+import com.billlocket.app.R
+import com.billlocket.app.locale.BillLocketFormatters
+import com.billlocket.app.locale.activeAppLocale
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -72,8 +75,9 @@ private val TextMuted = Color(0xFFA8A39A)
 private val ExpenseRed = Color(0xFFFF716D)
 private val IncomeGreen = Color(0xFF66D19E)
 
+@Composable
 private fun formatVnd(minorUnits: Long): String {
-    return NumberFormat.getNumberInstance(Locale("vi", "VN")).format(minorUnits) + " đ"
+    return BillLocketFormatters.formatMoney(minorUnits, activeAppLocale())
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -156,8 +160,15 @@ fun MonthlyRecapScreen(
                     RecapLoadingState()
                 }
                 state.errorMessage != null && recap == null -> {
+                    val errorText = when (state.errorMessage) {
+                        "Không thể tải tổng kết tháng",
+                        "Không thể tạo tổng kết tháng" -> stringResource(R.string.recap_error_load_failed)
+                        "Không thể tạo ảnh tổng kết" -> stringResource(R.string.recap_error_export_failed)
+                        null -> stringResource(R.string.recap_error_load_failed)
+                        else -> state.errorMessage.orEmpty()
+                    }
                     RecapErrorState(
-                        message = state.errorMessage ?: "Không thể tải tổng kết tháng",
+                        message = errorText,
                         onRetry = { viewModel.onAction(MonthlyRecapAction.Retry) },
                     )
                 }
@@ -232,7 +243,7 @@ private fun RecapTopBar(
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     imageVector = Icons.Default.Close,
-                    contentDescription = "Đóng",
+                    contentDescription = stringResource(R.string.home_close),
                     tint = Color.White,
                     modifier = Modifier.size(20.dp),
                 )
@@ -246,12 +257,12 @@ private fun RecapTopBar(
             IconButton(onClick = onPreviousMonth, modifier = Modifier.size(32.dp)) {
                 Icon(
                     Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                    contentDescription = "Tháng trước",
+                    contentDescription = stringResource(R.string.home_previous_month),
                     tint = Color.White,
                 )
             }
             Text(
-                text = "Tháng ${month.monthValue}/${month.year}",
+                text = BillLocketFormatters.formatMonthYear(month, activeAppLocale()),
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
@@ -263,7 +274,7 @@ private fun RecapTopBar(
             ) {
                 Icon(
                     Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = "Tháng sau",
+                    contentDescription = stringResource(R.string.home_next_month),
                     tint = if (canGoNext) Color.White else Color(0xFF4A4843),
                 )
             }
@@ -279,7 +290,7 @@ private fun RecapTopBar(
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     imageVector = Icons.Default.Share,
-                    contentDescription = "Chia sẻ",
+                    contentDescription = stringResource(R.string.recap_generate_and_share),
                     tint = Gold,
                     modifier = Modifier.size(19.dp),
                 )
@@ -320,11 +331,11 @@ private fun RecapBottomBar(
         }
 
         val buttonText = when (currentPage) {
-            0 -> "Bắt đầu xem"
-            1 -> "Tiếp theo"
-            2 -> "Tiếp tục"
-            3 -> "Tiếp tục xem"
-            else -> "Xem lại trên lịch"
+            0 -> stringResource(R.string.recap_start_viewing)
+            1 -> stringResource(R.string.recap_next)
+            2 -> stringResource(R.string.recap_continue)
+            3 -> stringResource(R.string.recap_continue_viewing)
+            else -> stringResource(R.string.recap_view_calendar)
         }
 
         Button(
@@ -371,14 +382,14 @@ private fun RecapCoverPage(
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Spacer(Modifier.height(8.dp))
             Text(
-                text = "THÁNG ${recap.month.monthValue} / ${recap.month.year}",
+                text = stringResource(R.string.recap_cover_title, recap.month.monthValue, recap.month.year),
                 style = MaterialTheme.typography.labelLarge,
                 fontWeight = FontWeight.Bold,
                 color = Gold,
                 letterSpacing = 1.2.sp,
             )
             Text(
-                text = "Một tháng\ncủa bạn",
+                text = stringResource(R.string.recap_cover_subtitle),
                 style = MaterialTheme.typography.displayMedium,
                 fontWeight = FontWeight.Black,
                 color = Color.White,
@@ -414,14 +425,14 @@ private fun RecapCoverPage(
                         )
                         Spacer(Modifier.height(14.dp))
                         Text(
-                            text = "Kỷ niệm chi tiêu của bạn",
+                            text = stringResource(R.string.recap_memories_title),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = Color.White,
                         )
                         Spacer(Modifier.height(6.dp))
                         Text(
-                            text = "Mỗi bức ảnh lưu lại một câu chuyện và bài học chi tiêu ý nghĩa.",
+                            text = stringResource(R.string.recap_memories_subtitle),
                             style = MaterialTheme.typography.bodySmall,
                             color = TextMuted,
                             textAlign = TextAlign.Center,
@@ -469,7 +480,7 @@ private fun RecapCoverPage(
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White,
                             )
-                            Text("khoảnh khắc", style = MaterialTheme.typography.bodySmall, color = TextMuted)
+                            Text(stringResource(R.string.recap_moments_count), style = MaterialTheme.typography.bodySmall, color = TextMuted)
                         }
                     }
                 }
@@ -501,7 +512,7 @@ private fun RecapCoverPage(
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White,
                             )
-                            Text("giao dịch", style = MaterialTheme.typography.bodySmall, color = TextMuted)
+                            Text(stringResource(R.string.recap_transactions_count), style = MaterialTheme.typography.bodySmall, color = TextMuted)
                         }
                     }
                 }
@@ -509,9 +520,9 @@ private fun RecapCoverPage(
 
             Text(
                 text = if (recap.transactionCount > 0) {
-                    "Bạn đã ghi lại ${recap.photos.size} khoảnh khắc chi tiêu trong tháng."
+                    stringResource(R.string.recap_moments_recorded, recap.photos.size)
                 } else {
-                    "Chưa có giao dịch nào được ghi lại trong tháng này."
+                    stringResource(R.string.recap_no_transactions)
                 },
                 style = MaterialTheme.typography.bodySmall,
                 color = TextMuted,
@@ -684,7 +695,7 @@ private fun RecapOverviewPage(
         item {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    text = "THÁNG ${recap.month.monthValue} CỦA BẠN",
+                    text = stringResource(R.string.recap_month_title, recap.month.monthValue),
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.Bold,
                     color = Gold,
@@ -696,7 +707,7 @@ private fun RecapOverviewPage(
                     color = Color.White,
                 )
                 Text(
-                    text = "Tổng đã chi",
+                    text = stringResource(R.string.recap_total_spent),
                     style = MaterialTheme.typography.bodyMedium,
                     color = TextMuted,
                 )
@@ -730,7 +741,7 @@ private fun RecapOverviewPage(
                             }
                         }
                         Column {
-                            Text("Thu", style = MaterialTheme.typography.bodySmall, color = TextMuted)
+                            Text(stringResource(R.string.home_income), style = MaterialTheme.typography.bodySmall, color = TextMuted)
                             Text(
                                 text = formatVnd(recap.income.minorUnits),
                                 style = MaterialTheme.typography.titleMedium,
@@ -762,7 +773,7 @@ private fun RecapOverviewPage(
                             }
                         }
                         Column {
-                            Text("Còn lại", style = MaterialTheme.typography.bodySmall, color = TextMuted)
+                            Text(stringResource(R.string.recap_remaining), style = MaterialTheme.typography.bodySmall, color = TextMuted)
                             val netUnits = recap.net.minorUnits
                             val netFormatted = (if (netUnits > 0) "+" else "") + formatVnd(netUnits)
                             Text(
@@ -795,7 +806,7 @@ private fun RecapOverviewPage(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            text = "Chi tiêu theo ngày",
+                            text = stringResource(R.string.recap_daily_spending),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = Color.White,
@@ -815,12 +826,17 @@ private fun RecapOverviewPage(
                                     val activeDate = LocalDate.ofEpochDay(recap.mostActiveDayEpoch)
                                     Column(horizontalAlignment = Alignment.End) {
                                         Text(
-                                            text = "Ngày chi nhiều nhất",
+                                            text = stringResource(R.string.recap_most_active_day),
                                             style = MaterialTheme.typography.labelSmall,
                                             color = TextMuted,
                                         )
                                         Text(
-                                            text = "${activeDate.dayOfMonth} tháng ${activeDate.monthValue} (${recap.mostActiveDayCount} GD)",
+                                            text = stringResource(
+                                                R.string.recap_most_active_day_format,
+                                                activeDate.dayOfMonth,
+                                                activeDate.monthValue,
+                                                recap.mostActiveDayCount,
+                                            ),
                                             style = MaterialTheme.typography.labelMedium,
                                             fontWeight = FontWeight.Bold,
                                             color = Gold,
@@ -881,7 +897,7 @@ private fun RecapCategoryPage(
     ) {
         item {
             Text(
-                text = "Bạn dành nhiều nhất cho...",
+                text = stringResource(R.string.recap_top_categories_header),
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
@@ -925,7 +941,7 @@ private fun RecapCategoryPage(
                                     (top.amount.minorUnits * 100 / recap.expense.minorUnits).toInt()
                                 } else 0
                                 Text(
-                                    text = "${formatVnd(top.amount.minorUnits)} • $percent% tổng chi",
+                                    text = stringResource(R.string.recap_category_spent_format, formatVnd(top.amount.minorUnits), percent),
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = Gold,
                                     fontWeight = FontWeight.SemiBold,
@@ -967,7 +983,7 @@ private fun RecapCategoryPage(
                 ) {
                     Box(modifier = Modifier.padding(24.dp), contentAlignment = Alignment.Center) {
                         Text(
-                            text = "Chưa có dữ liệu danh mục chi tiêu trong tháng.",
+                            text = stringResource(R.string.recap_no_category_data),
                             style = MaterialTheme.typography.bodyMedium,
                             color = TextMuted,
                         )
@@ -1000,7 +1016,7 @@ private fun RecapCategoryPage(
                     }
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(
-                            text = "GÓC NHÌN CỦA BILLLOCKET",
+                            text = stringResource(R.string.recap_perspective_title),
                             style = MaterialTheme.typography.labelSmall,
                             fontWeight = FontWeight.Bold,
                             color = Gold,
@@ -1008,9 +1024,9 @@ private fun RecapCategoryPage(
                         val top = recap.topCategory
                         val insightText = if (top != null && recap.expense.minorUnits > 0) {
                             val ratio = (top.amount.minorUnits * 10 / recap.expense.minorUnits).toInt().coerceAtLeast(1)
-                            "Cứ 10 đồng bạn chi trong tháng này, khoảng $ratio đồng dành cho ${top.name}."
+                            stringResource(R.string.recap_perspective_ratio, ratio, top.name)
                         } else {
-                            "Hãy tiếp tục duy trì ghi chép để nhận các góc nhìn chi tiêu thông minh."
+                            stringResource(R.string.recap_perspective_keep_recording)
                         }
                         Text(
                             text = insightText,
@@ -1040,13 +1056,13 @@ private fun RecapLocationPage(
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(
-                text = "Những nơi bạn đã đi qua",
+                text = stringResource(R.string.recap_places_title),
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
             )
             Text(
-                text = "Mỗi địa điểm là một câu chuyện, mỗi lần quay lại là một kỷ niệm đẹp.",
+                text = stringResource(R.string.recap_places_subtitle),
                 style = MaterialTheme.typography.bodySmall,
                 color = TextMuted,
             )
@@ -1072,13 +1088,13 @@ private fun RecapLocationPage(
                     ) {
                         Icon(Icons.Default.LocationOff, null, tint = Gold, modifier = Modifier.size(42.dp))
                         Text(
-                            text = "Chưa có địa điểm đã xác nhận",
+                            text = stringResource(R.string.recap_no_places_title),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = Color.White,
                         )
                         Text(
-                            text = "Các ảnh giao dịch có vị trí đã xác nhận sẽ xuất hiện tại đây khi bạn lưu vị trí cho ảnh.",
+                            text = stringResource(R.string.recap_no_places_subtitle),
                             style = MaterialTheme.typography.bodySmall,
                             color = TextMuted,
                             textAlign = TextAlign.Center,
@@ -1090,6 +1106,7 @@ private fun RecapLocationPage(
             // Interactive Map container
             val photosWithCoords = located.filter { it.latitude != null && it.longitude != null }
             val firstCoord = photosWithCoords.firstOrNull()
+            val savedLocationTitle = stringResource(R.string.recap_saved_location)
 
             Surface(
                 shape = RoundedCornerShape(24.dp),
@@ -1127,7 +1144,7 @@ private fun RecapLocationPage(
                                 )
                                 Marker(
                                     state = markerState,
-                                    title = photo.placeName ?: "Vị trí đã lưu",
+                                    title = photo.placeName ?: savedLocationTitle,
                                     snippet = photo.categoryName,
                                     onClick = {
                                         selectedLocationPhoto = photo
@@ -1140,14 +1157,14 @@ private fun RecapLocationPage(
                 } else {
                     // Fallback when coordinates are missing
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("Vị trí đã lưu trong tháng", color = TextMuted)
+                        Text(stringResource(R.string.recap_saved_locations_monthly), color = TextMuted)
                     }
                 }
             }
 
             // Bottom place detail card
             val currentSelected = selectedLocationPhoto ?: located.first()
-            val placeName = currentSelected.placeName ?: "Vị trí đã lưu"
+            val placeName = currentSelected.placeName ?: savedLocationTitle
             val photosAtPlace = located.filter { it.placeName == placeName }
 
             Surface(
@@ -1173,14 +1190,14 @@ private fun RecapLocationPage(
                                 color = Color.White,
                             )
                             Text(
-                                text = "Nơi xuất hiện trong tháng này",
+                                text = stringResource(R.string.recap_place_occurred),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = TextMuted,
                             )
                         }
 
                         Text(
-                            text = "${photosAtPlace.size} khoảnh khắc",
+                            text = stringResource(R.string.recap_place_moments_count, photosAtPlace.size),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold,
                             color = Gold,
@@ -1228,13 +1245,13 @@ private fun RecapGalleryPage(
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(
-                text = "Tháng ${recap.month.monthValue} qua những bức ảnh",
+                text = stringResource(R.string.recap_photos_overview_title, recap.month.monthValue),
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
             )
             Text(
-                text = "${recap.photos.size} ảnh • ${recap.transactionCount} giao dịch",
+                text = stringResource(R.string.recap_photos_overview_subtitle, recap.photos.size, recap.transactionCount),
                 style = MaterialTheme.typography.bodySmall,
                 color = TextMuted,
             )
@@ -1260,13 +1277,13 @@ private fun RecapGalleryPage(
                     ) {
                         Icon(Icons.Default.PhotoCamera, null, tint = Gold, modifier = Modifier.size(40.dp))
                         Text(
-                            text = "Tháng này chưa có ảnh giao dịch",
+                            text = stringResource(R.string.recap_no_photos_title),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = Color.White,
                         )
                         Text(
-                            text = "Hãy chụp ảnh hóa đơn hoặc khoảnh khắc chi tiêu để lưu lại kỷ niệm vào tháng sau nhé!",
+                            text = stringResource(R.string.recap_no_photos_subtitle),
                             style = MaterialTheme.typography.bodySmall,
                             color = TextMuted,
                             textAlign = TextAlign.Center,
@@ -1336,7 +1353,7 @@ private fun RecapGalleryPage(
                         onClick = onOpenCalendar,
                         modifier = Modifier.fillMaxWidth(),
                     ) {
-                        Text("Xem lại trên lịch ->", color = Gold, fontWeight = FontWeight.Bold)
+                        Text(stringResource(R.string.recap_view_calendar), color = Gold, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -1368,13 +1385,13 @@ private fun RecapShareModal(
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    text = "Xem trước & chia sẻ",
+                    text = stringResource(R.string.recap_preview_share_title),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = Color.White,
                 )
                 Text(
-                    text = "Tùy chỉnh thông tin hiển thị trong ảnh tổng kết trước khi chia sẻ.",
+                    text = stringResource(R.string.recap_preview_share_subtitle),
                     style = MaterialTheme.typography.bodySmall,
                     color = TextMuted,
                 )
@@ -1404,21 +1421,21 @@ private fun RecapShareModal(
 
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(
-                            text = "Nhìn lại tháng ${recap.month.monthValue}/${recap.month.year}",
+                            text = stringResource(R.string.recap_review_month_header, recap.month.monthValue, recap.month.year),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = Color.White,
                         )
                         if (privacy.showAmounts) {
                             Text(
-                                text = "Đã chi: ${formatVnd(recap.expense.minorUnits)}",
+                                text = stringResource(R.string.recap_spent_amount, formatVnd(recap.expense.minorUnits)),
                                 style = MaterialTheme.typography.bodyMedium,
                                 fontWeight = FontWeight.Bold,
                                 color = ExpenseRed,
                             )
                         } else {
                             Text(
-                                text = "Đã ẩn số tiền",
+                                text = stringResource(R.string.recap_amount_hidden),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = TextMuted,
                             )
@@ -1449,26 +1466,26 @@ private fun RecapShareModal(
                         }
                     }
 
-                    Text("Kỷ niệm chi tiêu, chỉ thuộc về bạn", style = MaterialTheme.typography.labelSmall, color = TextMuted)
+                    Text(stringResource(R.string.recap_tagline_private), style = MaterialTheme.typography.labelSmall, color = TextMuted)
                 }
             }
 
             // Privacy options
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 PrivacyOptionRow(
-                    label = "Hiện tổng chi & số tiền",
+                    label = stringResource(R.string.recap_toggle_amount),
                     icon = Icons.Default.AttachMoney,
                     checked = privacy.showAmounts,
                     onCheckedChange = { onAction(MonthlyRecapAction.ShowAmounts(it)) },
                 )
                 PrivacyOptionRow(
-                    label = "Hiện ghi chú giao dịch",
+                    label = stringResource(R.string.recap_toggle_notes),
                     icon = Icons.Default.Description,
                     checked = privacy.showNotes,
                     onCheckedChange = { onAction(MonthlyRecapAction.ShowNotes(it)) },
                 )
                 PrivacyOptionRow(
-                    label = "Hiện địa điểm đã lưu",
+                    label = stringResource(R.string.recap_toggle_locations),
                     icon = Icons.Default.Place,
                     checked = privacy.showPlaces,
                     onCheckedChange = { onAction(MonthlyRecapAction.ShowPlaces(it)) },
@@ -1476,8 +1493,14 @@ private fun RecapShareModal(
             }
 
             if (errorMessage != null) {
+                val errorText = when (errorMessage) {
+                    "Không thể tải tổng kết tháng",
+                    "Không thể tạo tổng kết tháng" -> stringResource(R.string.recap_error_load_failed)
+                    "Không thể tạo ảnh tổng kết" -> stringResource(R.string.recap_error_export_failed)
+                    else -> errorMessage
+                }
                 Text(
-                    text = errorMessage,
+                    text = errorText,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                 )
@@ -1502,11 +1525,11 @@ private fun RecapShareModal(
                         strokeWidth = 2.dp,
                     )
                     Spacer(Modifier.width(8.dp))
-                    Text("Đang tạo ảnh...", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.recap_generating_image), fontWeight = FontWeight.Bold)
                 } else {
                     Icon(Icons.Default.Share, null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text("Tạo ảnh & Chia sẻ", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.recap_generate_and_share), fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -1563,7 +1586,7 @@ private fun RecapLoadingState() {
         ) {
             CircularProgressIndicator(color = Gold)
             Text(
-                text = "Đang tổng hợp câu chuyện tháng...",
+                text = stringResource(R.string.recap_compiling_story),
                 style = MaterialTheme.typography.bodyMedium,
                 color = TextMuted,
             )
@@ -1597,7 +1620,7 @@ private fun RecapErrorState(
                 colors = ButtonDefaults.buttonColors(containerColor = Gold, contentColor = Color.Black),
                 shape = RoundedCornerShape(20.dp),
             ) {
-                Text("Thử lại", fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.recap_retry), fontWeight = FontWeight.Bold)
             }
         }
     }

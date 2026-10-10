@@ -62,11 +62,15 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil3.compose.AsyncImage
+import com.billlocket.app.R
 import com.billlocket.app.domain.model.*
+import com.billlocket.app.locale.BillLocketFormatters
+import com.billlocket.app.locale.activeAppLocale
 import com.billlocket.app.ui.common.BillLocketEmptyState
 import com.billlocket.app.ui.common.BillLocketErrorBanner
 import com.billlocket.app.ui.common.CollectEffects
 import com.billlocket.app.ui.common.collectUiState
+import androidx.compose.ui.res.stringResource
 import java.text.NumberFormat
 import java.time.Instant
 import java.time.LocalDate
@@ -77,15 +81,26 @@ import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
-private fun amount(value: Long, visibility: AmountVisibility = AmountVisibility.SHOWN): String = when (visibility) {
-    AmountVisibility.SHOWN -> NumberFormat.getNumberInstance(Locale("vi", "VN")).format(value) + " ₫"
-    AmountVisibility.HIDDEN -> "••••"
-    AmountVisibility.OBSCURED -> "*** ₫"
-}
+fun formatAmount(
+    value: Long,
+    visibility: AmountVisibility = AmountVisibility.SHOWN,
+    locale: Locale = BillLocketFormatters.LOCALE_VI,
+): String = BillLocketFormatters.formatMoneyWithVisibility(
+    minorUnits = value,
+    locale = locale,
+    hidden = visibility == AmountVisibility.HIDDEN,
+    obscured = visibility == AmountVisibility.OBSCURED,
+)
 
+@Composable
+private fun amount(value: Long, visibility: AmountVisibility = AmountVisibility.SHOWN): String =
+    formatAmount(value, visibility, activeAppLocale())
+
+@Composable
 private fun formatDateShort(value: InstantAtZone): String = runCatching {
+    val locale = activeAppLocale()
     val zone = runCatching { ZoneId.of(value.zoneId) }.getOrElse { ZoneId.systemDefault() }
-    Instant.ofEpochMilli(value.epochMillis).atZone(zone).format(DateTimeFormatter.ofPattern("dd/MM HH:mm"))
+    BillLocketFormatters.formatDateTimeShort(value.epochMillis, zone, locale)
 }.getOrElse { "" }
 
 private fun categoryIcon(name: String): ImageVector {
@@ -122,7 +137,7 @@ private fun categoryColor(name: String): Pair<Color, Color> {
 
 data class MetricComparison(
     val arrow: String,
-    val text: String,
+    val pct: Int,
     val isPositive: Boolean,
 )
 
@@ -134,9 +149,9 @@ private fun computeComparison(
     if (previous == null) return null
     if (previous == 0L) {
         return if (current > 0L) {
-            MetricComparison("↑", "100% so với kỳ trước", isPositive = !isExpense)
+            MetricComparison("↑", 100, isPositive = !isExpense)
         } else {
-            MetricComparison("", "0% so với kỳ trước", isPositive = true)
+            MetricComparison("", 0, isPositive = true)
         }
     }
     val delta = current - previous
@@ -150,7 +165,7 @@ private fun computeComparison(
     val isPositive = if (isExpense) pct <= 0 else pct >= 0
     return MetricComparison(
         arrow = arrow,
-        text = if (arrow.isNotEmpty()) "$arrow $absPct% so với kỳ trước" else "0% so với kỳ trước",
+        pct = absPct,
         isPositive = isPositive,
     )
 }
@@ -175,7 +190,9 @@ fun StatisticsScreen(
     val state by viewModel.state.collectUiState()
     val insights = state.insights
 
-    val trendBars = remember(state.trendGranularity, state.anchor, insights?.trend, state.yearlyTrend) {
+    val appLocale = activeAppLocale()
+    val isEnglishLocale = appLocale.language == "en"
+    val trendBars = remember(state.trendGranularity, state.anchor, insights?.trend, state.yearlyTrend, isEnglishLocale) {
         when (state.trendGranularity) {
             TrendGranularity.DAY -> {
                 val yearMonth = YearMonth.from(state.anchor)
@@ -221,8 +238,8 @@ fun StatisticsScreen(
                     val weekNum = index + 1
                     TrendBarItem(
                         epochDay = state.anchor.withDayOfMonth(startDay).toEpochDay(),
-                        label = "T$weekNum",
-                        tooltipDate = "Tuần $weekNum ($startDay/${state.anchor.monthValue} - $actualEnd/${state.anchor.monthValue})",
+                        label = if (isEnglishLocale) "W$weekNum" else "T$weekNum",
+                        tooltipDate = if (isEnglishLocale) "Week $weekNum ($startDay/${state.anchor.monthValue} - $actualEnd/${state.anchor.monthValue})" else "Tuần $weekNum ($startDay/${state.anchor.monthValue} - $actualEnd/${state.anchor.monthValue})",
                         incomeMinor = incomeSum,
                         expenseMinor = expenseSum,
                     )
@@ -239,8 +256,8 @@ fun StatisticsScreen(
                     val expenseSum = points.sumOf { it.expense.minorUnits }
                     TrendBarItem(
                         epochDay = LocalDate.of(currentYear, month, 1).toEpochDay(),
-                        label = "T$month",
-                        tooltipDate = "Tháng $month/$currentYear",
+                        label = if (isEnglishLocale) "M$month" else "T$month",
+                        tooltipDate = if (isEnglishLocale) "Month $month/$currentYear" else "Tháng $month/$currentYear",
                         incomeMinor = incomeSum,
                         expenseMinor = expenseSum,
                     )
@@ -282,14 +299,14 @@ fun StatisticsScreen(
                     ) {
                         Icon(Icons.Default.AutoAwesome, null, tint = Color(0xFFFFB800), modifier = Modifier.size(18.dp))
                         Text(
-                            text = "Nhìn lại tháng ${state.anchor.monthValue}/${state.anchor.year}",
+                            text = stringResource(R.string.recap_review_month_header, state.anchor.monthValue, state.anchor.year),
                             style = MaterialTheme.typography.labelMedium,
                             fontWeight = FontWeight.Bold,
                             color = Color.White,
                         )
                     }
                     Text(
-                        text = "Xem tổng kết ->",
+                        text = "${stringResource(R.string.home_recap_banner_action)} ->",
                         style = MaterialTheme.typography.labelSmall,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFFFFB800),
@@ -309,7 +326,7 @@ fun StatisticsScreen(
                         FilterChip(
                             selected = state.accountId == null,
                             onClick = { viewModel.onAction(StatisticsAction.AccountChanged(null)) },
-                            label = { Text("Tất cả tài khoản") },
+                            label = { Text(stringResource(R.string.insights_filter_all_accounts)) },
                         )
                     }
                     items(state.accounts, key = { it.id.value }) { account ->
@@ -328,7 +345,10 @@ fun StatisticsScreen(
         }
 
         state.errorMessage?.let { error ->
-            item { BillLocketErrorBanner(error) }
+            item {
+                val localized = if (error == "Không thể tải thống kê") stringResource(R.string.insights_error_load) else error
+                BillLocketErrorBanner(localized)
+            }
         }
 
         if (insights != null) {
@@ -399,7 +419,7 @@ private fun MonthHeaderSection(
         ) {
             Icon(
                 Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Tháng trước",
+                contentDescription = stringResource(R.string.home_previous_month),
                 tint = MaterialTheme.colorScheme.onSurface,
             )
         }
@@ -409,7 +429,7 @@ private fun MonthHeaderSection(
             horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             Text(
-                text = "Tháng ${anchor.monthValue}/${anchor.year}",
+                text = BillLocketFormatters.formatMonthYear(YearMonth.from(anchor), activeAppLocale()),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -432,7 +452,7 @@ private fun MonthHeaderSection(
             ) {
                 Icon(
                     Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = "Tháng sau",
+                    contentDescription = stringResource(R.string.home_next_month),
                     tint = MaterialTheme.colorScheme.onSurface,
                 )
             }
@@ -447,7 +467,7 @@ private fun MonthHeaderSection(
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         Icons.Filled.CalendarMonth,
-                        contentDescription = "Hôm nay",
+                        contentDescription = stringResource(R.string.home_today),
                         tint = Color(0xFFFFB800),
                         modifier = Modifier.size(18.dp),
                     )
@@ -483,7 +503,7 @@ private fun SummaryMetricCards(
         )
 
         MetricCard(
-            label = "Thu",
+            label = stringResource(R.string.home_income),
             amountText = amount(insights.income.minorUnits, visibility),
             badgeColor = Color(0xFF66D19E),
             badgeIcon = Icons.Filled.ArrowUpward,
@@ -491,7 +511,7 @@ private fun SummaryMetricCards(
             modifier = Modifier.weight(1f),
         )
         MetricCard(
-            label = "Chi",
+            label = stringResource(R.string.home_expense),
             amountText = amount(insights.expense.minorUnits, visibility),
             badgeColor = Color(0xFFFF8A84),
             badgeIcon = Icons.Filled.ArrowDownward,
@@ -499,7 +519,7 @@ private fun SummaryMetricCards(
             modifier = Modifier.weight(1f),
         )
         MetricCard(
-            label = "Ròng",
+            label = stringResource(R.string.insights_net),
             amountText = amount(insights.net.minorUnits, visibility),
             badgeColor = Color(0xFFFFB800),
             badgeIcon = Icons.Filled.Savings,
@@ -563,7 +583,7 @@ private fun MetricCard(
 
             if (comparison != null) {
                 val arrowPrefix = if (comparison.arrow.isNotEmpty()) "${comparison.arrow} " else ""
-                val restText = comparison.text.removePrefix(comparison.arrow).trim()
+                val restText = stringResource(R.string.insights_comparison_format, comparison.pct)
                 val arrowColor = if (comparison.isPositive) Color(0xFF66D19E) else Color(0xFFFF8A84)
                 val annotatedComparison = buildAnnotatedString {
                     if (arrowPrefix.isNotEmpty()) {
@@ -619,28 +639,16 @@ private fun PeriodComparisonInsightCard(
             if (expenseDelta != null) {
                 when {
                     expenseDelta > 0 -> {
-                        val text = buildAnnotatedString {
-                            append("So với tháng trước, chi tiêu tăng ")
-                            withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = Color(0xFFFFB800))) {
-                                append(amount(expenseDelta))
-                            }
-                        }
                         Text(
-                            text = text,
+                            text = stringResource(R.string.insights_compare_increase, amount(expenseDelta)),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface,
                             modifier = textModifier,
                         )
                     }
                     expenseDelta < 0 -> {
-                        val text = buildAnnotatedString {
-                            append("So với tháng trước, chi tiêu giảm ")
-                            withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = Color(0xFF66D19E))) {
-                                append(amount(-expenseDelta))
-                            }
-                        }
                         Text(
-                            text = text,
+                            text = stringResource(R.string.insights_compare_decrease, amount(-expenseDelta)),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface,
                             modifier = textModifier,
@@ -648,7 +656,7 @@ private fun PeriodComparisonInsightCard(
                     }
                     else -> {
                         Text(
-                            "So với tháng trước, chi tiêu không thay đổi.",
+                            text = stringResource(R.string.insights_compare_unchanged),
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface,
                             modifier = textModifier,
@@ -657,7 +665,7 @@ private fun PeriodComparisonInsightCard(
                 }
             } else {
                 Text(
-                    "Chưa có dữ liệu tháng trước để so sánh.",
+                    text = stringResource(R.string.insights_compare_no_data),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = textModifier,
@@ -688,7 +696,7 @@ private fun CategorySpendingSection(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "Chi theo danh mục",
+                text = stringResource(R.string.insights_spending_by_category),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -727,7 +735,7 @@ private fun CategorySpendingSection(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
-                    text = "Chưa có dữ liệu chi tiêu trong kỳ.",
+                    text = stringResource(R.string.insights_no_transactions_period),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(20.dp),
                     style = MaterialTheme.typography.bodyMedium,
@@ -855,7 +863,7 @@ private fun SpendingTrendSection(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "Xu hướng chi tiêu",
+                text = stringResource(R.string.insights_spending_trends),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -873,9 +881,9 @@ private fun SpendingTrendSection(
                     TrendGranularity.entries.forEach { option ->
                         val isSelected = option == granularity
                         val title = when (option) {
-                            TrendGranularity.DAY -> "Ngày"
-                            TrendGranularity.WEEK -> "Tuần"
-                            TrendGranularity.MONTH -> "Tháng"
+                            TrendGranularity.DAY -> stringResource(R.string.insights_tab_day)
+                            TrendGranularity.WEEK -> stringResource(R.string.insights_tab_week)
+                            TrendGranularity.MONTH -> stringResource(R.string.insights_tab_month)
                         }
                         Surface(
                             onClick = { onGranularityChanged(option) },
@@ -928,7 +936,7 @@ private fun SpendingTrendChart(
     if (items.isEmpty()) {
         Box(modifier = modifier, contentAlignment = Alignment.Center) {
             Text(
-                text = "Chưa có dữ liệu xu hướng",
+                text = stringResource(R.string.insights_no_trend_data),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -1003,7 +1011,7 @@ private fun SpendingTrendChart(
                                         .background(Color(0xFF66D19E), CircleShape)
                                 )
                                 Text(
-                                    text = "Thu: ${amount(selectedItem.incomeMinor, amountVisibility)}",
+                                    text = "${stringResource(R.string.home_income)}: ${amount(selectedItem.incomeMinor, amountVisibility)}",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = Color(0xFF66D19E),
                                     fontWeight = FontWeight.Medium,
@@ -1021,7 +1029,7 @@ private fun SpendingTrendChart(
                                         .background(Color(0xFFFF8A84), CircleShape)
                                 )
                                 Text(
-                                    text = "Chi: ${amount(selectedItem.expenseMinor, amountVisibility)}",
+                                    text = "${stringResource(R.string.home_expense)}: ${amount(selectedItem.expenseMinor, amountVisibility)}",
                                     style = MaterialTheme.typography.labelSmall,
                                     color = Color(0xFFFF8A84),
                                     fontWeight = FontWeight.Medium,
@@ -1030,7 +1038,7 @@ private fun SpendingTrendChart(
                         }
                         if (selectedItem.incomeMinor == 0L && selectedItem.expenseMinor == 0L) {
                             Text(
-                                text = "Không có giao dịch",
+                                text = stringResource(R.string.insights_no_transactions),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = Color(0xFF8E8B85),
                             )
@@ -1045,11 +1053,11 @@ private fun SpendingTrendChart(
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         Box(Modifier.size(6.dp).background(Color(0xFF66D19E), CircleShape))
-                        Text("Thu", style = MaterialTheme.typography.labelSmall, color = Color(0xFF9E9B94))
+                        Text(stringResource(R.string.home_income), style = MaterialTheme.typography.labelSmall, color = Color(0xFF9E9B94))
                     }
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         Box(Modifier.size(6.dp).background(Color(0xFFFF8A84), CircleShape))
-                        Text("Chi", style = MaterialTheme.typography.labelSmall, color = Color(0xFF9E9B94))
+                        Text(stringResource(R.string.home_expense), style = MaterialTheme.typography.labelSmall, color = Color(0xFF9E9B94))
                     }
                 }
             }
@@ -1226,7 +1234,7 @@ private fun RecentTransactionsSection(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "Giao dịch gần đây",
+                text = stringResource(R.string.insights_recent_transactions),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
@@ -1265,7 +1273,7 @@ private fun RecentTransactionsSection(
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Text(
-                    text = "Không có giao dịch nào trong kỳ này.",
+                    text = stringResource(R.string.insights_no_transactions_period),
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(16.dp),
                     style = MaterialTheme.typography.bodyMedium,
@@ -1357,13 +1365,30 @@ private fun RecentTransactionsSection(
     }
 }
 
-private fun periodName(kind: PeriodKind) = when (kind) { PeriodKind.WEEK -> "Tuần"; PeriodKind.MONTH -> "Tháng"; PeriodKind.YEAR -> "Năm" }
-private fun periodLabel(kind: PeriodKind, anchor: LocalDate) = when (kind) { PeriodKind.WEEK -> "Tuần ${anchor.dayOfYear / 7 + 1}/${anchor.year}"; PeriodKind.MONTH -> "Tháng ${anchor.monthValue}/${anchor.year}"; PeriodKind.YEAR -> anchor.year.toString() }
-fun trendDescription(point: TrendPoint) = "${LocalDate.ofEpochDay(point.epochDay)}: thu ${point.income.minorUnits}, chi ${point.expense.minorUnits}"
-fun comparisonText(current: PeriodInsights, previous: PeriodComparison): String {
+private fun periodName(kind: PeriodKind, locale: Locale = Locale.getDefault()) = when (kind) {
+    PeriodKind.WEEK -> if (locale.language == "en") "Week" else "Tuần"
+    PeriodKind.MONTH -> if (locale.language == "en") "Month" else "Tháng"
+    PeriodKind.YEAR -> if (locale.language == "en") "Year" else "Năm"
+}
+private fun periodLabel(kind: PeriodKind, anchor: LocalDate, locale: Locale = Locale.getDefault()) = when (kind) {
+    PeriodKind.WEEK -> if (locale.language == "en") "Week ${anchor.dayOfYear / 7 + 1}/${anchor.year}" else "Tuần ${anchor.dayOfYear / 7 + 1}/${anchor.year}"
+    PeriodKind.MONTH -> BillLocketFormatters.formatMonthYear(YearMonth.from(anchor), locale)
+    PeriodKind.YEAR -> anchor.year.toString()
+}
+fun trendDescription(point: TrendPoint) = "${LocalDate.ofEpochDay(point.epochDay)}: +${point.income.minorUnits}, -${point.expense.minorUnits}"
+fun comparisonText(
+    current: PeriodInsights,
+    previous: PeriodComparison,
+    locale: Locale = BillLocketFormatters.LOCALE_VI,
+): String {
     val expenseDelta = current.expense.minorUnits - previous.expense.minorUnits
-    val direction = when { expenseDelta > 0 -> "tăng"; expenseDelta < 0 -> "giảm"; else -> "không đổi" }
-    return "So với kỳ trước, chi tiêu $direction ${amount(kotlin.math.abs(expenseDelta))}."
+    val formattedDelta = formatAmount(kotlin.math.abs(expenseDelta), AmountVisibility.SHOWN, locale)
+    val isEnglish = locale.language == "en"
+    return when {
+        expenseDelta > 0 -> if (isEnglish) "Compared to previous period, spending increased by $formattedDelta." else "So với kỳ trước, chi tiêu tăng $formattedDelta."
+        expenseDelta < 0 -> if (isEnglish) "Compared to previous period, spending decreased by $formattedDelta." else "So với kỳ trước, chi tiêu giảm $formattedDelta."
+        else -> if (isEnglish) "Compared to previous period, spending is unchanged." else "So với kỳ trước, chi tiêu không đổi."
+    }
 }
 
 @Composable
@@ -1382,10 +1407,10 @@ fun BudgetsScreen(onBack: () -> Unit, viewModel: BudgetsViewModel = hiltViewMode
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Ngân sách", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) },
+                title = { Text(stringResource(R.string.budgets_title), style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Quay lại")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.action_back))
                     }
                 },
                 actions = {
@@ -1397,7 +1422,7 @@ fun BudgetsScreen(onBack: () -> Unit, viewModel: BudgetsViewModel = hiltViewMode
                         modifier = Modifier.size(38.dp),
                     ) {
                         Box(contentAlignment = Alignment.Center) {
-                            Icon(Icons.Filled.Add, "Thêm ngân sách", tint = Color(0xFFFFB800), modifier = Modifier.size(20.dp))
+                            Icon(Icons.Filled.Add, stringResource(R.string.budgets_add), tint = Color(0xFFFFB800), modifier = Modifier.size(20.dp))
                         }
                     }
                     Spacer(Modifier.width(12.dp))
@@ -1420,16 +1445,16 @@ fun BudgetsScreen(onBack: () -> Unit, viewModel: BudgetsViewModel = hiltViewMode
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     IconButton(onClick = { viewModel.onAction(BudgetsAction.PreviousMonth) }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Tháng trước", tint = MaterialTheme.colorScheme.onSurface)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, stringResource(R.string.home_previous_month), tint = MaterialTheme.colorScheme.onSurface)
                     }
                     Text(
-                        "Tháng ${state.month.monthValue}/${state.month.year}",
+                        BillLocketFormatters.formatMonthYear(state.month, activeAppLocale()),
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                     IconButton(onClick = { viewModel.onAction(BudgetsAction.NextMonth) }) {
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, "Tháng sau", tint = MaterialTheme.colorScheme.onSurface)
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, stringResource(R.string.home_next_month), tint = MaterialTheme.colorScheme.onSurface)
                     }
                 }
             }
@@ -1455,13 +1480,13 @@ fun BudgetsScreen(onBack: () -> Unit, viewModel: BudgetsViewModel = hiltViewMode
                         )
                         Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                             Text(
-                                text = "Theo dõi ngân sách vẫn hoạt động khi không có giao dịch.",
+                                text = stringResource(R.string.budgets_empty_hint_1),
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = Color.White,
                                 fontWeight = FontWeight.Medium,
                             )
                             Text(
-                                text = "Đặt hạn mức chi tiêu để kiểm soát tài chính tốt hơn.",
+                                text = stringResource(R.string.budgets_empty_hint_2),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = Color(0xFF8E8B85),
                             )
@@ -1478,29 +1503,41 @@ fun BudgetsScreen(onBack: () -> Unit, viewModel: BudgetsViewModel = hiltViewMode
                     modifier = Modifier.fillMaxWidth(),
                 ) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text("Thông báo chưa được bật.", style = MaterialTheme.typography.bodyMedium, color = Color.White)
+                        Text(stringResource(R.string.budgets_notifications_off), style = MaterialTheme.typography.bodyMedium, color = Color.White)
                         TextButton(onClick = { viewModel.onAction(BudgetsAction.EnableNotifications) }) {
-                            Text("Bật cảnh báo ngưỡng", color = Color(0xFFFFB800), fontWeight = FontWeight.Bold)
+                            Text(stringResource(R.string.budgets_enable_warning), color = Color(0xFFFFB800), fontWeight = FontWeight.Bold)
                         }
                     }
                 }
             }
 
-            state.errorMessage?.let { item { BillLocketErrorBanner(it) } }
+            state.errorMessage?.let { msg ->
+                item {
+                    val localized = when (msg) {
+                        "Hạn mức phải lớn hơn 0 và ngưỡng từ 1 đến 99" -> stringResource(R.string.budgets_error_invalid_input)
+                        "Không thể lưu ngân sách" -> stringResource(R.string.budgets_error_save)
+                        else -> msg
+                    }
+                    BillLocketErrorBanner(localized)
+                }
+            }
 
             if (state.budgets.isEmpty()) item {
                 BillLocketEmptyState(
                     Icons.Filled.Savings,
-                    "Chưa có ngân sách",
-                    "Tạo ngân sách để theo dõi chi tiêu trong tháng.",
-                    actionLabel = "Tạo ngân sách",
+                    stringResource(R.string.budgets_empty_title),
+                    stringResource(R.string.budgets_empty_message),
+                    actionLabel = stringResource(R.string.budgets_create),
                     onAction = { viewModel.onAction(BudgetsAction.Edit(null)) },
                 )
             }
 
             items(state.budgets, key = { it.id.value }) { budget ->
-                val name = budget.categoryId?.let { id -> state.categories.firstOrNull { it.id == id }?.name } ?: "Tổng chi"
+                val name = budget.categoryId?.let { id -> state.categories.firstOrNull { it.id == id }?.name } ?: stringResource(R.string.budgets_scope_all_expense)
                 val ratio = if (budget.limit.minorUnits == 0L) 0f else (budget.spent.minorUnits.toFloat() / budget.limit.minorUnits).coerceAtLeast(0f)
+                val spentText = amount(budget.spent.minorUnits)
+                val limitText = amount(budget.limit.minorUnits)
+                val budgetContentDescription = stringResource(R.string.budgets_spent_out_of, name, spentText, limitText)
                 Surface(
                     onClick = { viewModel.onAction(BudgetsAction.Edit(budget)) },
                     shape = RoundedCornerShape(18.dp),
@@ -1511,17 +1548,17 @@ fun BudgetsScreen(onBack: () -> Unit, viewModel: BudgetsViewModel = hiltViewMode
                     Column(
                         Modifier
                             .padding(16.dp)
-                            .semantics { contentDescription = "$name đã dùng ${budget.spent.minorUnits} trên ${budget.limit.minorUnits}" },
+                            .semantics { contentDescription = budgetContentDescription },
                         verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Text(name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White)
                             IconButton(onClick = { viewModel.onAction(BudgetsAction.Delete(budget.id)) }) {
-                                Icon(Icons.Filled.Delete, "Xóa ngân sách", tint = Color(0xFF8E8B85), modifier = Modifier.size(20.dp))
+                                Icon(Icons.Filled.Delete, stringResource(R.string.budgets_delete_title), tint = Color(0xFF8E8B85), modifier = Modifier.size(20.dp))
                             }
                         }
                         Text(
-                            "${amount(budget.spent.minorUnits)} / ${amount(budget.limit.minorUnits)}",
+                            "$spentText / $limitText",
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.SemiBold,
                             color = Color.White,
@@ -1539,8 +1576,8 @@ fun BudgetsScreen(onBack: () -> Unit, viewModel: BudgetsViewModel = hiltViewMode
                             Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                         ) {
-                            Text("${(ratio * 100).toInt()}% đã dùng", style = MaterialTheme.typography.bodySmall, color = Color(0xFF8E8B85))
-                            Text("Cảnh báo ở ${budget.warningPercent}%", style = MaterialTheme.typography.bodySmall, color = Color(0xFF8E8B85))
+                            Text(stringResource(R.string.budgets_ratio_used, (ratio * 100).toInt()), style = MaterialTheme.typography.bodySmall, color = Color(0xFF8E8B85))
+                            Text(stringResource(R.string.budgets_warning_at, budget.warningPercent), style = MaterialTheme.typography.bodySmall, color = Color(0xFF8E8B85))
                         }
                     }
                 }
@@ -1602,7 +1639,7 @@ private fun BudgetBottomSheet(state: BudgetsState, onAction: (BudgetsAction) -> 
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = if (state.editing == null) "Thêm ngân sách" else "Sửa ngân sách",
+                    text = if (state.editing == null) stringResource(R.string.budgets_add) else stringResource(R.string.budgets_edit_title),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = Color.White,
@@ -1618,7 +1655,7 @@ private fun BudgetBottomSheet(state: BudgetsState, onAction: (BudgetsAction) -> 
                     modifier = Modifier.size(32.dp),
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Icon(Icons.Filled.Close, contentDescription = "Đóng", tint = Color(0xFFCCCCCC), modifier = Modifier.size(16.dp))
+                        Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.action_close), tint = Color(0xFFCCCCCC), modifier = Modifier.size(16.dp))
                     }
                 }
             }
@@ -1626,7 +1663,7 @@ private fun BudgetBottomSheet(state: BudgetsState, onAction: (BudgetsAction) -> 
             // Scope Selector
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    text = "Phạm vi",
+                    text = stringResource(R.string.budgets_field_scope),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
                     color = Color(0xFFCCCCCC),
@@ -1643,7 +1680,7 @@ private fun BudgetBottomSheet(state: BudgetsState, onAction: (BudgetsAction) -> 
                         ) {
                             Box(modifier = Modifier.padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
                                 Text(
-                                    "Tổng chi",
+                                    stringResource(R.string.budgets_scope_all_expense),
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = if (isOverall) FontWeight.Bold else FontWeight.Medium,
                                     color = if (isOverall) Color(0xFFFFB800) else Color(0xFFCCCCCC),
@@ -1676,7 +1713,7 @@ private fun BudgetBottomSheet(state: BudgetsState, onAction: (BudgetsAction) -> 
             // Budget Limit Field (Numeric Keyboard Only)
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
-                    text = "Hạn mức",
+                    text = stringResource(R.string.budgets_field_limit),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
                     color = if (isLimitFocused) Color(0xFFFFB800) else Color(0xFFCCCCCC),
@@ -1691,16 +1728,16 @@ private fun BudgetBottomSheet(state: BudgetsState, onAction: (BudgetsAction) -> 
                         .fillMaxWidth()
                         .onFocusChanged { isLimitFocused = it.isFocused },
                     textStyle = TextStyle(fontSize = 17.sp, color = Color.White, fontWeight = FontWeight.SemiBold),
-                    placeholder = { Text("0 đ", color = Color(0xFF75726B), fontSize = 17.sp) },
+                    placeholder = { Text(if (activeAppLocale().language == "en") "0 ₫" else "0 đ", color = Color(0xFF75726B), fontSize = 17.sp) },
                     trailingIcon = {
                         if (state.limitText.isNotEmpty()) {
                             IconButton(onClick = { onAction(BudgetsAction.LimitChanged("")) }) {
-                                Icon(Icons.Filled.Close, "Xóa", modifier = Modifier.size(18.dp), tint = Color(0xFF8E8B85))
+                                Icon(Icons.Filled.Close, stringResource(R.string.action_clear), modifier = Modifier.size(18.dp), tint = Color(0xFF8E8B85))
                             }
                         }
                     },
                     suffix = {
-                        Text("đ", color = if (isLimitFocused) Color(0xFFFFB800) else Color(0xFF8E8B85), fontWeight = FontWeight.Bold)
+                        Text(if (activeAppLocale().language == "en") "₫" else "đ", color = if (isLimitFocused) Color(0xFFFFB800) else Color(0xFF8E8B85), fontWeight = FontWeight.Bold)
                     },
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Number,
@@ -1720,7 +1757,7 @@ private fun BudgetBottomSheet(state: BudgetsState, onAction: (BudgetsAction) -> 
                     singleLine = true,
                 )
                 Text(
-                    text = "Nhập số tiền hạn mức (chỉ nhập số)",
+                    text = stringResource(R.string.budgets_limit_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = Color(0xFF8E8B85),
                 )
@@ -1729,7 +1766,7 @@ private fun BudgetBottomSheet(state: BudgetsState, onAction: (BudgetsAction) -> 
             // Warning Percentage Field (Numeric Keyboard Only)
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
-                    text = "Cảnh báo (%)",
+                    text = stringResource(R.string.budgets_field_warning),
                     style = MaterialTheme.typography.bodyMedium,
                     fontWeight = FontWeight.Medium,
                     color = if (isWarningFocused) Color(0xFFFFB800) else Color(0xFFCCCCCC),
@@ -1747,7 +1784,7 @@ private fun BudgetBottomSheet(state: BudgetsState, onAction: (BudgetsAction) -> 
                     trailingIcon = {
                         if (state.warningText.isNotEmpty()) {
                             IconButton(onClick = { onAction(BudgetsAction.WarningChanged("")) }) {
-                                Icon(Icons.Filled.Close, "Xóa", modifier = Modifier.size(18.dp), tint = Color(0xFF8E8B85))
+                                Icon(Icons.Filled.Close, stringResource(R.string.action_clear), modifier = Modifier.size(18.dp), tint = Color(0xFF8E8B85))
                             }
                         }
                     },
@@ -1775,7 +1812,7 @@ private fun BudgetBottomSheet(state: BudgetsState, onAction: (BudgetsAction) -> 
                     singleLine = true,
                 )
                 Text(
-                    text = "Nhận thông báo khi chi tiêu đạt đến mức này.",
+                    text = stringResource(R.string.budgets_field_warning_hint),
                     style = MaterialTheme.typography.bodySmall,
                     color = Color(0xFF8E8B85),
                 )
@@ -1802,7 +1839,7 @@ private fun BudgetBottomSheet(state: BudgetsState, onAction: (BudgetsAction) -> 
                         .height(48.dp),
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Text("Hủy", color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                        Text(stringResource(R.string.action_cancel), color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
                     }
                 }
 
@@ -1824,7 +1861,7 @@ private fun BudgetBottomSheet(state: BudgetsState, onAction: (BudgetsAction) -> 
                         .weight(1f)
                         .height(48.dp),
                 ) {
-                    Text("Lưu", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    Text(stringResource(R.string.action_save), fontWeight = FontWeight.Bold, fontSize = 15.sp)
                 }
             }
         }

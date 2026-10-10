@@ -27,6 +27,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.app.ActivityCompat
@@ -36,6 +37,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil3.compose.AsyncImage
+import com.billlocket.app.R
 import com.billlocket.app.feature.transaction.draft.DraftImage
 import com.billlocket.app.ui.common.CollectEffects
 import com.billlocket.app.ui.common.collectUiState
@@ -139,10 +141,10 @@ private fun LegacyCaptureScreen(
         snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
             TopAppBar(
-                title = { Text("Ghi lại giao dịch") },
+                title = { Text(stringResource(R.string.capture_title)) },
                 navigationIcon = {
                     IconButton(onClick = { viewModel.onAction(CaptureAction.Back) }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Quay lại")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 },
             )
@@ -166,13 +168,13 @@ private fun LegacyCaptureScreen(
                             IconButton(onClick = { viewModel.onAction(CaptureAction.ToggleFlash) }) {
                                 Icon(
                                     if (state.flashEnabled) Icons.Filled.FlashOn else Icons.Filled.FlashOff,
-                                    contentDescription = "Bật hoặc tắt đèn flash",
+                                    contentDescription = stringResource(R.string.capture_flash_toggle_desc),
                                 )
                             }
                         }
                         if (state.frontCameraAvailable) {
                             IconButton(onClick = { viewModel.onAction(CaptureAction.ToggleLens) }) {
-                                Icon(Icons.Filled.Cameraswitch, contentDescription = "Đổi camera")
+                                Icon(Icons.Filled.Cameraswitch, contentDescription = stringResource(R.string.capture_switch_camera_desc))
                             }
                         }
                     }
@@ -189,9 +191,9 @@ private fun LegacyCaptureScreen(
                     verticalArrangement = Arrangement.Center,
                 ) {
                     Icon(Icons.Filled.NoPhotography, contentDescription = null, modifier = Modifier.size(64.dp))
-                    Text("Bạn có thể cấp quyền camera, chọn ảnh hoặc tiếp tục không có ảnh.")
+                    Text(stringResource(R.string.capture_permission_fallback_msg))
                     Button(onClick = { viewModel.onAction(CaptureAction.RequestCameraPermission) }) {
-                        Text(if (state.permission == CameraPermissionState.DENIED_PERMANENTLY) "Mở cài đặt" else "Cấp quyền camera")
+                        Text(if (state.permission == CameraPermissionState.DENIED_PERMANENTLY) stringResource(R.string.capture_open_settings) else stringResource(R.string.capture_grant_permission))
                     }
                 }
             }
@@ -203,7 +205,7 @@ private fun LegacyCaptureScreen(
                     onMove = { from, to -> viewModel.onAction(CaptureAction.MoveImage(from, to)) },
                 )
             }
-            state.errorMessage?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            state.errorMessage?.let { Text(localizeCaptureError(it), color = MaterialTheme.colorScheme.error) }
             Row(
                 modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly,
@@ -211,7 +213,7 @@ private fun LegacyCaptureScreen(
             ) {
                 OutlinedButton(onClick = { viewModel.onAction(CaptureAction.PickImages) }, enabled = !state.isProcessing) {
                     Icon(Icons.Filled.PhotoLibrary, contentDescription = null)
-                    Text(" Chọn ảnh")
+                    Text(" " + stringResource(R.string.capture_pick_photos))
                 }
                 if (state.permission == CameraPermissionState.GRANTED && state.cameraAvailable) {
                     FilledIconButton(
@@ -219,11 +221,11 @@ private fun LegacyCaptureScreen(
                         enabled = !state.isProcessing,
                         modifier = Modifier.size(64.dp),
                     ) {
-                        Icon(Icons.Filled.CameraAlt, contentDescription = "Chụp ảnh")
+                        Icon(Icons.Filled.CameraAlt, contentDescription = stringResource(R.string.capture_take_photo))
                     }
                 }
                 Button(onClick = { viewModel.onAction(CaptureAction.Continue) }, enabled = !state.isProcessing) {
-                    Text(if (state.images.isEmpty()) "Không dùng ảnh" else "Tiếp tục")
+                    Text(if (state.images.isEmpty()) stringResource(R.string.capture_no_photos) else stringResource(R.string.capture_continue))
                 }
             }
         }
@@ -232,10 +234,10 @@ private fun LegacyCaptureScreen(
     if (state.showDiscardConfirmation) {
         AlertDialog(
             onDismissRequest = { viewModel.onAction(CaptureAction.KeepDraft) },
-            title = { Text("Bỏ bản nháp?") },
-            text = { Text("Các ảnh chưa lưu sẽ bị xóa.") },
-            confirmButton = { TextButton(onClick = { viewModel.onAction(CaptureAction.DiscardDraft) }) { Text("Bỏ") } },
-            dismissButton = { TextButton(onClick = { viewModel.onAction(CaptureAction.KeepDraft) }) { Text("Tiếp tục chỉnh sửa") } },
+            title = { Text(stringResource(R.string.capture_discard_title)) },
+            text = { Text(stringResource(R.string.capture_discard_message)) },
+            confirmButton = { TextButton(onClick = { viewModel.onAction(CaptureAction.DiscardDraft) }) { Text(stringResource(R.string.capture_discard_confirm)) } },
+            dismissButton = { TextButton(onClick = { viewModel.onAction(CaptureAction.KeepDraft) }) { Text(stringResource(R.string.capture_continue_editing)) } },
         )
     }
 }
@@ -251,24 +253,34 @@ private fun DraftImageStrip(
             Card(modifier = Modifier.width(116.dp)) {
                 AsyncImage(
                     model = image.previewUri,
-                    contentDescription = "Ảnh giao dịch ${index + 1}",
+                    contentDescription = stringResource(R.string.capture_photo_desc, index + 1),
                     modifier = Modifier.fillMaxWidth().height(84.dp),
                 )
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     IconButton(onClick = { onMove(index, index - 1) }, enabled = index > 0) {
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Đưa ảnh sang trái")
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = stringResource(R.string.capture_move_left))
                     }
                     IconButton(onClick = { onRemove(image.id) }) {
-                        Icon(Icons.Filled.Delete, contentDescription = "Xóa ảnh")
+                        Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.capture_delete_photo))
                     }
                     IconButton(onClick = { onMove(index, index + 1) }, enabled = index < images.lastIndex) {
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Đưa ảnh sang phải")
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = stringResource(R.string.capture_move_right))
                     }
                 }
                 if (image.locationCandidate != null) {
-                    Text("Có gợi ý vị trí", style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(4.dp))
+                    Text(stringResource(R.string.capture_has_location_hint), style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(4.dp))
                 }
             }
         }
     }
+}
+
+@Composable
+internal fun localizeCaptureError(msg: String): String = when (msg) {
+    "Không có quyền vị trí; ảnh vẫn được lưu bình thường" -> stringResource(R.string.capture_error_permission_denied)
+    "Không thể chụp ảnh" -> stringResource(R.string.capture_error_take_photo)
+    "Không thể chuẩn bị ảnh" -> stringResource(R.string.capture_error_prepare_photo)
+    "Ảnh không hợp lệ hoặc quá lớn" -> stringResource(R.string.capture_error_invalid_or_large)
+    "Không lấy được vị trí chính xác; ảnh vẫn được lưu bình thường" -> stringResource(R.string.capture_error_location_inaccurate)
+    else -> msg
 }

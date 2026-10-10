@@ -24,6 +24,9 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextAlign
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
+import com.billlocket.app.R
+import com.billlocket.app.locale.localizedContext
+import com.billlocket.app.locale.resolveAppLocale
 
 class TodayRecapWidget : GlanceAppWidget() {
     override val sizeMode = SizeMode.Exact
@@ -38,6 +41,8 @@ class TodayRecapWidget : GlanceAppWidget() {
 
 @Composable
 fun TodayRecapContent(context: Context, data: TodayRecapWidgetData) {
+    val locCtx = context.localizedContext()
+    val locale = resolveAppLocale(context)
     val openTodayIntent = widgetIntent(context, WIDGET_ACTION_TODAY, data.todayEpochDay.toString())
 
     // Outer subtle warm border (1.5dp)
@@ -76,7 +81,7 @@ fun TodayRecapContent(context: Context, data: TodayRecapWidgetData) {
                                 Text(text = "📸", style = TextStyle(fontSize = 24.sp))
                                 Spacer(GlanceModifier.height(4.dp))
                                 Text(
-                                    text = "Hôm nay chưa có giao dịch",
+                                    text = locCtx.getString(R.string.widget_today_no_transactions),
                                     style = TextStyle(
                                         color = ColorProvider(Color(0xFF9E9487)),
                                         fontSize = 11.sp,
@@ -90,7 +95,7 @@ fun TodayRecapContent(context: Context, data: TodayRecapWidgetData) {
                         1 -> {
                             Image(
                                 provider = ImageProvider(data.images[0]),
-                                contentDescription = "Ảnh giao dịch hôm nay",
+                                contentDescription = locCtx.getString(R.string.widget_today_photo_desc),
                                 contentScale = ContentScale.Crop,
                                 modifier = GlanceModifier.fillMaxSize().cornerRadius(12.dp),
                             )
@@ -99,14 +104,14 @@ fun TodayRecapContent(context: Context, data: TodayRecapWidgetData) {
                             Row(modifier = GlanceModifier.fillMaxSize()) {
                                 Image(
                                     provider = ImageProvider(data.images[0]),
-                                    contentDescription = "Ảnh 1",
+                                    contentDescription = locCtx.getString(R.string.widget_today_photo_desc),
                                     contentScale = ContentScale.Crop,
                                     modifier = GlanceModifier.defaultWeight().fillMaxHeight().cornerRadius(10.dp),
                                 )
                                 Spacer(GlanceModifier.width(3.5.dp))
                                 Image(
                                     provider = ImageProvider(data.images[1]),
-                                    contentDescription = "Ảnh 2",
+                                    contentDescription = locCtx.getString(R.string.widget_today_photo_desc),
                                     contentScale = ContentScale.Crop,
                                     modifier = GlanceModifier.defaultWeight().fillMaxHeight().cornerRadius(10.dp),
                                 )
@@ -116,7 +121,7 @@ fun TodayRecapContent(context: Context, data: TodayRecapWidgetData) {
                             Row(modifier = GlanceModifier.fillMaxSize()) {
                                 Image(
                                     provider = ImageProvider(data.images[0]),
-                                    contentDescription = "Ảnh chính",
+                                    contentDescription = locCtx.getString(R.string.widget_today_photo_desc),
                                     contentScale = ContentScale.Crop,
                                     modifier = GlanceModifier.defaultWeight().fillMaxHeight().cornerRadius(10.dp),
                                 )
@@ -124,14 +129,14 @@ fun TodayRecapContent(context: Context, data: TodayRecapWidgetData) {
                                 Column(modifier = GlanceModifier.defaultWeight().fillMaxHeight()) {
                                     Image(
                                         provider = ImageProvider(data.images[1]),
-                                        contentDescription = "Ảnh 2",
+                                        contentDescription = locCtx.getString(R.string.widget_today_photo_desc),
                                         contentScale = ContentScale.Crop,
                                         modifier = GlanceModifier.fillMaxWidth().defaultWeight().cornerRadius(8.dp),
                                     )
                                     Spacer(GlanceModifier.height(3.5.dp))
                                     Image(
                                         provider = ImageProvider(data.images[2]),
-                                        contentDescription = "Ảnh 3",
+                                        contentDescription = locCtx.getString(R.string.widget_today_photo_desc),
                                         contentScale = ContentScale.Crop,
                                         modifier = GlanceModifier.fillMaxWidth().defaultWeight().cornerRadius(8.dp),
                                     )
@@ -142,7 +147,7 @@ fun TodayRecapContent(context: Context, data: TodayRecapWidgetData) {
                             Row(modifier = GlanceModifier.fillMaxSize()) {
                                 Image(
                                     provider = ImageProvider(data.images[0]),
-                                    contentDescription = "Ảnh chính",
+                                    contentDescription = locCtx.getString(R.string.widget_today_photo_desc),
                                     contentScale = ContentScale.Crop,
                                     modifier = GlanceModifier.defaultWeight().fillMaxHeight().cornerRadius(10.dp),
                                 )
@@ -150,7 +155,7 @@ fun TodayRecapContent(context: Context, data: TodayRecapWidgetData) {
                                 Column(modifier = GlanceModifier.defaultWeight().fillMaxHeight()) {
                                     Image(
                                         provider = ImageProvider(data.images[1]),
-                                        contentDescription = "Ảnh 2",
+                                        contentDescription = locCtx.getString(R.string.widget_today_photo_desc),
                                         contentScale = ContentScale.Crop,
                                         modifier = GlanceModifier.fillMaxWidth().defaultWeight().cornerRadius(8.dp),
                                     )
@@ -158,14 +163,14 @@ fun TodayRecapContent(context: Context, data: TodayRecapWidgetData) {
                                     Row(modifier = GlanceModifier.fillMaxWidth().defaultWeight()) {
                                         Image(
                                             provider = ImageProvider(data.images[2]),
-                                            contentDescription = "Ảnh 3",
+                                            contentDescription = locCtx.getString(R.string.widget_today_photo_desc),
                                             contentScale = ContentScale.Crop,
                                             modifier = GlanceModifier.defaultWeight().fillMaxHeight().cornerRadius(7.dp),
                                         )
                                         Spacer(GlanceModifier.width(3.5.dp))
                                         Image(
                                             provider = ImageProvider(data.images[3]),
-                                            contentDescription = "Ảnh 4",
+                                            contentDescription = locCtx.getString(R.string.widget_today_photo_desc),
                                             contentScale = ContentScale.Crop,
                                             modifier = GlanceModifier.defaultWeight().fillMaxHeight().cornerRadius(7.dp),
                                         )
@@ -198,7 +203,7 @@ fun TodayRecapContent(context: Context, data: TodayRecapWidgetData) {
                             if (data.calendarIcon != null) {
                                 Image(
                                     provider = ImageProvider(data.calendarIcon),
-                                    contentDescription = "Lịch hôm nay",
+                                    contentDescription = locCtx.getString(R.string.widget_calendar_today_desc),
                                     modifier = GlanceModifier.size(22.dp),
                                 )
                             } else {
@@ -224,7 +229,7 @@ fun TodayRecapContent(context: Context, data: TodayRecapWidgetData) {
                                 verticalAlignment = Alignment.Vertical.CenterVertically,
                             ) {
                                 Text(
-                                    text = "Hôm nay",
+                                    text = locCtx.getString(R.string.widget_today_title),
                                     style = TextStyle(
                                         color = ColorProvider(Color.White),
                                         fontSize = 10.sp,
@@ -233,7 +238,7 @@ fun TodayRecapContent(context: Context, data: TodayRecapWidgetData) {
                                     maxLines = 1,
                                 )
                                 Text(
-                                    text = "${data.transactionCount} giao dịch",
+                                    text = locCtx.getString(R.string.widget_today_transactions_count, data.transactionCount),
                                     style = TextStyle(
                                         color = ColorProvider(Color(0xFF9E9487)),
                                         fontSize = 7.5.sp,
@@ -256,7 +261,7 @@ fun TodayRecapContent(context: Context, data: TodayRecapWidgetData) {
                         // Right: Total spent
                         Column(horizontalAlignment = Alignment.Horizontal.End) {
                             Text(
-                                text = "Đã chi",
+                                text = locCtx.getString(R.string.widget_today_spent),
                                 style = TextStyle(
                                     color = ColorProvider(Color(0xFF9E9487)),
                                     fontSize = 7.sp,
@@ -264,7 +269,7 @@ fun TodayRecapContent(context: Context, data: TodayRecapWidgetData) {
                                 maxLines = 1,
                             )
                             Text(
-                                text = formatWidgetAmount(data.totalExpenseMinor),
+                                text = formatWidgetAmount(data.totalExpenseMinor, locale),
                                 style = TextStyle(
                                     color = ColorProvider(Color(0xFFFFB800)),
                                     fontSize = 10.5.sp,

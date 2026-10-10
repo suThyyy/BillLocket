@@ -1,0 +1,563 @@
+<resources>
+    <!-- App & Navigation -->
+    <string name="app_name">BillLocket</string>
+    <string name="setting">Settings</string>
+    <string name="nav_home">Home</string>
+    <string name="nav_statistics">Stats</string>
+    <string name="nav_capture">Capture</string>
+    <string name="nav_map">Map</string>
+    <string name="nav_accounts">Accounts</string>
+    <string name="nav_more">More</string>
+
+    <!-- Destinations -->
+    <string name="destination_day">Daily Transactions</string>
+    <string name="destination_capture">Record Transaction</string>
+    <string name="destination_transaction_editor">Enter Transaction</string>
+    <string name="destination_transaction_detail">Transaction Details</string>
+    <string name="destination_image_location">Photo Location</string>
+    <string name="destination_accounts">Accounts</string>
+    <string name="destination_account_detail">Account Details</string>
+    <string name="destination_account_editor">Edit Account</string>
+    <string name="destination_transfers">Transfers</string>
+    <string name="destination_transfer_editor">Enter Transfer</string>
+    <string name="destination_categories">Categories</string>
+    <string name="destination_budgets">Budgets</string>
+    <string name="destination_settings">Settings</string>
+    <string name="destination_widget_settings">Widget Settings</string>
+    <string name="destination_storage_settings">Storage Management</string>
+    <string name="destination_backup_settings">Backup and Restore</string>
+    <string name="destination_not_found">Content Not Found</string>
+    <string name="destination_not_found_message">This content does not exist or is no longer available.</string>
+
+    <!-- Actions -->
+    <string name="action_back">Back</string>
+    <string name="action_close">Close</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_save">Save</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_edit">Edit</string>
+    <string name="action_create">Create</string>
+    <string name="action_confirm">Confirm</string>
+    <string name="action_go_home">Go to Home</string>
+    <string name="action_search_transactions">Search Transactions</string>
+    <string name="action_undo">Undo</string>
+
+    <!-- Home -->
+    <string name="home_badge">PHOTO MONEY JOURNAL</string>
+    <string name="home_tagline">Photo money journal</string>
+    <string name="home_search">Search transactions</string>
+    <string name="home_month_expense_total">THIS MONTH\'S EXPENSES</string>
+    <string name="home_total_spent">Total spent</string>
+    <string name="home_hide_amount">Hide amount</string>
+    <string name="home_show_amount">Show amount</string>
+    <string name="home_income">Income</string>
+    <string name="home_expense">Expense</string>
+    <string name="home_filter_all">All</string>
+    <string name="home_today">Today</string>
+    <string name="home_previous_month">Previous month</string>
+    <string name="home_next_month">Next month</string>
+    <string name="home_day_photo_desc">Transaction photo for day %1$d</string>
+    <string name="home_transactions_header">Transactions</string>
+    <string name="home_memories">Memories</string>
+    <string name="home_view_all">View all</string>
+    <string name="home_create_transaction">Create transaction</string>
+    <string name="home_create_for_selected_day">Create transaction for selected day</string>
+    <string name="home_future_day">Future date</string>
+    <string name="home_no_transactions_for_day">No transactions on this day</string>
+    <string name="home_future_day_hint">Cannot add transactions for future dates</string>
+    <string name="home_tap_to_record_hint">Tap to record a spending moment</string>
+    <string name="home_photo_memory">Memory photo</string>
+    <string name="home_close">Close</string>
+    <string name="home_tap_photo_for_details">Tap photo to view details →</string>
+    <string name="home_no_photos_attached">No photos attached for this day</string>
+    <string name="home_month_summary_title">Monthly Total</string>
+    <string name="home_recap_banner_title">MONTH %1$d RECAP</string>
+    <string name="home_recap_banner_photos_count">Look back at %1$d moments and your spending story</string>
+    <string name="home_recap_banner_no_photos">Look back at your spending story</string>
+    <string name="home_recap_banner_interim">Estimated up to today</string>
+    <string name="home_recap_banner_full">Review the entire month</string>
+    <string name="home_recap_banner_action">View recap</string>
+    <string name="home_empty_title">No transactions yet</string>
+    <string name="home_empty_message">Tap the camera button to record your first transaction.</string>
+
+    <!-- Capture -->
+    <string name="capture_title">Record Transaction</string>
+    <string name="capture_permission_camera">Camera permission is required to capture receipts</string>
+    <string name="capture_open_settings">Open Settings</string>
+    <string name="capture_cancel">Cancel</string>
+    <string name="capture_location_on">Location on</string>
+    <string name="capture_discard_title">Discard draft?</string>
+    <string name="capture_discard_message">Unsaved photos will be deleted.</string>
+    <string name="capture_discard_confirm">Discard</string>
+    <string name="capture_continue_editing">Continue editing</string>
+    <string name="capture_location_consent_title">Save photo location automatically?</string>
+    <string name="capture_location_consent_message">BillLocket only tags your current location to photos you take after your consent. Library photos do not use current location and you can always edit or remove location later.</string>
+    <string name="capture_location_enable">Enable location</string>
+    <string name="capture_location_skip">No, take photo anyway</string>
+    <string name="capture_flash_desc">Flash</string>
+    <string name="capture_flash_toggle_desc">Toggle flash</string>
+    <string name="capture_switch_camera_desc">Switch camera</string>
+    <string name="capture_permission_prompt">Enable camera to capture receipts</string>
+    <string name="capture_permission_sub">You can still pick photos from library or continue.</string>
+    <string name="capture_permission_fallback_msg">You can grant camera permission, pick photos, or continue without photos.</string>
+    <string name="capture_grant_permission">Grant camera permission</string>
+    <string name="capture_pick_photos">Pick photos</string>
+    <string name="capture_take_photo">Take photo</string>
+    <string name="capture_skip_photos">Skip photos</string>
+    <string name="capture_no_photos">No photos</string>
+    <string name="capture_continue">Continue</string>
+    <string name="capture_continue_count">Continue (%1$d)</string>
+    <string name="capture_photo_desc">Transaction photo %1$d</string>
+    <string name="capture_delete_photo">Delete photo</string>
+    <string name="capture_move_left">Move left</string>
+    <string name="capture_move_right">Move right</string>
+    <string name="capture_has_location_hint">Location suggested</string>
+
+    <!-- Transaction Editor -->
+    <string name="editor_title_new">New Transaction</string>
+    <string name="editor_title_edit">Edit Transaction</string>
+    <string name="editor_discard_title">Discard changes?</string>
+    <string name="editor_discard_message">Unsaved changes will not be applied.</string>
+    <string name="editor_discard_confirm">Discard changes</string>
+    <string name="editor_continue_editing">Keep editing</string>
+    <string name="editor_type_expense">Expense</string>
+    <string name="editor_type_income">Income</string>
+    <string name="editor_save_transaction">Save transaction</string>
+    <string name="editor_update_transaction">Update transaction</string>
+    <string name="editor_saving">Saving…</string>
+    <string name="editor_add_photo">Add photo</string>
+    <string name="editor_missing_image">Missing photo</string>
+    <string name="editor_location_view">View location</string>
+    <string name="editor_location_add">Add location</string>
+    <string name="editor_relative_today">Today</string>
+    <string name="editor_relative_yesterday">Yesterday</string>
+    <string name="editor_time_label">Time</string>
+    <string name="editor_photos_label">Photos</string>
+    <string name="editor_error_amount">Amount must be greater than 0</string>
+    <string name="editor_error_account">Please select an account</string>
+    <string name="editor_error_category">Please select an appropriate category</string>
+    <string name="editor_error_date">Invalid date and time</string>
+    <string name="editor_error_future_date">Transaction date cannot be in the future.</string>
+    <string name="editor_error_missing_images">Please remove missing photos before saving</string>
+    <string name="editor_error_save_failed">Failed to save transaction. Please try again.</string>
+
+    <!-- Transaction Detail -->
+    <string name="detail_title">Transaction Details</string>
+    <string name="detail_delete_title">Delete transaction?</string>
+    <string name="detail_delete_message">This transaction and associated photos will be permanently deleted.</string>
+    <string name="detail_delete_confirm">Delete</string>
+    <string name="detail_delete_cancel">Cancel</string>
+    <string name="detail_field_category">Category</string>
+    <string name="detail_field_account">Account</string>
+    <string name="detail_field_time">Time</string>
+    <string name="detail_field_note">Note</string>
+    <string name="detail_field_location">Location</string>
+    <string name="detail_photos_count">Photos (%1$d)</string>
+    <string name="detail_no_note">No note</string>
+    <string name="tx_detail_photo_unavailable">Photo is no longer available</string>
+    <string name="tx_detail_photo_cd">Transaction photo</string>
+
+    <!-- Transaction Common -->
+    <string name="transaction_expense">Expense</string>
+    <string name="transaction_income">Income</string>
+    <string name="transaction_note_hint">Note (optional)</string>
+    <string name="transaction_amount_label">Amount</string>
+    <string name="transaction_category_label">Category</string>
+    <string name="transaction_account_label">Account</string>
+    <string name="transaction_date_label">Date</string>
+    <string name="transaction_saved">Transaction saved</string>
+    <string name="transaction_deleted">Transaction deleted</string>
+
+    <!-- Transaction Search -->
+    <string name="search_title">Search Transactions</string>
+    <string name="search_hint">Search by note, category, account…</string>
+    <string name="search_filter_all">All</string>
+    <string name="search_filter_expense">Expense</string>
+    <string name="search_filter_income">Income</string>
+    <string name="search_no_results">No transactions found</string>
+    <string name="search_no_results_hint">Try searching with different keywords</string>
+    <string name="search_results_count">%1$d results</string>
+
+    <!-- More -->
+    <string name="more_title">Yours</string>
+    <string name="more_subtitle">Manage money your way</string>
+    <string name="more_tagline">Your finances, kept with photos</string>
+    <string name="more_section_manage">Manage</string>
+    <string name="more_section_manage_settings">Management &amp; Settings</string>
+    <string name="more_accounts_title">Accounts</string>
+    <string name="more_accounts_subtitle">Balances and account ordering</string>
+    <string name="more_categories_title">Categories</string>
+    <string name="more_categories_subtitle">Income and expense categories</string>
+    <string name="more_transfers_title">Transfers</string>
+    <string name="more_transfers_subtitle">History between accounts</string>
+    <string name="more_budgets_title">Budgets</string>
+    <string name="more_budgets_subtitle">Monthly spending limits</string>
+    <string name="more_settings_title">Settings</string>
+    <string name="more_settings_subtitle">Appearance, privacy, and data</string>
+
+    <!-- Accounts -->
+    <string name="accounts_title">Accounts</string>
+    <string name="accounts_subtitle">Manage balances and your accounts</string>
+    <string name="accounts_options">Options</string>
+    <string name="accounts_create">Add account</string>
+    <string name="accounts_total_balance">Total Balance</string>
+    <string name="accounts_active_count">%1$d active accounts</string>
+    <string name="accounts_your_accounts">Your accounts (%1$d)</string>
+    <string name="accounts_reorder_done">Done</string>
+    <string name="accounts_reorder_action">Reorder</string>
+    <string name="accounts_empty_title">No accounts yet</string>
+    <string name="accounts_empty_message">Create an account to track cash, bank, or wallet.</string>
+    <string name="accounts_archived_count">Archived (%1$d)</string>
+    <string name="accounts_move_up">Move up</string>
+    <string name="accounts_move_down">Move down</string>
+    <string name="accounts_archive">Archive</string>
+    <string name="accounts_archive_dialog_title">Archive account?</string>
+    <string name="accounts_archive_dialog_message">%1$s will be hidden from new transactions, but history and past data remain intact.</string>
+    <string name="accounts_edit_title_new">Add Account</string>
+    <string name="accounts_edit_title_edit">Edit Account</string>
+    <string name="accounts_field_name">Account name</string>
+    <string name="accounts_field_type">Account type</string>
+    <string name="accounts_field_balance">Initial balance</string>
+    <string name="accounts_type_cash">Cash</string>
+    <string name="accounts_type_bank">Bank</string>
+    <string name="accounts_type_ewallet">E-wallet</string>
+    <string name="account_detail_current_balance">Current balance</string>
+    <string name="account_detail_edit">Edit account</string>
+    <string name="account_detail_archived">Archived</string>
+
+    <!-- Categories -->
+    <string name="categories_title">Categories</string>
+    <string name="categories_create">Add category</string>
+    <string name="categories_empty_title">No categories yet</string>
+    <string name="categories_empty_message">Create categories to classify transactions.</string>
+    <string name="categories_default_badge">Default</string>
+    <string name="categories_custom_badge">Custom</string>
+    <string name="categories_archived_count">Archived (%1$d)</string>
+    <string name="categories_archived_hidden">Hidden</string>
+    <string name="categories_archive_dialog_title">Archive category?</string>
+    <string name="categories_archive_dialog_message">%1$s will be hidden from new transactions, but history and past data remain intact.</string>
+    <string name="categories_edit_title_new">Add Category</string>
+    <string name="categories_edit_title_edit">Edit Category</string>
+    <string name="categories_field_name">Category name</string>
+    <string name="categories_field_color">Color</string>
+    <string name="categories_field_icon">Icon</string>
+
+    <!-- Transfers -->
+    <string name="transfers_title">Transfers</string>
+    <string name="transfers_create">Add transfer</string>
+    <string name="transfers_empty_title">No transfers yet</string>
+    <string name="transfers_empty_message">Transfer money between two accounts without changing income or expenses.</string>
+    <string name="transfers_edit_title_new">Add Transfer</string>
+    <string name="transfers_edit_title_edit">Edit Transfer</string>
+    <string name="transfers_from_account">From account</string>
+    <string name="transfers_to_account">To account</string>
+    <string name="transfers_save_button">Save transfer</string>
+
+    <!-- Budgets -->
+    <string name="budgets_title">Budgets</string>
+    <string name="budgets_add">Add budget</string>
+    <string name="budgets_create">Create budget</string>
+    <string name="budgets_empty_title">No budgets yet</string>
+    <string name="budgets_empty_message">Create budgets to monitor spending this month.</string>
+    <string name="budgets_empty_hint_1">Budget tracking still works when there are no transactions.</string>
+    <string name="budgets_empty_hint_2">Set spending limits to better control your finances.</string>
+    <string name="budgets_notifications_off">Notifications are not enabled.</string>
+    <string name="budgets_enable_warning">Enable threshold alerts</string>
+    <string name="budgets_total_expense">Total expense</string>
+    <string name="budgets_delete_title">Delete budget</string>
+    <string name="budgets_spent_ratio">%1$d%% used</string>
+    <string name="budgets_warning_at">Alert at %1$d%%</string>
+    <string name="budgets_edit_title_new">Add Budget</string>
+    <string name="budgets_edit_title_edit">Edit Budget</string>
+    <string name="budgets_field_scope">Scope</string>
+    <string name="budgets_field_limit">Limit</string>
+    <string name="budgets_field_limit_hint">Enter limit amount (numbers only)</string>
+    <string name="budgets_field_warning_percent">Alert threshold (%)</string>
+    <string name="budgets_field_warning_hint">Receive notifications when spending reaches this level.</string>
+
+    <!-- Insights -->
+    <string name="insights_tab_day">Day</string>
+    <string name="insights_tab_week">Week</string>
+    <string name="insights_tab_month">Month</string>
+    <string name="insights_tab_year">Year</string>
+    <string name="insights_spending_trends">Spending trends</string>
+    <string name="insights_spending_by_category">Spending by category</string>
+    <string name="insights_filter_all_accounts">All accounts</string>
+    <string name="insights_no_trend_data">No trend data yet</string>
+    <string name="insights_no_transactions">No transactions</string>
+    <string name="insights_recent_transactions">Recent Transactions</string>
+    <string name="insights_view_all">View all</string>
+    <string name="insights_no_transactions_period">No transactions in this period.</string>
+    <string name="insights_compare_increase">Compared to previous period, spending increased by %1$s.</string>
+    <string name="insights_compare_decrease">Compared to previous period, spending decreased by %1$s.</string>
+    <string name="insights_compare_unchanged">Compared to previous period, spending is unchanged.</string>
+    <string name="insights_compare_no_data">No previous period data for comparison.</string>
+
+    <!-- Map -->
+    <string name="map_title">Transaction Map</string>
+    <string name="map_no_location">No transactions with location yet</string>
+    <string name="map_theme_dark">Dark</string>
+    <string name="map_theme_light">Light</string>
+    <string name="map_theme_system">System</string>
+    <string name="map_photos_count">%1$d transaction photos</string>
+    <string name="map_current_location">Current location</string>
+    <string name="map_showing_nearby">Showing nearby</string>
+    <string name="map_tap_to_locate">Tap to locate</string>
+    <string name="map_locate_current">Locate current position</string>
+    <string name="map_style_selector">Map style</string>
+    <string name="map_selected_location">Selected location</string>
+    <string name="map_load_failed">Failed to load map</string>
+    <string name="map_retry">Retry</string>
+    <string name="map_empty_title">No photos on map yet</string>
+    <string name="map_empty_message">Transaction photos with confirmed locations will appear here.</string>
+    <string name="map_all">All</string>
+    <string name="map_all_categories">All categories</string>
+    <string name="map_details">Details</string>
+    <string name="map_resolving_address">Resolving address…</string>
+    <string name="map_open_transaction">Open transaction</string>
+    <string name="map_calendar">Calendar</string>
+
+    <!-- Monthly Recap -->
+    <string name="recap_title">Monthly Recap</string>
+    <string name="recap_total_spent">Total Spending</string>
+    <string name="recap_top_categories">Top Spending Categories</string>
+    <string name="recap_memories_title">Your Spending Memories</string>
+    <string name="recap_memories_subtitle">Every photo preserves a meaningful story and lesson in spending.</string>
+    <string name="recap_moments_count">moments</string>
+    <string name="recap_transactions_count">transactions</string>
+    <string name="recap_moments_recorded">You recorded %1$d spending moments this month.</string>
+    <string name="recap_no_transactions">No transactions recorded this month.</string>
+    <string name="recap_month_title">YOUR MONTH %1$d</string>
+    <string name="recap_remaining">Remaining</string>
+    <string name="recap_daily_spending">Daily Spending</string>
+    <string name="recap_most_active_day">Most Active Day</string>
+    <string name="recap_most_active_day_format">%2$d/%1$d (%3$d txns)</string>
+    <string name="recap_top_categories_header">You spent most on...</string>
+    <string name="recap_category_spent_format">%1$s • %2$d%% of total</string>
+    <string name="recap_no_category_data">No category spending data this month.</string>
+    <string name="recap_perspective_title">BILLLOCKET INSIGHT</string>
+    <string name="recap_perspective_ratio">For every 10 dong you spent this month, about %1$s went to %2$s.</string>
+    <string name="recap_perspective_keep_recording">Keep logging transactions to receive smart spending insights.</string>
+    <string name="recap_places_title">Places You Visited</string>
+    <string name="recap_places_subtitle">Every location is a story, every revisit a pleasant memory.</string>
+    <string name="recap_no_places_title">No confirmed locations yet</string>
+    <string name="recap_no_places_subtitle">Transaction photos with confirmed locations will appear here when you save locations for photos.</string>
+    <string name="recap_saved_location">Saved location</string>
+    <string name="recap_saved_locations_monthly">Saved locations this month</string>
+    <string name="recap_place_occurred">Locations from this month</string>
+    <string name="recap_place_moments_count">%1$d moments</string>
+    <string name="recap_photos_overview_title">Month %1$d Through Photos</string>
+    <string name="recap_photos_overview_subtitle">%1$d photos • %2$d transactions</string>
+    <string name="recap_no_photos_title">No transaction photos this month</string>
+    <string name="recap_no_photos_subtitle">Capture receipt photos or spending moments to preserve memories next month!</string>
+    <string name="recap_view_calendar">View on calendar -></string>
+    <string name="recap_preview_share_title">Preview &amp; Share</string>
+    <string name="recap_preview_share_subtitle">Customize information shown in recap image before sharing.</string>
+    <string name="recap_review_month_header">Look back at %1$d/%2$d</string>
+    <string name="recap_spent_amount">Spent: %1$s</string>
+    <string name="recap_amount_hidden">Amount hidden</string>
+    <string name="recap_tagline_private">Spending memories, strictly yours</string>
+    <string name="recap_toggle_amount">Show total spent &amp; amounts</string>
+    <string name="recap_toggle_notes">Show transaction notes</string>
+    <string name="recap_toggle_locations">Show saved locations</string>
+    <string name="recap_generating_image">Generating image...</string>
+    <string name="recap_generate_and_share">Generate Image &amp; Share</string>
+    <string name="recap_compiling_story">Compiling monthly story...</string>
+    <string name="recap_retry">Retry</string>
+    <string name="recap_start_viewing">Start recap</string>
+    <string name="recap_next">Next</string>
+    <string name="recap_continue">Continue</string>
+    <string name="recap_continue_viewing">Keep watching</string>
+    <string name="recap_cover_title">MONTH %1$d / %2$d</string>
+    <string name="recap_cover_subtitle">Your\nmonth</string>
+    <string name="recap_spent_amount_label">Spent</string>
+    <string name="recap_income_amount_label">Income %1$s</string>
+    <string name="recap_most_label">Most: %1$s</string>
+    <string name="recap_cannot_read_photo">Unable to load image</string>
+
+    <!-- Photo Location -->
+    <string name="image_location_title">Photo Location</string>
+    <string name="image_location_exif_hint">Use EXIF suggestion: %1$f, %2$f</string>
+    <string name="image_location_latitude">Latitude</string>
+    <string name="image_location_longitude">Longitude</string>
+    <string name="image_location_place_name">Place name (optional)</string>
+    <string name="image_location_current">Current</string>
+    <string name="image_location_remove">Remove location</string>
+    <string name="image_location_confirm">Confirm</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_personalization">Personalization</string>
+    <string name="settings_personalization_sub">Appearance, privacy and data</string>
+    <string name="settings_appearance">Appearance</string>
+    <string name="settings_language">Language</string>
+    <string name="settings_language_system">System</string>
+    <string name="settings_language_vietnamese">Tiếng Việt</string>
+    <string name="settings_language_english">English</string>
+    <string name="settings_theme_system">System</string>
+    <string name="settings_theme_light">Light</string>
+    <string name="settings_theme_dark">Dark</string>
+    <string name="settings_amount_visibility">Amount Display</string>
+    <string name="settings_amount_show">Show</string>
+    <string name="settings_amount_hide">Hide</string>
+    <string name="settings_amount_obscure">Obscure</string>
+    <string name="settings_currency_format">Currency: %1$s</string>
+    <string name="settings_permissions">App Permissions</string>
+    <string name="settings_permission_camera">Camera</string>
+    <string name="settings_permission_location">Location</string>
+    <string name="settings_permission_notifications">Notifications</string>
+    <string name="settings_permission_granted">Granted</string>
+    <string name="settings_permission_on_demand">Requested only when using feature</string>
+    <string name="settings_photo_picker_hint">Photos use Photo Picker, so BillLocket does not need full library access.</string>
+    <string name="settings_open_system_settings">Open system permission settings</string>
+    <string name="settings_widget">Widgets</string>
+    <string name="settings_widget_sub">Photos, privacy and tap actions</string>
+    <string name="settings_storage_backup">Storage and Backup</string>
+    <string name="settings_storage_backup_sub">Storage usage, data export and restore</string>
+    <string name="settings_storage_cleanup_button">Clean unused orphan files safely</string>
+    <string name="settings_storage_export_full">Full export</string>
+    <string name="settings_storage_export_private">Private export (no photos/locations)</string>
+    <string name="settings_storage_restore_file">Restore from file</string>
+    <string name="settings_storage_replace_dialog_title">Replace all data?</string>
+    <string name="settings_storage_replace_dialog_message">Backup contains %1$d transactions and %2$d photos. Current BillLocket data will be replaced.</string>
+    <string name="settings_storage_sensitive_dialog_title">Sensitive Data</string>
+    <string name="settings_storage_sensitive_dialog_message">Exported file may contain receipt photos, amounts, and locations. Store only in trusted locations.</string>
+    <string name="settings_storage_choose_location">Choose save location</string>
+    <string name="settings_storage_restore_confirm">Restore</string>
+    <string name="settings_storage_usage_format">Original photos: %1$s\nTemporary / recovery: %2$s\nCache: %3$s</string>
+
+    <!-- Widget Settings -->
+    <string name="widget_settings_title">Widgets</string>
+    <string name="widget_settings_privacy">Privacy</string>
+    <string name="widget_settings_show_amount">Display amount</string>
+    <string name="widget_settings_show_amount_sub">Turn off to hide amounts on the home screen</string>
+    <string name="widget_settings_show_category">Display category</string>
+    <string name="widget_settings_show_category_sub">Option to hide classification information entirely</string>
+    <string name="widget_settings_on_tap">When tapping photo</string>
+    <string name="widget_settings_open_detail">Open transaction details</string>
+    <string name="widget_settings_open_capture">Quick receipt capture</string>
+    <string name="widget_settings_note">The ＋ button on the widget always opens quick capture. If a photo is deleted or unreadable, the widget automatically switches to another valid photo.</string>
+
+    <!-- Widgets -->
+    <string name="widget_description">Recent transaction photos and receipt capture shortcut</string>
+    <string name="widget_latest_transaction_name">Latest Transaction (2x1)</string>
+    <string name="widget_latest_transaction_desc">Photo and amount of latest transaction with photo shortcut</string>
+    <string name="widget_today_recap_name">Today Recap (2x2)</string>
+    <string name="widget_today_recap_desc">Transaction photos and total spending for today</string>
+    <string name="widget_weekly_recap_name">Weekly Overview (4x2)</string>
+    <string name="widget_weekly_recap_desc">Spending overview, category breakdown and transaction photos this week</string>
+    <string name="widget_relative_today">Today</string>
+    <string name="widget_relative_yesterday">Yesterday</string>
+    <string name="widget_no_transactions">No transactions</string>
+    <string name="widget_latest_photo_desc">Latest transaction photo</string>
+    <string name="widget_no_photo">No photo</string>
+    <string name="widget_latest_title">Latest transaction</string>
+    <string name="widget_add_new">Add new transaction</string>
+    <string name="widget_today_no_transactions">No transactions today</string>
+    <string name="widget_today_photo_desc">Today transaction photo</string>
+    <string name="widget_calendar_today_desc">Today calendar</string>
+    <string name="widget_today_title">Today</string>
+    <string name="widget_today_transactions_count">%1$d transactions</string>
+    <string name="widget_today_spent">Spent</string>
+    <string name="widget_weekly_title">Weekly overview</string>
+    <string name="widget_this_week">This week</string>
+    <string name="widget_weekly_top_category">%1$s highest • %2$d%%</string>
+    <string name="widget_weekly_no_spending">No spending this week</string>
+    <string name="widget_weekly_no_photos">No photos this week</string>
+    <string name="widget_weekly_photo_desc">This week transaction photo</string>
+
+    <!-- Notifications -->
+    <string name="notification_budget_channel">Budget Alerts</string>
+    <string name="notification_budget_channel_desc">Notifications when spending reaches budget thresholds</string>
+    <string name="notification_budget_warning_title">Budget Warning</string>
+    <string name="notification_budget_exceeded">You have used 100% of this month\'s budget.</string>
+    <string name="notification_budget_used_format">You have used %1$d%% of this month\'s budget.</string>
+
+    <!-- BL-045 Corrective Strings -->
+    <!-- Storage messages -->
+    <string name="settings_storage_msg_currency_blocked">Cannot change currency when financial data exists</string>
+    <string name="settings_storage_msg_measure_failed">Failed to read storage usage</string>
+    <string name="settings_storage_msg_cleanup_succeeded">Cleaned up %1$d unused files</string>
+    <string name="settings_storage_msg_cleanup_failed">Failed to clean up storage</string>
+    <string name="settings_storage_msg_export_succeeded">Backup exported successfully</string>
+    <string name="settings_storage_msg_export_failed">Backup export failed</string>
+    <string name="settings_storage_msg_invalid_backup">Invalid backup file</string>
+    <string name="settings_storage_msg_restore_succeeded">Restored successfully</string>
+    <string name="settings_storage_msg_restore_failed">Restore failed; previous data was preserved</string>
+
+    <!-- Map Feature -->
+    <string name="map_showing_around_here">Showing around here</string>
+    <string name="map_recenter_cd">Recenter to current location</string>
+    <string name="map_style_cd">Map style</string>
+    <string name="map_selected_point_title">Selected location</string>
+    <string name="map_calendar_cd">Calendar</string>
+    <string name="map_detail_cd">Details</string>
+    <string name="map_error_load_photos">Cannot load photos with location</string>
+    <string name="map_error_current_location">Cannot obtain current location</string>
+
+    <!-- Insights & Budgets -->
+    <string name="insights_net">Net</string>
+    <string name="insights_comparison_format">%1$d%% vs previous period</string>
+    <string name="insights_period_week">Week</string>
+    <string name="insights_period_month">Month</string>
+    <string name="insights_period_year">Year</string>
+    <string name="insights_delta_increased">Compared to previous period, spending increased by %1$s.</string>
+    <string name="insights_delta_decreased">Compared to previous period, spending decreased by %1$s.</string>
+    <string name="insights_delta_unchanged">Compared to previous period, spending is unchanged.</string>
+    <string name="budgets_scope_all_expense">Total spending</string>
+    <string name="budgets_spent_out_of">%1$s used %2$s of %3$s</string>
+    <string name="budgets_ratio_used">%1$d%% used</string>
+    <string name="budgets_edit_title">Edit budget</string>
+    <string name="budgets_limit_hint">Enter limit amount (numbers only)</string>
+    <string name="budgets_field_warning">Warning (%)</string>
+    <string name="action_clear">Clear</string>
+
+    <!-- Accounts -->
+    <string name="accounts_toggle_balance_cd">Toggle balance visibility</string>
+    <string name="accounts_tab_this_month">This month</string>
+    <string name="accounts_tab_this_year">This year</string>
+    <string name="accounts_tab_all">All</string>
+
+    <!-- Location Feature Errors -->
+    <string name="location_error_no_image_in_draft">No photo found in draft</string>
+    <string name="location_error_current_location_fallback">Cannot get current location; you can still select on the map</string>
+    <string name="location_error_select_location">Please select a location</string>
+
+    <!-- Recap Errors -->
+    <string name="recap_error_load_failed">Cannot load monthly recap</string>
+    <string name="recap_error_export_failed">Cannot generate recap image</string>
+
+    <!-- Transaction Errors -->
+    <string name="tx_detail_error_delete_failed">Cannot delete transaction</string>
+    <string name="search_error_load_failed">Cannot load transactions</string>
+
+    <!-- Home Errors -->
+    <string name="home_error_load_calendar">Unable to load calendar</string>
+    <string name="home_error_future_date">Cannot add transactions for future dates.</string>
+    <string name="home_error_load_day_tx">Unable to load transactions for this day</string>
+    <string name="home_error_load_tx">Unable to load transactions</string>
+
+    <!-- Finance Errors -->
+    <string name="accounts_error_load">Unable to load accounts</string>
+    <string name="accounts_error_archive">Unable to archive account</string>
+    <string name="accounts_error_reorder">Unable to reorder accounts</string>
+    <string name="accounts_error_invalid_input">Please enter a valid name and balance</string>
+    <string name="accounts_error_save_exists">Unable to save account; name may already exist</string>
+    <string name="categories_error_name_required">Please enter a category name</string>
+    <string name="categories_error_save_exists">Unable to save category; name may already exist</string>
+    <string name="transfers_error_load">Unable to load transfer history</string>
+    <string name="transfers_error_invalid_input">Select two different accounts and enter an amount greater than 0</string>
+    <string name="transfers_error_save">Unable to save transfer</string>
+
+    <!-- Insights & Budgets Errors -->
+    <string name="insights_error_load">Unable to load statistics</string>
+    <string name="budgets_error_invalid_input">Limit must be greater than 0 and threshold between 1 and 99</string>
+    <string name="budgets_error_save">Unable to save budget</string>
+
+    <!-- Capture Errors -->
+    <string name="capture_error_permission_denied">Location permission denied; photo is still saved normally</string>
+    <string name="capture_error_take_photo">Unable to take photo</string>
+    <string name="capture_error_prepare_photo">Unable to prepare photo</string>
+    <string name="capture_error_invalid_or_large">Invalid photo or file too large</string>
+    <string name="capture_error_location_inaccurate">Unable to get accurate location; photo is still saved normally</string>
+</resources>

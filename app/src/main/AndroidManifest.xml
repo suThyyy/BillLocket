@@ -22,10 +22,19 @@
         android:supportsRtl="true"
         android:fitsSystemWindows="false"
         android:theme="@style/Theme.BillLocket"
+        android:localeConfig="@xml/locale_config"
         tools:targetApi="31">
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="${MAPS_API_KEY}" />
+        <service
+            android:name="androidx.appcompat.app.AppLocalesMetadataHolderService"
+            android:enabled="false"
+            android:exported="false">
+            <meta-data
+                android:name="autoStoreLocales"
+                android:value="true" />
+        </service>
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="com.billlocket.app.fileprovider"

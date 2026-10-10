@@ -27,10 +27,14 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil3.compose.AsyncImage
+import com.billlocket.app.R
 import com.billlocket.app.domain.model.*
 import com.billlocket.app.feature.transaction.draft.DraftImage
+import com.billlocket.app.locale.BillLocketFormatters
+import com.billlocket.app.locale.activeAppLocale
 import com.billlocket.app.ui.common.CollectEffects
 import com.billlocket.app.ui.common.collectUiState
+import androidx.compose.ui.res.stringResource
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
@@ -99,18 +103,20 @@ private fun LegacyTransactionEditorScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (state.sourceTransactionId == null) "Giao dịch mới" else "Chỉnh sửa giao dịch") },
+                title = { Text(if (state.sourceTransactionId == null) stringResource(R.string.editor_title_new) else stringResource(R.string.editor_title_edit)) },
                 navigationIcon = {
                     IconButton(onClick = { viewModel.onAction(TransactionEditorAction.Back) }) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Quay lại")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 },
             )
         },
     ) { padding ->
+        val locale = activeAppLocale()
         if (state.fatalError != null) {
             Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = androidx.compose.ui.Alignment.Center) {
-                Text(state.fatalError.orEmpty())
+                val errorMsg = if (state.fatalError == "Không tìm thấy giao dịch") stringResource(R.string.destination_not_found) else state.fatalError.orEmpty()
+                Text(errorMsg)
             }
         } else {
             Column(
@@ -121,24 +127,24 @@ private fun LegacyTransactionEditorScreen(
                     FilterChip(
                         selected = state.type == TransactionType.EXPENSE,
                         onClick = { viewModel.onAction(TransactionEditorAction.TypeChanged(TransactionType.EXPENSE)) },
-                        label = { Text("Chi") },
+                        label = { Text(stringResource(R.string.home_expense)) },
                     )
                     FilterChip(
                         selected = state.type == TransactionType.INCOME,
                         onClick = { viewModel.onAction(TransactionEditorAction.TypeChanged(TransactionType.INCOME)) },
-                        label = { Text("Thu") },
+                        label = { Text(stringResource(R.string.home_income)) },
                     )
                 }
                 OutlinedTextField(
                     value = state.amountText,
                     onValueChange = { viewModel.onAction(TransactionEditorAction.AmountChanged(it)) },
-                    label = { Text("Số tiền (${state.currency.value})") },
+                    label = { Text("${stringResource(R.string.transaction_amount_label)} (${state.currency.value})") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     isError = "amount" in state.fieldErrors,
-                    supportingText = { state.fieldErrors["amount"]?.let { Text(it) } },
+                    supportingText = { state.fieldErrors["amount"]?.let { msg -> localizeEditorError(msg)?.let { Text(it) } } },
                     modifier = Modifier.fillMaxWidth(),
                 )
-                Text("Danh mục", style = MaterialTheme.typography.labelLarge)
+                Text(stringResource(R.string.transaction_category_label), style = MaterialTheme.typography.labelLarge)
                 ChoiceRow(
                     values = state.categories.filter { it.type == state.type },
                     selected = state.selectedCategoryId,
@@ -146,8 +152,8 @@ private fun LegacyTransactionEditorScreen(
                     label = Category::name,
                     onSelected = { viewModel.onAction(TransactionEditorAction.CategorySelected(it)) },
                 )
-                state.fieldErrors["category"]?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-                Text("Tài khoản", style = MaterialTheme.typography.labelLarge)
+                state.fieldErrors["category"]?.let { msg -> localizeEditorError(msg)?.let { Text(it, color = MaterialTheme.colorScheme.error) } }
+                Text(stringResource(R.string.transaction_account_label), style = MaterialTheme.typography.labelLarge)
                 ChoiceRow(
                     values = state.accounts,
                     selected = state.selectedAccountId,
@@ -155,11 +161,11 @@ private fun LegacyTransactionEditorScreen(
                     label = Account::name,
                     onSelected = { viewModel.onAction(TransactionEditorAction.AccountSelected(it)) },
                 )
-                state.fieldErrors["account"]?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                state.fieldErrors["account"]?.let { msg -> localizeEditorError(msg)?.let { Text(it, color = MaterialTheme.colorScheme.error) } }
                 OutlinedTextField(
                     value = state.note,
                     onValueChange = { viewModel.onAction(TransactionEditorAction.NoteChanged(it)) },
-                    label = { Text("Ghi chú (không bắt buộc)") },
+                    label = { Text(stringResource(R.string.transaction_note_hint)) },
                     minLines = 2,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -167,18 +173,18 @@ private fun LegacyTransactionEditorScreen(
                     val zoned = Instant.ofEpochMilli(occurred.epochMillis).atZone(ZoneId.of(occurred.zoneId))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         OutlinedButton(onClick = { viewModel.onAction(TransactionEditorAction.PickDate) }) {
-                            Text(zoned.toLocalDate().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")))
+                            Text(BillLocketFormatters.formatDate(zoned.toLocalDate(), locale))
                         }
                         OutlinedButton(onClick = { viewModel.onAction(TransactionEditorAction.PickTime) }) {
-                            Text(zoned.toLocalTime().format(DateTimeFormatter.ofPattern("HH:mm")))
+                            Text(BillLocketFormatters.formatTime(zoned.toLocalTime(), locale))
                         }
                     }
                 }
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text("Ảnh (${state.images.size})", style = MaterialTheme.typography.labelLarge)
+                    Text(stringResource(R.string.detail_photos_count, state.images.size), style = MaterialTheme.typography.labelLarge)
                     TextButton(onClick = { viewModel.onAction(TransactionEditorAction.AddImages) }) {
                         Icon(Icons.Filled.AddPhotoAlternate, contentDescription = null)
-                        Text("Thêm ảnh")
+                        Text(stringResource(R.string.editor_add_photo))
                     }
                 }
                 EditorImageStrip(
@@ -187,15 +193,19 @@ private fun LegacyTransactionEditorScreen(
                     onMove = { from, to -> viewModel.onAction(TransactionEditorAction.MoveImage(from, to)) },
                     onLocation = { onNavigateLocation(state.draftId, TransactionImageId(it)) },
                 )
-                state.fieldErrors["images"]?.let { Text(it, color = MaterialTheme.colorScheme.error) }
-                state.fieldErrors["save"]?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                state.fieldErrors["images"]?.let { msg ->
+                    localizeEditorError(msg)?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                }
+                state.fieldErrors["save"]?.let { msg ->
+                    localizeEditorError(msg)?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+                }
                 Button(
                     onClick = { viewModel.onAction(TransactionEditorAction.Save) },
                     enabled = state.canSave,
                     modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
                 ) {
                     if (state.isSaving) CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                    else Text("Lưu giao dịch")
+                    else Text(stringResource(R.string.editor_save_transaction))
                 }
             }
         }
@@ -204,16 +214,16 @@ private fun LegacyTransactionEditorScreen(
     if (state.showDiscardConfirmation) {
         AlertDialog(
             onDismissRequest = { viewModel.onAction(TransactionEditorAction.KeepEditing) },
-            title = { Text("Bỏ thay đổi?") },
-            text = { Text("Các thay đổi chưa lưu sẽ không được áp dụng.") },
+            title = { Text(stringResource(R.string.editor_discard_title)) },
+            text = { Text(stringResource(R.string.editor_discard_message)) },
             confirmButton = {
                 TextButton(onClick = { viewModel.onAction(TransactionEditorAction.Discard) }) {
-                    Text("Bỏ thay đổi", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.editor_discard_confirm), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.onAction(TransactionEditorAction.KeepEditing) }) {
-                    Text("Tiếp tục chỉnh sửa")
+                    Text(stringResource(R.string.editor_continue_editing))
                 }
             },
         )
@@ -248,7 +258,7 @@ private fun EditorImageStrip(
     onLocation: (String) -> Unit,
 ) {
     if (images.isEmpty()) {
-        Text("Giao dịch này chưa có ảnh.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(stringResource(R.string.home_no_photos_attached), color = MaterialTheme.colorScheme.onSurfaceVariant)
         return
     }
     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -256,26 +266,38 @@ private fun EditorImageStrip(
             Card(modifier = Modifier.width(128.dp)) {
                 AsyncImage(
                     model = image.previewUri,
-                    contentDescription = "Ảnh giao dịch ${index + 1}",
+                    contentDescription = stringResource(R.string.capture_photo_desc, index + 1),
                     modifier = Modifier.fillMaxWidth().height(88.dp),
                 )
-                if (image.isMissing) Text("Ảnh bị thiếu", color = MaterialTheme.colorScheme.error)
-                else if (image.locationCandidate != null) Text("Có gợi ý vị trí", style = MaterialTheme.typography.labelSmall)
+                if (image.isMissing) Text(stringResource(R.string.editor_missing_image), color = MaterialTheme.colorScheme.error)
+                else if (image.locationCandidate != null) Text(stringResource(R.string.capture_has_location_hint), style = MaterialTheme.typography.labelSmall)
                 Row {
                     IconButton(onClick = { onLocation(image.id) }) {
-                        Icon(Icons.Filled.LocationOn, contentDescription = "Chỉnh vị trí ảnh")
+                        Icon(Icons.Filled.LocationOn, contentDescription = stringResource(R.string.editor_location_view))
                     }
                     IconButton(onClick = { onMove(index, index - 1) }, enabled = index > 0) {
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Đưa ảnh sang trái")
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = stringResource(R.string.capture_move_left))
                     }
                     IconButton(onClick = { onRemove(image.id) }) {
-                        Icon(Icons.Filled.Delete, contentDescription = "Xóa ảnh")
+                        Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.capture_delete_photo))
                     }
                     IconButton(onClick = { onMove(index, index + 1) }, enabled = index < images.lastIndex) {
-                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Đưa ảnh sang phải")
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = stringResource(R.string.capture_move_right))
                     }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun localizeEditorError(error: String?): String? = when (error) {
+    "Số tiền phải lớn hơn 0" -> stringResource(R.string.editor_error_amount)
+    "Hãy chọn tài khoản" -> stringResource(R.string.editor_error_account)
+    "Hãy chọn danh mục phù hợp" -> stringResource(R.string.editor_error_category)
+    "Ngày giờ không hợp lệ" -> stringResource(R.string.editor_error_date)
+    "Ngày giao dịch không thể lớn hơn hôm nay." -> stringResource(R.string.editor_error_future_date)
+    "Hãy xóa ảnh bị thiếu trước khi lưu" -> stringResource(R.string.editor_error_missing_images)
+    "Không thể lưu giao dịch. Vui lòng thử lại." -> stringResource(R.string.editor_error_save_failed)
+    else -> error
 }

@@ -5,6 +5,7 @@ import android.location.Address
 import android.location.Geocoder
 import android.os.Build
 import com.billlocket.app.domain.model.GeoPoint
+import com.billlocket.app.locale.resolveAppLocale
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
@@ -75,7 +76,7 @@ class AndroidAddressResolver @Inject constructor(
                 if (!Geocoder.isPresent()) {
                     return@withContext fallback(point, existingPlaceName)
                 }
-                val geocoder = Geocoder(context, Locale("vi", "VN"))
+                val geocoder = Geocoder(context, resolveAppLocale(context))
                 val addresses: List<Address>? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     suspendCancellableCoroutine { continuation ->
                         geocoder.getFromLocation(
