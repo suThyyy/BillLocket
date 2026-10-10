@@ -560,4 +560,25 @@
     <string name="capture_error_prepare_photo">Unable to prepare photo</string>
     <string name="capture_error_invalid_or_large">Invalid photo or file too large</string>
     <string name="capture_error_location_inaccurate">Unable to get accurate location; photo is still saved normally</string>
+
+    <!-- Voice Note Dictation (BL-046) -->
+    <string name="voice_dictate_note">Dictate note</string>
+    <string name="voice_listening">Listening…</string>
+    <string name="voice_processing">Processing speech…</string>
+    <string name="voice_stop">Stop</string>
+    <string name="voice_cancel">Cancel</string>
+    <string name="voice_unavailable">Speech recognition is unavailable on this device</string>
+    <string name="voice_permission_dialog_title">Voice note dictation</string>
+    <string name="voice_permission_dialog_body">BillLocket uses the microphone for a single note dictation session and does not retain audio. Recognition may require internet if on-device model is unavailable.</string>
+    <string name="voice_permission_continue">Continue</string>
+    <string name="voice_permission_denied">Microphone permission is required to dictate notes.</string>
+    <string name="voice_permission_permanently_denied">Microphone permission was denied. Please open Settings to allow it.</string>
+    <string name="voice_open_settings">Open Settings</string>
+    <string name="voice_error_no_match">No speech recognized. Please try again.</string>
+    <string name="voice_error_busy">Recognition service is busy. Please try again later.</string>
+    <string name="voice_error_network">Network error or recognition timeout.</string>
+    <string name="voice_error_audio">Audio recording error.</string>
+    <string name="voice_error_service">Speech recognition service is not responding.</string>
+    <string name="voice_error_generic">Voice recognition failed. You can still type manually.</string>
+    <string name="voice_privacy_notice">BillLocket does not retain microphone audio.</string>
 </resources>

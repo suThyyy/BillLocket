@@ -1,8 +1,19 @@
 package com.billlocket.app.feature.transaction.editor
 
+import android.Manifest
+import android.app.Activity
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.provider.Settings
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import com.billlocket.app.feature.transaction.voice.*
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
@@ -89,6 +100,43 @@ fun TransactionEditorScreen(
     val keyboard = LocalSoftwareKeyboardController.current
     val focusRequester = remember { FocusRequester() }
 
+    // Voice dictation coordinator (BL-046)
+    val coroutineScope = rememberCoroutineScope()
+    val transcriber = remember(context) { AndroidSpeechRecognizerTranscriber(context) }
+    val voiceCoordinator = remember(transcriber, coroutineScope) { VoiceNoteCoordinator(transcriber, coroutineScope) }
+    val voiceState by voiceCoordinator.state.collectAsState()
+    val appLocale = activeAppLocale()
+    val speechLocaleTag = remember(appLocale) { VoiceLocaleMapper.resolveLocaleTag(appLocale) }
+
+    var showPermissionRationale by remember { mutableStateOf(false) }
+    var hasRequestedPermissionOnce by rememberSaveable { mutableStateOf(false) }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { granted ->
+        hasRequestedPermissionOnce = true
+        val activity = context as? Activity
+        val permanentlyDenied = !granted && activity != null &&
+            !ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.RECORD_AUDIO)
+        voiceCoordinator.onPermissionResult(granted, permanentlyDenied, speechLocaleTag)
+    }
+
+    DisposableEffect(voiceCoordinator) {
+        onDispose {
+            voiceCoordinator.close()
+        }
+    }
+
+    // Automatically merge recognized speech into draft note upon completion
+    LaunchedEffect(voiceState) {
+        val currentVoiceState = voiceState
+        if (currentVoiceState is VoiceNoteState.Completed) {
+            val mergedNote = VoiceNoteTextMerger.merge(state.note, currentVoiceState.text)
+            viewModel.onAction(TransactionEditorAction.NoteChanged(mergedNote))
+            voiceCoordinator.dismissCompleted()
+        }
+    }
+
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) viewModel.onAction(TransactionEditorAction.RefreshImages)
@@ -134,8 +182,11 @@ fun TransactionEditorScreen(
         focusRequester.requestFocus()
     }
 
+    val isVoiceActive = voiceState is VoiceNoteState.Listening || voiceState is VoiceNoteState.Processing
+    BackHandler(enabled = isVoiceActive) { voiceCoordinator.cancel() }
+
     val imeVisible = WindowInsets.isImeVisible
-    BackHandler(enabled = !imeVisible) { viewModel.onAction(TransactionEditorAction.Back) }
+    BackHandler(enabled = !imeVisible && !isVoiceActive) { viewModel.onAction(TransactionEditorAction.Back) }
 
     Scaffold(containerColor = Color(0xFF0F0E0D)) { padding ->
         if (state.fatalError != null) {
@@ -184,6 +235,39 @@ fun TransactionEditorScreen(
                         category = currentCategory,
                         animatedTint = animatedTint,
                         focusRequester = focusRequester,
+                        voiceState = voiceState,
+                        onStartVoice = {
+                            keyboard?.hide()
+                            focusManager.clearFocus()
+                            val hasPermission = ContextCompat.checkSelfPermission(
+                                context,
+                                Manifest.permission.RECORD_AUDIO,
+                            ) == PackageManager.PERMISSION_GRANTED
+                            val activity = context as? Activity
+                            val permanentlyDenied = !hasPermission && activity != null &&
+                                !ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.RECORD_AUDIO) &&
+                                hasRequestedPermissionOnce
+
+                            if (!hasPermission && !permanentlyDenied) {
+                                showPermissionRationale = true
+                            } else {
+                                voiceCoordinator.onMicTapped(
+                                    hasPermission = hasPermission,
+                                    permanentlyDenied = permanentlyDenied,
+                                    localeTag = speechLocaleTag,
+                                    onRequestPermission = { permissionLauncher.launch(Manifest.permission.RECORD_AUDIO) },
+                                )
+                            }
+                        },
+                        onStopVoice = { voiceCoordinator.stop() },
+                        onCancelVoice = { voiceCoordinator.cancel() },
+                        onDismissVoiceError = { voiceCoordinator.dismissError() },
+                        onOpenSettings = {
+                            val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                data = Uri.fromParts("package", context.packageName, null)
+                            }
+                            context.startActivity(intent)
+                        },
                         onAction = viewModel::onAction,
                         onAddPhoto = { viewModel.onAction(TransactionEditorAction.AddImages) },
                         onDone = {
@@ -275,6 +359,18 @@ fun TransactionEditorScreen(
             },
         )
     }
+
+    if (showPermissionRationale) {
+        VoicePermissionRationaleDialog(
+            onContinue = {
+                showPermissionRationale = false
+                permissionLauncher.launch(Manifest.permission.RECORD_AUDIO)
+            },
+            onDismiss = {
+                showPermissionRationale = false
+            },
+        )
+    }
 }
 
 @Composable
@@ -312,6 +408,12 @@ private fun HeroCard(
     category: Category?,
     animatedTint: Color,
     focusRequester: FocusRequester,
+    voiceState: VoiceNoteState,
+    onStartVoice: () -> Unit,
+    onStopVoice: () -> Unit,
+    onCancelVoice: () -> Unit,
+    onDismissVoiceError: () -> Unit,
+    onOpenSettings: () -> Unit,
     onAction: (TransactionEditorAction) -> Unit,
     onAddPhoto: () -> Unit,
     onDone: () -> Unit,
@@ -522,43 +624,79 @@ private fun HeroCard(
                     }
                 }
 
-                // Bottom: Inline Note Input Capsule
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(38.dp)
-                        .background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(19.dp))
-                        .padding(horizontal = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Icon(
-                        Icons.Filled.Edit,
-                        null,
-                        Modifier.size(15.dp),
-                        tint = Color.White.copy(alpha = 0.6f),
-                    )
-                    BasicTextField(
-                        value = state.note,
-                        onValueChange = { onAction(TransactionEditorAction.NoteChanged(it)) },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                        keyboardActions = KeyboardActions(onDone = { onDone() }),
-                        textStyle = MaterialTheme.typography.bodyMedium.copy(color = Color.White),
-                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                        modifier = Modifier.fillMaxWidth(),
-                        decorationBox = { innerTextField ->
-                            Box(contentAlignment = Alignment.CenterStart) {
-                                if (state.note.isEmpty()) {
-                                    Text(
-                                        stringResource(R.string.transaction_note_hint),
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = Color.White.copy(alpha = 0.45f),
-                                    )
-                                }
-                                innerTextField()
+                // Bottom: Inline Note Input Capsule with Voice Dictation (BL-046)
+                when (val vs = voiceState) {
+                    is VoiceNoteState.Listening -> {
+                        VoiceListeningCapsule(
+                            partialText = vs.partialText,
+                            onStop = onStopVoice,
+                            onCancel = onCancelVoice,
+                        )
+                    }
+                    VoiceNoteState.Processing -> {
+                        VoiceProcessingCapsule(
+                            onCancel = onCancelVoice,
+                        )
+                    }
+                    else -> {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(38.dp)
+                                .background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(19.dp))
+                                .padding(horizontal = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Icon(
+                                Icons.Filled.Edit,
+                                null,
+                                Modifier.size(15.dp),
+                                tint = Color.White.copy(alpha = 0.6f),
+                            )
+                            BasicTextField(
+                                value = state.note,
+                                onValueChange = { onAction(TransactionEditorAction.NoteChanged(it)) },
+                                singleLine = true,
+                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                                keyboardActions = KeyboardActions(onDone = { onDone() }),
+                                textStyle = MaterialTheme.typography.bodyMedium.copy(color = Color.White),
+                                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                                modifier = Modifier.weight(1f),
+                                decorationBox = { innerTextField ->
+                                    Box(contentAlignment = Alignment.CenterStart) {
+                                        if (state.note.isEmpty()) {
+                                            Text(
+                                                stringResource(R.string.transaction_note_hint),
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = Color.White.copy(alpha = 0.45f),
+                                            )
+                                        }
+                                        innerTextField()
+                                    }
+                                },
+                            )
+                            IconButton(
+                                onClick = onStartVoice,
+                                enabled = vs !is VoiceNoteState.Unavailable,
+                                modifier = Modifier.size(28.dp),
+                            ) {
+                                Icon(
+                                    Icons.Filled.Mic,
+                                    contentDescription = stringResource(R.string.voice_dictate_note),
+                                    tint = if (vs is VoiceNoteState.Unavailable) Color.White.copy(alpha = 0.25f) else Color(0xFFFFB800),
+                                    modifier = Modifier.size(18.dp),
+                                )
                             }
-                        },
+                        }
+                    }
+                }
+                if (voiceState is VoiceNoteState.Error) {
+                    Spacer(Modifier.height(8.dp))
+                    VoiceErrorBanner(
+                        error = (voiceState as VoiceNoteState.Error).error,
+                        onDismiss = onDismissVoiceError,
+                        onOpenSettings = onOpenSettings,
                     )
                 }
             }

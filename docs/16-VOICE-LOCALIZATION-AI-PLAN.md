@@ -2,7 +2,7 @@
 
 Last updated: 2026-10-10
 
-Status: BL-045 implementation and automated validation complete; physical-device acceptance remains pending and is retained in the BL-048 release gate.
+Status: BL-045 and BL-046 implementation and automated validation complete; physical-device acceptance remains pending and is retained in the BL-048 release gate.
 
 ## 1. Authority and safe baseline
 
@@ -82,7 +82,7 @@ test: complete smart-assistance regression gate
 | BL-043 | Monthly photo recap | Complete | Complete |
 | BL-044 | Preserve report-ready baseline and approve extension plan | Complete | Low |
 | BL-045 | Vietnamese/English localization foundation | BL-044 | Implemented; automated gate passed, device acceptance pending |
-| BL-046 | Optional voice-to-text for transaction notes | BL-045 | Medium |
+| BL-046 | Optional voice-to-text for transaction notes | BL-045 | Implemented; automated gate passed, device acceptance pending |
 | BL-047 | On-device photo category suggestion | BL-045 | Medium |
 | BL-048 | Combined regression, device acceptance and release decision | BL-046, BL-047 | Medium |
 
@@ -183,7 +183,21 @@ Default categories use stable IDs. Localize their display names by stable system
 - Baseline flows pass in both languages.
 - Final validation: `test`, `assembleDebug`, `assembleDebugAndroidTest`, `assembleRelease`, `git diff --check`.
 
-## 8. BL-046 — Voice-to-text transaction notes
+## 8. BL-046 — Voice-to-text transaction notes — implementation complete, device acceptance pending
+
+### Implementation checkpoint — 2026-10-10
+
+- Added `VoiceNoteTranscriber` abstraction and `AndroidSpeechRecognizerTranscriber` implementation using `android.speech.SpeechRecognizer` with `RecognizerIntent.ACTION_RECOGNIZE_SPEECH` and `EXTRA_PARTIAL_RESULTS`. On API 31+, prefers `createOnDeviceSpeechRecognizer` when available, otherwise falls back to system recognizer.
+- Bound recognizer lifecycle strictly to the `TransactionEditorScreen` composition owner and destroyed cleanly via `DisposableEffect`.
+- Implemented `VoiceNoteCoordinator` pure Kotlin state machine (`Unavailable`, `Idle`, `RequestingPermission`, `Listening(partialText)`, `Processing`, `Completed(text)`, `Error(error)`). Only one bounded session is allowed, idempotent cancel/stop/close, and late callbacks are discarded.
+- Implemented `VoiceLocaleMapper` mapping Vietnamese to `vi-VN`, English to `en-US`, and resolving system language appropriately.
+- Implemented `VoiceNoteTextMerger` with whitespace normalization, single-space appending to existing notes, inserting into empty notes, Unicode Vietnamese preservation, and 500-character boundary capping.
+- Added localized permission explanation dialog, listening capsule with restrained pulsing animation, partial-result preview distinct from committed text, processing spinner, and recoverable error banners. Denied permissions provide retry rationale; permanent denial routes to `ACTION_APPLICATION_DETAILS_SETTINGS`.
+- Added `RECORD_AUDIO` permission, microphone feature declaration (not required), and `<queries>` intent filter for `android.speech.RecognitionService`.
+- 19 new voice strings added to `values/strings.xml` and `values-en/strings.xml` with 100% key parity (514 keys each).
+- Added comprehensive unit test suites covering locale mapping, text merging, state machine transitions, and transaction editor behavior.
+- Automated validation passed: JDK 17 `test`, `assembleDebug`, `assembleDebugAndroidTest`, `assembleRelease`, `lint`, and `git diff --check`.
+- Physical device testing: UNAVAILABLE / PENDING (no physical device authorized/connected via ADB; device gate deferred to BL-048).
 
 ### Goal
 

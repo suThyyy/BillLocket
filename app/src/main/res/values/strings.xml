@@ -560,4 +560,25 @@
     <string name="capture_error_prepare_photo">Không thể chuẩn bị ảnh</string>
     <string name="capture_error_invalid_or_large">Ảnh không hợp lệ hoặc quá lớn</string>
     <string name="capture_error_location_inaccurate">Không lấy được vị trí chính xác; ảnh vẫn được lưu bình thường</string>
+
+    <!-- Voice Note Dictation (BL-046) -->
+    <string name="voice_dictate_note">Đọc ghi chú</string>
+    <string name="voice_listening">Đang nghe…</string>
+    <string name="voice_processing">Đang xử lý giọng nói…</string>
+    <string name="voice_stop">Dừng</string>
+    <string name="voice_cancel">Hủy</string>
+    <string name="voice_unavailable">Nhận dạng giọng nói không khả dụng trên thiết bị này</string>
+    <string name="voice_permission_dialog_title">Nhập ghi chú bằng giọng nói</string>
+    <string name="voice_permission_dialog_body">BillLocket sử dụng micro cho một phiên đọc ghi chú và không lưu trữ âm thanh. Dịch vụ nhận dạng có thể cần mạng nếu thiết bị không hỗ trợ ngoại tuyến.</string>
+    <string name="voice_permission_continue">Tiếp tục</string>
+    <string name="voice_permission_denied">Cần quyền truy cập micro để đọc ghi chú.</string>
+    <string name="voice_permission_permanently_denied">Quyền micro đã bị từ chối. Vui lòng mở Cài đặt để cho phép.</string>
+    <string name="voice_open_settings">Mở Cài đặt</string>
+    <string name="voice_error_no_match">Không nhận diện được giọng nói. Vui lòng thử lại.</string>
+    <string name="voice_error_busy">Dịch vụ nhận dạng đang bận. Vui lòng thử lại sau.</string>
+    <string name="voice_error_network">Lỗi kết nối mạng hoặc hết thời gian nhận dạng.</string>
+    <string name="voice_error_audio">Lỗi thu âm từ micro.</string>
+    <string name="voice_error_service">Dịch vụ nhận dạng giọng nói không phản hồi.</string>
+    <string name="voice_error_generic">Nhận dạng giọng nói thất bại. Bạn vẫn có thể nhập bằng tay.</string>
+    <string name="voice_privacy_notice">BillLocket không lưu trữ âm thanh micro.</string>
 </resources>
