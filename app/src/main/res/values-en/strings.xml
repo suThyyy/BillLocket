@@ -581,4 +581,16 @@
     <string name="voice_error_service">Speech recognition service is not responding.</string>
     <string name="voice_error_generic">Voice recognition failed. You can still type manually.</string>
     <string name="voice_privacy_notice">BillLocket does not retain microphone audio.</string>
+
+    <!-- On-Device Image Category Suggestions (BL-047) -->
+    <string name="ai_suggestion_prefix">AI suggestion</string>
+    <string name="ai_suggestion_title">AI suggestion: %1$s</string>
+    <string name="ai_apply">Apply</string>
+    <string name="ai_dismiss">Dismiss</string>
+    <string name="ai_processed_on_device">Processed on device</string>
+    <string name="ai_suggestion_cd">Category suggestion from photo: %1$s</string>
+    <string name="ai_apply_cd">Apply category suggestion %1$s</string>
+    <string name="ai_dismiss_cd">Dismiss category suggestion</string>
+    <string name="settings_ai_privacy_title">On-device AI</string>
+    <string name="settings_ai_privacy_body">Image category suggestions are processed on device, do not upload photos to a server, and may be inaccurate.</string>
 </resources>

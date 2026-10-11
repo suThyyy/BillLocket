@@ -170,6 +170,14 @@ fun GeneralSettingsScreen(onBack: () -> Unit, onWidget: () -> Unit, onStorage: (
                     onClick = onStorage,
                 )
             }
+            BillLocketSectionCard {
+                Text(stringResource(R.string.settings_ai_privacy_title), style = MaterialTheme.typography.titleMedium)
+                Text(
+                    text = stringResource(R.string.settings_ai_privacy_body),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }

@@ -52,10 +52,45 @@ class TransactionDraftStoreTest {
         )
 
         store.save(draft)
-        val restored = assertNotNull(store.load(id))
+        val restored = requireNotNull(store.load(id))
 
         assertEquals(draft, restored)
         store.delete(id)
         assertEquals(null, store.load(id))
+    }
+
+    @Test
+    fun updateCategorySuggestionMetadataPreservesFinancialFields() = runBlocking {
+        val id = DraftId("draft-concurrency")
+        val initialDraft = TransactionDraft(
+            id = id,
+            type = TransactionType.EXPENSE,
+            amountText = "250000",
+            note = "Coffee with friends",
+            occurred = InstantAtZone(1_700_000_000_000, 19_675, "Asia/Ho_Chi_Minh"),
+            dirty = true,
+            updatedAtEpochMillis = 1_700_000_000_000,
+        )
+        store.save(initialDraft)
+
+        val metadata = DraftCategorySuggestionMetadata(
+            analyzedPrimaryImageKey = "img-primary",
+            suggestionSemanticKey = "FOOD_DRINK",
+            suggestionConfidence = 0.91f,
+            suggestionSupportingLabels = listOf("coffee", "beverage"),
+            suggestionDismissedForImageKey = null,
+            categoryWasManuallySelected = true,
+        )
+
+        store.updateCategorySuggestionMetadata(id, metadata)
+
+        val updated = requireNotNull(store.load(id))
+        assertEquals("250000", updated.amountText)
+        assertEquals("Coffee with friends", updated.note)
+        assertEquals("img-primary", updated.analyzedPrimaryImageKey)
+        assertEquals("FOOD_DRINK", updated.suggestionSemanticKey)
+        assertEquals(0.91f, updated.suggestionConfidence!!, 0.001f)
+        assertEquals(listOf("coffee", "beverage"), updated.suggestionSupportingLabels)
+        assertEquals(true, updated.categoryWasManuallySelected)
     }
 }

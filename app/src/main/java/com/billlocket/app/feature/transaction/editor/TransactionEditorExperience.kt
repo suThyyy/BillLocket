@@ -14,6 +14,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import com.billlocket.app.feature.transaction.voice.*
+import com.billlocket.app.feature.transaction.ai.*
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
@@ -287,6 +288,14 @@ fun TransactionEditorScreen(
                         animatedTint = animatedTint,
                         onCategorySelected = { viewModel.onAction(TransactionEditorAction.CategorySelected(it)) },
                         onAccountSelected = { viewModel.onAction(TransactionEditorAction.AccountSelected(it)) },
+                    )
+
+                    // 2b. Optional AI Category Suggestion (BL-047)
+                    CategorySuggestionCard(
+                        suggestionState = state.suggestionState,
+                        categories = state.categories,
+                        onApply = { viewModel.onAction(TransactionEditorAction.ApplyCategorySuggestion) },
+                        onDismiss = { viewModel.onAction(TransactionEditorAction.DismissCategorySuggestion) },
                     )
 
                     // 3. Segmented Type Toggle & Date Selector Pill

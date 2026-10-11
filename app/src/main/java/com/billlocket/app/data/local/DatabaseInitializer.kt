@@ -3,12 +3,14 @@ package com.billlocket.app.data.local
 import androidx.room.RoomDatabase
 import androidx.sqlite.db.SupportSQLiteDatabase
 
+import com.billlocket.app.domain.model.BuiltInCategoryIds
+
 object DatabaseInitializer {
     const val INITIAL_ACCOUNT_ID = "00000000-0000-4000-8000-000000000001"
-    const val FOOD_CATEGORY_ID = "10000000-0000-4000-8000-000000000001"
-    const val SHOPPING_CATEGORY_ID = "10000000-0000-4000-8000-000000000002"
-    const val TRANSPORT_CATEGORY_ID = "10000000-0000-4000-8000-000000000003"
-    const val HOME_CATEGORY_ID = "10000000-0000-4000-8000-000000000004"
+    const val FOOD_CATEGORY_ID = BuiltInCategoryIds.FOOD
+    const val SHOPPING_CATEGORY_ID = BuiltInCategoryIds.SHOPPING
+    const val TRANSPORT_CATEGORY_ID = BuiltInCategoryIds.TRANSPORT
+    const val HOME_CATEGORY_ID = BuiltInCategoryIds.HOME
     const val SALARY_CATEGORY_ID = "20000000-0000-4000-8000-000000000001"
     const val BONUS_CATEGORY_ID = "20000000-0000-4000-8000-000000000002"
 
@@ -100,33 +102,33 @@ object DatabaseInitializer {
                 arrayOf(SHOPPING_CATEGORY_ID, "Mua sắm", "mua sắm", "EXPENSE", 0xFFFF7043L, "shopping_bag", 1),
                 arrayOf(TRANSPORT_CATEGORY_ID, "Di chuyển", "di chuyển", "EXPENSE", 0xFF42A5F5L, "directions_bus", 2),
                 arrayOf(HOME_CATEGORY_ID, "Nhà cửa", "nhà cửa", "EXPENSE", 0xFF66BB6AL, "home", 3),
-                arrayOf("10000000-0000-4000-8000-000000000005", "Cà phê", "cà phê", "EXPENSE", 0xFF8D6E63L, "local_cafe", 4),
-                arrayOf("10000000-0000-4000-8000-000000000006", "Quần áo", "quần áo", "EXPENSE", 0xFFFFD54FL, "checkroom", 5),
-                arrayOf("10000000-0000-4000-8000-000000000007", "Xăng xe", "xăng xe", "EXPENSE", 0xFFFF5722L, "local_gas_station", 6),
-                arrayOf("10000000-0000-4000-8000-000000000008", "Gửi xe", "gửi xe", "EXPENSE", 0xFF29B6F6L, "local_parking", 7),
-                arrayOf("10000000-0000-4000-8000-000000000009", "Điện", "điện", "EXPENSE", 0xFFFFCA28L, "bolt", 8),
-                arrayOf("10000000-0000-4000-8000-00000000000a", "Nước", "nước", "EXPENSE", 0xFF26C6DAL, "water_drop", 9),
-                arrayOf("10000000-0000-4000-8000-00000000000b", "Internet", "internet", "EXPENSE", 0xFF26A69AL, "wifi", 10),
-                arrayOf("10000000-0000-4000-8000-00000000000c", "Điện thoại", "điện thoại", "EXPENSE", 0xFF78909CL, "phone_android", 11),
-                arrayOf("10000000-0000-4000-8000-00000000000d", "Học tập", "học tập", "EXPENSE", 0xFF5C6BC0L, "school", 12),
-                arrayOf("10000000-0000-4000-8000-00000000000e", "Sách", "sách", "EXPENSE", 0xFFA1887FL, "menu_book", 13),
-                arrayOf("10000000-0000-4000-8000-00000000000f", "Làm đẹp", "làm đẹp", "EXPENSE", 0xFFEC407AL, "spa", 14),
-                arrayOf("10000000-0000-4000-8000-000000000010", "Sức khỏe", "sức khỏe", "EXPENSE", 0xFFEF5350L, "fitness_center", 15),
-                arrayOf("10000000-0000-4000-8000-000000000011", "Thuốc men", "thuốc men", "EXPENSE", 0xFFFF7043L, "medical_services", 16),
-                arrayOf("10000000-0000-4000-8000-000000000012", "Giải trí", "giải trí", "EXPENSE", 0xFFAB47BCL, "sports_esports", 17),
-                arrayOf("10000000-0000-4000-8000-000000000013", "Du lịch", "du lịch", "EXPENSE", 0xFF29B6F6L, "flight", 18),
-                arrayOf("10000000-0000-4000-8000-000000000014", "Quà tặng", "quà tặng", "EXPENSE", 0xFFF06292L, "redeem", 19),
-                arrayOf("10000000-0000-4000-8000-000000000015", "Gia đình", "gia đình", "EXPENSE", 0xFFFFA726L, "family_restroom", 20),
-                arrayOf("10000000-0000-4000-8000-000000000016", "Con cái", "con cái", "EXPENSE", 0xFFFFB74DL, "child_care", 21),
-                arrayOf("10000000-0000-4000-8000-000000000017", "Thú cưng", "thú cưng", "EXPENSE", 0xFF81C784L, "pets", 22),
-                arrayOf("10000000-0000-4000-8000-000000000018", "Công việc", "công việc", "EXPENSE", 0xFF78909CL, "work", 23),
-                arrayOf("10000000-0000-4000-8000-000000000019", "Văn phòng phẩm", "văn phòng phẩm", "EXPENSE", 0xFF4DB6ACL, "edit_note", 24),
-                arrayOf("10000000-0000-4000-8000-00000000001a", "Phí dịch vụ", "phí dịch vụ", "EXPENSE", 0xFF42A5F5L, "receipt_long", 25),
-                arrayOf("10000000-0000-4000-8000-00000000001b", "Bảo hiểm", "bảo hiểm", "EXPENSE", 0xFF66BB6AL, "verified_user", 26),
-                arrayOf("10000000-0000-4000-8000-00000000001c", "Trả góp", "trả góp", "EXPENSE", 0xFFFFB300L, "credit_score", 27),
-                arrayOf("10000000-0000-4000-8000-00000000001d", "Nợ", "nợ", "EXPENSE", 0xFFEF5350L, "credit_card", 28),
-                arrayOf("10000000-0000-4000-8000-00000000001e", "Thuế/Phí", "thuế/phí", "EXPENSE", 0xFF90A4AEL, "account_balance", 29),
-                arrayOf("10000000-0000-4000-8000-00000000001f", "Khác", "khác", "EXPENSE", 0xFF9E9E9EL, "more_horiz", 30),
+                arrayOf(BuiltInCategoryIds.COFFEE, "Cà phê", "cà phê", "EXPENSE", 0xFF8D6E63L, "local_cafe", 4),
+                arrayOf(BuiltInCategoryIds.CLOTHING, "Quần áo", "quần áo", "EXPENSE", 0xFFFFD54FL, "checkroom", 5),
+                arrayOf(BuiltInCategoryIds.FUEL, "Xăng xe", "xăng xe", "EXPENSE", 0xFFFF5722L, "local_gas_station", 6),
+                arrayOf(BuiltInCategoryIds.PARKING, "Gửi xe", "gửi xe", "EXPENSE", 0xFF29B6F6L, "local_parking", 7),
+                arrayOf(BuiltInCategoryIds.ELECTRICITY, "Điện", "điện", "EXPENSE", 0xFFFFCA28L, "bolt", 8),
+                arrayOf(BuiltInCategoryIds.WATER, "Nước", "nước", "EXPENSE", 0xFF26C6DAL, "water_drop", 9),
+                arrayOf(BuiltInCategoryIds.INTERNET, "Internet", "internet", "EXPENSE", 0xFF26A69AL, "wifi", 10),
+                arrayOf(BuiltInCategoryIds.PHONE, "Điện thoại", "điện thoại", "EXPENSE", 0xFF78909CL, "phone_android", 11),
+                arrayOf(BuiltInCategoryIds.STUDY, "Học tập", "học tập", "EXPENSE", 0xFF5C6BC0L, "school", 12),
+                arrayOf(BuiltInCategoryIds.BOOKS, "Sách", "sách", "EXPENSE", 0xFFA1887FL, "menu_book", 13),
+                arrayOf(BuiltInCategoryIds.BEAUTY, "Làm đẹp", "làm đẹp", "EXPENSE", 0xFFEC407AL, "spa", 14),
+                arrayOf(BuiltInCategoryIds.HEALTH, "Sức khỏe", "sức khỏe", "EXPENSE", 0xFFEF5350L, "fitness_center", 15),
+                arrayOf(BuiltInCategoryIds.MEDICINE, "Thuốc men", "thuốc men", "EXPENSE", 0xFFFF7043L, "medical_services", 16),
+                arrayOf(BuiltInCategoryIds.ENTERTAINMENT, "Giải trí", "giải trí", "EXPENSE", 0xFFAB47BCL, "sports_esports", 17),
+                arrayOf(BuiltInCategoryIds.TRAVEL, "Du lịch", "du lịch", "EXPENSE", 0xFF29B6F6L, "flight", 18),
+                arrayOf(BuiltInCategoryIds.GIFTS, "Quà tặng", "quà tặng", "EXPENSE", 0xFFF06292L, "redeem", 19),
+                arrayOf(BuiltInCategoryIds.FAMILY, "Gia đình", "gia đình", "EXPENSE", 0xFFFFA726L, "family_restroom", 20),
+                arrayOf(BuiltInCategoryIds.CHILDREN, "Con cái", "con cái", "EXPENSE", 0xFFFFB74DL, "child_care", 21),
+                arrayOf(BuiltInCategoryIds.PETS, "Thú cưng", "thú cưng", "EXPENSE", 0xFF81C784L, "pets", 22),
+                arrayOf(BuiltInCategoryIds.WORK, "Công việc", "công việc", "EXPENSE", 0xFF78909CL, "work", 23),
+                arrayOf(BuiltInCategoryIds.STATIONERY, "Văn phòng phẩm", "văn phòng phẩm", "EXPENSE", 0xFF4DB6ACL, "edit_note", 24),
+                arrayOf(BuiltInCategoryIds.SERVICE_FEE, "Phí dịch vụ", "phí dịch vụ", "EXPENSE", 0xFF42A5F5L, "receipt_long", 25),
+                arrayOf(BuiltInCategoryIds.INSURANCE, "Bảo hiểm", "bảo hiểm", "EXPENSE", 0xFF66BB6AL, "verified_user", 26),
+                arrayOf(BuiltInCategoryIds.INSTALLMENT, "Trả góp", "trả góp", "EXPENSE", 0xFFFFB300L, "credit_score", 27),
+                arrayOf(BuiltInCategoryIds.DEBT, "Nợ", "nợ", "EXPENSE", 0xFFEF5350L, "credit_card", 28),
+                arrayOf(BuiltInCategoryIds.TAX_FEES, "Thuế/Phí", "thuế/phí", "EXPENSE", 0xFF90A4AEL, "account_balance", 29),
+                arrayOf(BuiltInCategoryIds.OTHER_EXPENSE, "Khác", "khác", "EXPENSE", 0xFF9E9E9EL, "more_horiz", 30),
 
                 // 14 Income Categories
                 arrayOf(SALARY_CATEGORY_ID, "Lương", "lương", "INCOME", 0xFF26A69AL, "payments", 0),

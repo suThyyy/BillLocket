@@ -9,10 +9,13 @@ import com.billlocket.app.domain.port.MediaStorePort
 import com.billlocket.app.domain.repository.*
 import com.billlocket.app.domain.result.Outcome
 import com.billlocket.app.domain.usecase.*
+import com.billlocket.app.feature.transaction.ai.*
 import com.billlocket.app.feature.transaction.draft.*
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.*
 import javax.inject.Inject
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -36,6 +39,7 @@ data class TransactionEditorState(
     val dirty: Boolean = false,
     val showDiscardConfirmation: Boolean = false,
     val fatalError: String? = null,
+    val suggestionState: CategorySuggestionState = CategorySuggestionState.NotRequested,
 ) {
     val canSave: Boolean
         get() = !isLoading && !isSaving && fatalError == null && amountText.isNotBlank() &&
@@ -56,6 +60,8 @@ sealed interface TransactionEditorAction {
     data object RefreshImages : TransactionEditorAction
     data object PickDate : TransactionEditorAction
     data object PickTime : TransactionEditorAction
+    data object ApplyCategorySuggestion : TransactionEditorAction
+    data object DismissCategorySuggestion : TransactionEditorAction
     data object Save : TransactionEditorAction
     data object Back : TransactionEditorAction
     data object KeepEditing : TransactionEditorAction
@@ -83,6 +89,7 @@ class TransactionEditorViewModel @Inject constructor(
     private val evaluateBudgetThresholds: EvaluateBudgetThresholds,
     private val mediaStore: MediaStorePort,
     private val clock: Clock,
+    private val suggestionEngine: ImageCategorySuggestionEngine,
 ) : ViewModel() {
     private val draftId = DraftId(checkNotNull(savedStateHandle["draftId"]))
     private val routeTransactionId = savedStateHandle.get<String>("transactionId")?.let(::TransactionId)
@@ -90,6 +97,14 @@ class TransactionEditorViewModel @Inject constructor(
     val state = _state.asStateFlow()
     private val effectChannel = Channel<TransactionEditorEffect>(Channel.BUFFERED)
     val effects = effectChannel.receiveAsFlow()
+
+    private var categoryWasManuallySelected = false
+    private var analysisJob: Job? = null
+    private var cachedAnalyzedImageKey: String? = null
+    private var cachedSemanticKey: String? = null
+    private var cachedConfidence: Float? = null
+    private var cachedSupportingLabels: List<String> = emptyList()
+    private var cachedDismissedImageKey: String? = null
 
     private var lastUsedCategoryName: String? = null
     private var lastUsedAccountName: String? = null
@@ -169,33 +184,93 @@ class TransactionEditorViewModel @Inject constructor(
                         categories,
                         accounts,
                     )
+                    var nextSuggestionState = current.suggestionState
+                    val curPrimary = primaryImageKey(current.images)
+                    if (cachedSemanticKey != null && !categoryWasManuallySelected && curPrimary != null && curPrimary == cachedAnalyzedImageKey && curPrimary != cachedDismissedImageKey) {
+                        val semanticKey = runCatching { SemanticCategoryKey.valueOf(cachedSemanticKey!!) }.getOrNull()
+                        if (semanticKey != null && current.type == TransactionType.EXPENSE) {
+                            val resolved = CategoryResolver.resolve(semanticKey, categories, current.type)
+                            if (resolved != null) {
+                                nextSuggestionState = CategorySuggestionState.Suggested(
+                                    imageKey = curPrimary,
+                                    suggestion = CategorySuggestion(
+                                        semanticKey = semanticKey,
+                                        confidence = cachedConfidence ?: 1.0f,
+                                        supportingLabels = cachedSupportingLabels,
+                                    ),
+                                    resolvedCategoryId = resolved.id,
+                                )
+                            }
+                        }
+                    } else if (nextSuggestionState is CategorySuggestionState.Suggested) {
+                        val stillValid = CategoryResolver.resolve(
+                            nextSuggestionState.suggestion.semanticKey,
+                            categories,
+                            current.type,
+                        )
+                        if (stillValid == null || stillValid.id != nextSuggestionState.resolvedCategoryId) {
+                            nextSuggestionState = if (stillValid != null) {
+                                nextSuggestionState.copy(resolvedCategoryId = stillValid.id)
+                            } else {
+                                CategorySuggestionState.NoSuggestion(nextSuggestionState.imageKey)
+                            }
+                        }
+                    }
                     _state.value = current.copy(
                         accounts = accounts,
                         categories = categories,
                         currency = currency,
                         selectedAccountId = resolvedAcc,
                         selectedCategoryId = resolvedCat,
+                        suggestionState = nextSuggestionState,
                     )
+                    if (categories.isNotEmpty() && nextSuggestionState is CategorySuggestionState.NotRequested && current.images.isNotEmpty()) {
+                        checkAndTriggerAnalysis(current.images)
+                    }
                 }
         }
     }
 
     fun onAction(action: TransactionEditorAction) {
         when (action) {
-            is TransactionEditorAction.TypeChanged -> mutate {
-                val compatible = categories.filter { it.type == action.value }
-                val defaultCat = compatible.firstOrNull { it.isDefault }?.id ?: compatible.firstOrNull()?.id
-                copy(
-                    type = action.value,
-                    selectedCategoryId = defaultCat,
-                    fieldErrors = fieldErrors - "category",
-                )
+            is TransactionEditorAction.TypeChanged -> viewModelScope.launch {
+                if (action.value == _state.value.type) return@launch
+                analysisJob?.cancel()
+                analysisJob = null
+                categoryWasManuallySelected = false
+                cachedDismissedImageKey = null
+                mutateNow {
+                    val compatible = categories.filter { it.type == action.value }
+                    val defaultCat = compatible.firstOrNull { it.isDefault }?.id ?: compatible.firstOrNull()?.id
+                    copy(
+                        type = action.value,
+                        selectedCategoryId = defaultCat,
+                        fieldErrors = fieldErrors - "category",
+                        suggestionState = CategorySuggestionState.NotRequested,
+                    )
+                }
+                if (_state.value.type == TransactionType.EXPENSE) {
+                    checkAndTriggerAnalysis(_state.value.images)
+                }
             }
             is TransactionEditorAction.AmountChanged -> if (action.value.length <= 18) mutate {
                 copy(amountText = action.value, fieldErrors = fieldErrors - "amount")
             }
-            is TransactionEditorAction.CategorySelected -> mutate {
-                copy(selectedCategoryId = action.id, fieldErrors = fieldErrors - "category")
+            is TransactionEditorAction.CategorySelected -> {
+                categoryWasManuallySelected = true
+                analysisJob?.cancel()
+                analysisJob = null
+                val currentKey = primaryImageKey(_state.value.images)
+                if (currentKey != null) {
+                    cachedDismissedImageKey = currentKey
+                }
+                mutate {
+                    copy(
+                        selectedCategoryId = action.id,
+                        fieldErrors = fieldErrors - "category",
+                        suggestionState = if (currentKey != null) CategorySuggestionState.Dismissed(currentKey) else CategorySuggestionState.NotRequested,
+                    )
+                }
             }
             is TransactionEditorAction.AccountSelected -> mutate {
                 copy(selectedAccountId = action.id, fieldErrors = fieldErrors - "account")
@@ -209,6 +284,8 @@ class TransactionEditorViewModel @Inject constructor(
             TransactionEditorAction.RefreshImages -> refreshImages()
             TransactionEditorAction.PickDate -> emit(TransactionEditorEffect.LaunchDatePicker)
             TransactionEditorAction.PickTime -> emit(TransactionEditorEffect.LaunchTimePicker)
+            TransactionEditorAction.ApplyCategorySuggestion -> applyCategorySuggestion()
+            TransactionEditorAction.DismissCategorySuggestion -> dismissCategorySuggestion()
             TransactionEditorAction.Save -> save()
             TransactionEditorAction.Back -> {
                 if (isFormDirty()) _state.value = _state.value.copy(showDiscardConfirmation = true)
@@ -242,15 +319,25 @@ class TransactionEditorViewModel @Inject constructor(
             image.copy(isMissing = !exists)
         }
         val restored = draft.copy(images = verifiedImages)
+        cachedAnalyzedImageKey = restored.analyzedPrimaryImageKey
+        cachedSemanticKey = restored.suggestionSemanticKey
+        cachedConfidence = restored.suggestionConfidence
+        cachedSupportingLabels = restored.suggestionSupportingLabels
+        cachedDismissedImageKey = restored.suggestionDismissedForImageKey
+        categoryWasManuallySelected = categoryWasManuallySelected || restored.categoryWasManuallySelected
         drafts.save(restored)
         val current = _state.value
-        val (resolvedCat, resolvedAcc) = resolveDefaults(
-            restored.type,
-            restored.categoryId,
-            restored.accountId,
-            current.categories,
-            current.accounts,
-        )
+        val (resolvedCat, resolvedAcc) = if (current.categories.isNotEmpty() || current.accounts.isNotEmpty()) {
+            resolveDefaults(
+                restored.type,
+                restored.categoryId,
+                restored.accountId,
+                current.categories,
+                current.accounts,
+            )
+        } else {
+            restored.categoryId to restored.accountId
+        }
         baseline = FormBaseline(
             type = restored.type,
             amountText = restored.amountText,
@@ -273,6 +360,7 @@ class TransactionEditorViewModel @Inject constructor(
             dirty = initialDirty,
             isLoading = false,
         )
+        checkAndTriggerAnalysis(restored.images)
     }
 
     private fun save() = viewModelScope.launch {
@@ -349,18 +437,24 @@ class TransactionEditorViewModel @Inject constructor(
     private fun removeImage(id: String) = viewModelScope.launch {
         val image = _state.value.images.firstOrNull { it.id == id }
         image?.stagedMedia()?.let { mediaStore.discardStaged(it) }
-        mutateNow { copy(images = images.filterNot { it.id == id }, fieldErrors = fieldErrors - "images") }
+        val remaining = _state.value.images.filterNot { it.id == id }
+        mutateNow { copy(images = remaining, fieldErrors = fieldErrors - "images") }
+        checkAndTriggerAnalysis(remaining)
     }
 
     private fun refreshImages() = viewModelScope.launch {
-        drafts.load(draftId)?.let { draft -> _state.update { it.copy(images = draft.images, dirty = draft.dirty) } }
+        drafts.load(draftId)?.let { draft ->
+            _state.update { it.copy(images = draft.images, dirty = draft.dirty) }
+            checkAndTriggerAnalysis(draft.images)
+        }
     }
 
-    private fun moveImage(from: Int, to: Int) {
+    private fun moveImage(from: Int, to: Int) = viewModelScope.launch {
         val images = _state.value.images
-        if (from !in images.indices || to !in images.indices || from == to) return
+        if (from !in images.indices || to !in images.indices || from == to) return@launch
         val reordered = images.toMutableList().apply { add(to, removeAt(from)) }
-        mutate { copy(images = reordered) }
+        mutateNow { copy(images = reordered) }
+        checkAndTriggerAnalysis(reordered)
     }
 
     private fun discard() = viewModelScope.launch {
@@ -377,7 +471,19 @@ class TransactionEditorViewModel @Inject constructor(
         val candidate = _state.value.transform()
         val next = candidate.copy(dirty = isFormDirty(candidate))
         _state.value = next
-        if (!next.isLoading && next.occurred != null) drafts.save(next.toDraft(clock.nowEpochMillis()))
+        if (!next.isLoading && next.occurred != null) {
+            drafts.save(
+                next.toDraft(
+                    now = clock.nowEpochMillis(),
+                    analyzedImageKey = cachedAnalyzedImageKey,
+                    semanticKey = cachedSemanticKey,
+                    confidence = cachedConfidence,
+                    supportingLabels = cachedSupportingLabels,
+                    dismissedImageKey = cachedDismissedImageKey,
+                    categoryWasManuallySelected = categoryWasManuallySelected,
+                )
+            )
+        }
     }
 
     private fun emit(effect: TransactionEditorEffect) {
@@ -392,7 +498,200 @@ class TransactionEditorViewModel @Inject constructor(
             sourceTransactionId = routeTransactionId,
             occurred = InstantAtZone(now.toEpochMilli(), now.atZone(zone).toLocalDate().toEpochDay(), zone.id),
             updatedAtEpochMillis = now.toEpochMilli(),
+            analyzedPrimaryImageKey = cachedAnalyzedImageKey,
+            suggestionSemanticKey = cachedSemanticKey,
+            suggestionConfidence = cachedConfidence,
+            suggestionSupportingLabels = cachedSupportingLabels,
+            suggestionDismissedForImageKey = cachedDismissedImageKey,
+            categoryWasManuallySelected = false,
         )
+    }
+
+    private fun applyCategorySuggestion() {
+        val current = _state.value
+        val sugg = current.suggestionState
+        if (sugg is CategorySuggestionState.Suggested) {
+            val currentKey = primaryImageKey(current.images)
+            if (currentKey == sugg.imageKey && current.type == TransactionType.EXPENSE) {
+                val target = current.categories.firstOrNull {
+                    it.id == sugg.resolvedCategoryId && !it.isArchived && it.type == TransactionType.EXPENSE
+                }
+                if (target != null) {
+                    categoryWasManuallySelected = true
+                    cachedDismissedImageKey = sugg.imageKey
+                    mutate {
+                        copy(
+                            selectedCategoryId = target.id,
+                            fieldErrors = fieldErrors - "category",
+                            suggestionState = CategorySuggestionState.Dismissed(sugg.imageKey),
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    private fun dismissCategorySuggestion() {
+        val current = _state.value
+        val sugg = current.suggestionState
+        if (sugg is CategorySuggestionState.Suggested) {
+            val dismissedKey = sugg.imageKey
+            cachedDismissedImageKey = dismissedKey
+            _state.update { it.copy(suggestionState = CategorySuggestionState.Dismissed(dismissedKey)) }
+            viewModelScope.launch {
+                drafts.updateCategorySuggestionMetadata(
+                    draftId,
+                    DraftCategorySuggestionMetadata(
+                        analyzedPrimaryImageKey = cachedAnalyzedImageKey,
+                        suggestionSemanticKey = cachedSemanticKey,
+                        suggestionConfidence = cachedConfidence,
+                        suggestionSupportingLabels = cachedSupportingLabels,
+                        suggestionDismissedForImageKey = dismissedKey,
+                        categoryWasManuallySelected = categoryWasManuallySelected,
+                    )
+                )
+            }
+        }
+    }
+
+    private fun primaryImageKey(images: List<DraftImage> = _state.value.images): String? {
+        val primary = images.firstOrNull { !it.isMissing } ?: return null
+        return "${primary.id}:${primary.checksumSha256 ?: primary.mediaUri}"
+    }
+
+    private fun checkAndTriggerAnalysis(images: List<DraftImage> = _state.value.images) {
+        val currentType = _state.value.type
+        if (currentType != TransactionType.EXPENSE) {
+            analysisJob?.cancel()
+            analysisJob = null
+            _state.update { it.copy(suggestionState = CategorySuggestionState.NotRequested) }
+            return
+        }
+
+        val primary = images.firstOrNull { !it.isMissing }
+        if (primary == null) {
+            analysisJob?.cancel()
+            analysisJob = null
+            _state.update { it.copy(suggestionState = CategorySuggestionState.NotRequested) }
+            return
+        }
+
+        val imageKey = "${primary.id}:${primary.checksumSha256 ?: primary.mediaUri}"
+
+        val currentSuggestion = _state.value.suggestionState
+        when (currentSuggestion) {
+            is CategorySuggestionState.Analyzing -> if (currentSuggestion.imageKey == imageKey) return
+            is CategorySuggestionState.Suggested -> if (currentSuggestion.imageKey == imageKey) return
+            is CategorySuggestionState.Dismissed -> if (currentSuggestion.imageKey == imageKey) return
+            is CategorySuggestionState.NoSuggestion -> if (currentSuggestion.imageKey == imageKey) return
+            is CategorySuggestionState.Failed -> if (currentSuggestion.imageKey == imageKey) return
+            else -> Unit
+        }
+
+        if (categoryWasManuallySelected) {
+            _state.update { it.copy(suggestionState = CategorySuggestionState.Dismissed(imageKey)) }
+            return
+        }
+
+        analysisJob?.cancel()
+        analysisJob = viewModelScope.launch {
+            val draft = drafts.load(draftId)
+            if (draft?.analyzedPrimaryImageKey == imageKey) {
+                cachedAnalyzedImageKey = imageKey
+                cachedSemanticKey = draft.suggestionSemanticKey
+                cachedConfidence = draft.suggestionConfidence
+                cachedSupportingLabels = draft.suggestionSupportingLabels
+                cachedDismissedImageKey = draft.suggestionDismissedForImageKey
+
+                if (draft.suggestionDismissedForImageKey == imageKey) {
+                    _state.update { it.copy(suggestionState = CategorySuggestionState.Dismissed(imageKey)) }
+                    return@launch
+                }
+                val semanticName = draft.suggestionSemanticKey
+                val confidence = draft.suggestionConfidence
+                if (semanticName != null && confidence != null) {
+                    val semanticKey = runCatching { SemanticCategoryKey.valueOf(semanticName) }.getOrNull()
+                    if (semanticKey != null) {
+                        val resolved = CategoryResolver.resolve(semanticKey, _state.value.categories, _state.value.type)
+                        if (resolved != null) {
+                            val suggestion = CategorySuggestion(
+                                semanticKey = semanticKey,
+                                confidence = confidence,
+                                supportingLabels = draft.suggestionSupportingLabels,
+                            )
+                            _state.update { it.copy(suggestionState = CategorySuggestionState.Suggested(imageKey, suggestion, resolved.id)) }
+                            return@launch
+                        } else if (_state.value.categories.isEmpty()) {
+                            return@launch
+                        }
+                    }
+                }
+                if (_state.value.categories.isNotEmpty()) {
+                    _state.update { it.copy(suggestionState = CategorySuggestionState.NoSuggestion(imageKey)) }
+                }
+                return@launch
+            }
+
+            _state.update { it.copy(suggestionState = CategorySuggestionState.Analyzing(imageKey)) }
+
+            val suggestion = try {
+                suggestionEngine.suggest(primary.mediaUri)
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (_: Throwable) {
+                null
+            }
+
+            if (primaryImageKey(_state.value.images) != imageKey ||
+                _state.value.type != TransactionType.EXPENSE ||
+                categoryWasManuallySelected ||
+                cachedDismissedImageKey == imageKey
+            ) {
+                return@launch
+            }
+
+            cachedAnalyzedImageKey = imageKey
+            if (suggestion != null) {
+                cachedSemanticKey = suggestion.semanticKey.name
+                cachedConfidence = suggestion.confidence
+                cachedSupportingLabels = suggestion.supportingLabels
+
+                val cats = _state.value.categories
+                val resolved = CategoryResolver.resolve(suggestion.semanticKey, cats, _state.value.type)
+                if (resolved != null) {
+                    _state.update { it.copy(suggestionState = CategorySuggestionState.Suggested(imageKey, suggestion, resolved.id)) }
+                } else if (cats.isNotEmpty()) {
+                    _state.update { it.copy(suggestionState = CategorySuggestionState.NoSuggestion(imageKey)) }
+                }
+                drafts.updateCategorySuggestionMetadata(
+                    draftId,
+                    DraftCategorySuggestionMetadata(
+                        analyzedPrimaryImageKey = imageKey,
+                        suggestionSemanticKey = suggestion.semanticKey.name,
+                        suggestionConfidence = suggestion.confidence,
+                        suggestionSupportingLabels = suggestion.supportingLabels,
+                        suggestionDismissedForImageKey = cachedDismissedImageKey,
+                        categoryWasManuallySelected = categoryWasManuallySelected,
+                    )
+                )
+            } else {
+                cachedSemanticKey = null
+                cachedConfidence = null
+                cachedSupportingLabels = emptyList()
+                _state.update { it.copy(suggestionState = CategorySuggestionState.NoSuggestion(imageKey)) }
+                drafts.updateCategorySuggestionMetadata(
+                    draftId,
+                    DraftCategorySuggestionMetadata(
+                        analyzedPrimaryImageKey = imageKey,
+                        suggestionSemanticKey = null,
+                        suggestionConfidence = null,
+                        suggestionSupportingLabels = emptyList(),
+                        suggestionDismissedForImageKey = cachedDismissedImageKey,
+                        categoryWasManuallySelected = categoryWasManuallySelected,
+                    )
+                )
+            }
+        }
     }
 }
 
@@ -428,9 +727,18 @@ private fun TransactionDetails.toDraft(draftId: DraftId, now: Long) = Transactio
     images = images.map(DraftImage::fromPersisted),
     dirty = false,
     updatedAtEpochMillis = now,
+    categoryWasManuallySelected = true,
 )
 
-private fun TransactionEditorState.toDraft(now: Long) = TransactionDraft(
+private fun TransactionEditorState.toDraft(
+    now: Long,
+    analyzedImageKey: String? = null,
+    semanticKey: String? = null,
+    confidence: Float? = null,
+    supportingLabels: List<String> = emptyList(),
+    dismissedImageKey: String? = null,
+    categoryWasManuallySelected: Boolean = false,
+) = TransactionDraft(
     id = draftId,
     sourceTransactionId = sourceTransactionId,
     type = type,
@@ -442,4 +750,10 @@ private fun TransactionEditorState.toDraft(now: Long) = TransactionDraft(
     images = images,
     dirty = dirty,
     updatedAtEpochMillis = now,
+    analyzedPrimaryImageKey = analyzedImageKey,
+    suggestionSemanticKey = semanticKey,
+    suggestionConfidence = confidence,
+    suggestionSupportingLabels = supportingLabels,
+    suggestionDismissedForImageKey = dismissedImageKey,
+    categoryWasManuallySelected = categoryWasManuallySelected,
 )

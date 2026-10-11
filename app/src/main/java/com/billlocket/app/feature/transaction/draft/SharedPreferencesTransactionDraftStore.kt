@@ -6,6 +6,8 @@ import com.billlocket.app.domain.port.CandidateLocation
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
@@ -14,24 +16,51 @@ import org.json.JSONObject
 class SharedPreferencesTransactionDraftStore @Inject constructor(
     private val preferences: SharedPreferences,
 ) : TransactionDraftStore {
+    private val mutex = Mutex()
+
     override suspend fun load(id: DraftId): TransactionDraft? = withContext(Dispatchers.IO) {
-        preferences.getString(key(id), null)?.let { encoded ->
-            runCatching { JSONObject(encoded).toDraft(id) }.getOrNull()
+        mutex.withLock {
+            preferences.getString(key(id), null)?.let { encoded ->
+                runCatching { JSONObject(encoded).toDraft(id) }.getOrNull()
+            }
         }
     }
 
     override suspend fun save(draft: TransactionDraft) = withContext(Dispatchers.IO) {
-        check(preferences.edit().putString(key(draft.id), draft.toJson().toString()).commit())
+        mutex.withLock {
+            check(preferences.edit().putString(key(draft.id), draft.toJson().toString()).commit())
+        }
     }
 
     override suspend fun delete(id: DraftId) = withContext(Dispatchers.IO) {
-        check(preferences.edit().remove(key(id)).commit())
+        mutex.withLock {
+            check(preferences.edit().remove(key(id)).commit())
+        }
+    }
+
+    override suspend fun updateCategorySuggestionMetadata(
+        id: DraftId,
+        metadata: DraftCategorySuggestionMetadata,
+    ) = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            val encoded = preferences.getString(key(id), null) ?: return@withLock
+            val existing = runCatching { JSONObject(encoded).toDraft(id) }.getOrNull() ?: return@withLock
+            val updated = existing.copy(
+                analyzedPrimaryImageKey = metadata.analyzedPrimaryImageKey,
+                suggestionSemanticKey = metadata.suggestionSemanticKey,
+                suggestionConfidence = metadata.suggestionConfidence,
+                suggestionSupportingLabels = metadata.suggestionSupportingLabels,
+                suggestionDismissedForImageKey = metadata.suggestionDismissedForImageKey,
+                categoryWasManuallySelected = metadata.categoryWasManuallySelected,
+            )
+            check(preferences.edit().putString(key(id), updated.toJson().toString()).commit())
+        }
     }
 
     private fun key(id: DraftId) = "transaction_draft.${id.value}"
 }
 
-private fun TransactionDraft.toJson() = JSONObject().apply {
+internal fun TransactionDraft.toJson() = JSONObject().apply {
     put("sourceTransactionId", sourceTransactionId?.value)
     put("type", type.name)
     put("amountText", amountText)
@@ -44,9 +73,15 @@ private fun TransactionDraft.toJson() = JSONObject().apply {
     put("dirty", dirty)
     put("updatedAt", updatedAtEpochMillis)
     put("images", JSONArray().apply { images.forEach { put(it.toJson()) } })
+    put("analyzedPrimaryImageKey", analyzedPrimaryImageKey)
+    put("suggestionSemanticKey", suggestionSemanticKey)
+    put("suggestionConfidence", suggestionConfidence?.toDouble())
+    put("suggestionSupportingLabels", JSONArray().apply { suggestionSupportingLabels.forEach { put(it) } })
+    put("suggestionDismissedForImageKey", suggestionDismissedForImageKey)
+    put("categoryWasManuallySelected", categoryWasManuallySelected)
 }
 
-private fun DraftImage.toJson() = JSONObject().apply {
+internal fun DraftImage.toJson() = JSONObject().apply {
     put("id", id)
     put("kind", kind.name)
     put("previewUri", previewUri)
@@ -70,7 +105,7 @@ private fun DraftImage.toJson() = JSONObject().apply {
     put("missing", isMissing)
 }
 
-private fun JSONObject.toDraft(id: DraftId): TransactionDraft = TransactionDraft(
+internal fun JSONObject.toDraft(id: DraftId): TransactionDraft = TransactionDraft(
     id = id,
     sourceTransactionId = stringOrNull("sourceTransactionId")?.let(::TransactionId),
     type = TransactionType.valueOf(getString("type")),
@@ -82,6 +117,14 @@ private fun JSONObject.toDraft(id: DraftId): TransactionDraft = TransactionDraft
     images = getJSONArray("images").let { array -> List(array.length()) { array.getJSONObject(it).toDraftImage() } },
     dirty = getBoolean("dirty"),
     updatedAtEpochMillis = getLong("updatedAt"),
+    analyzedPrimaryImageKey = stringOrNull("analyzedPrimaryImageKey"),
+    suggestionSemanticKey = stringOrNull("suggestionSemanticKey"),
+    suggestionConfidence = doubleOrNull("suggestionConfidence")?.toFloat(),
+    suggestionSupportingLabels = optJSONArray("suggestionSupportingLabels")?.let { array ->
+        List(array.length()) { array.getString(it) }
+    } ?: emptyList(),
+    suggestionDismissedForImageKey = stringOrNull("suggestionDismissedForImageKey"),
+    categoryWasManuallySelected = optBoolean("categoryWasManuallySelected", false),
 )
 
 private fun JSONObject.toDraftImage(): DraftImage {

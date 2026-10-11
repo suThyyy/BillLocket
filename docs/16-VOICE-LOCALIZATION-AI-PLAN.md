@@ -1,8 +1,8 @@
 # BillLocket — Voice, Localization and On-device AI Delivery Plan
 
-Last updated: 2026-10-10
+Last updated: 2026-10-11
 
-Status: BL-045 and BL-046 implementation and automated validation complete; physical-device acceptance remains pending and is retained in the BL-048 release gate.
+Status: BL-045, BL-046 and BL-047 implementation and automated validation complete; physical-device acceptance remains pending and is retained in the BL-048 release gate.
 
 ## 1. Authority and safe baseline
 
@@ -83,7 +83,7 @@ test: complete smart-assistance regression gate
 | BL-044 | Preserve report-ready baseline and approve extension plan | Complete | Low |
 | BL-045 | Vietnamese/English localization foundation | BL-044 | Implemented; automated gate passed, device acceptance pending |
 | BL-046 | Optional voice-to-text for transaction notes | BL-045 | Implemented; automated gate passed, device acceptance pending |
-| BL-047 | On-device photo category suggestion | BL-045 | Medium |
+| BL-047 | On-device photo category suggestion | BL-045 | Implemented; automated gate passed, device acceptance pending |
 | BL-048 | Combined regression, device acceptance and release decision | BL-046, BL-047 | Medium |
 
 BL-046 and BL-047 are technically independent after BL-045, but they should be delivered sequentially to keep review and rollback simple.
@@ -292,7 +292,38 @@ Only one session may exist. Repeated taps cannot create multiple recognizers.
 - No recognizer survives navigation or lifecycle disposal.
 - Final validation matches BL-045 plus a real-device dictation pass.
 
-## 9. BL-047 — On-device image category suggestions
+## 9. BL-047 — On-device image category suggestions — implementation complete, device acceptance pending
+
+### Implementation checkpoint — 2026-10-11
+
+- Chosen dependency: `com.google.mlkit:image-labeling:17.0.9` (bundled default model, fully on-device, no cloud API, no API key, offline-capable).
+- Architecture implemented:
+  - Narrow abstraction: `ImageCategorySuggestionEngine` returning pure `CategorySuggestion` (semantic key, confidence, sanitized supporting labels).
+  - Android implementation: `AndroidMlKitImageCategorySuggestionEngine` using ML Kit `ImageLabeling.getClient(ImageLabelerOptions.DEFAULT_OPTIONS)` with deterministic power-of-two bounded decoding (`calculateInSampleSize`) guaranteeing $\max(\text{decodedWidth}, \text{decodedHeight}) \le 1024$ px, sample-size calculation, EXIF orientation correction, safe stream cleanup, and Task-owned `InferenceResources` with `AtomicBoolean` cleanup guard ensuring `Bitmap` and `ImageLabeler` remain valid until ML Kit Task completion even under coroutine cancellation.
+  - Pure Kotlin label scoring: `ImageLabelClassifier` with explicit whitelist across 7 semantic groups (`FOOD_DRINK`, `CLOTHING_SHOPPING`, `TRANSPORT_FUEL`, `HEALTH`, `STUDY_WORK`, `ENTERTAINMENT`, `HOME`), blocked generic/negative labels (`person`, `face`, `receipt`, `document`, `paper`, `screenshot`, `text`, etc.), deduplication of duplicate normalized labels before aggregation, deterministic aggregation formula: `combined = 1 - product(1 - confidence_i)`, minimum aggregate confidence threshold $\ge 0.70$, and ambiguity lead margin $\ge 0.10$.
+  - Stable category resolution: `CategoryResolver` mapping semantic keys strictly to stable built-in category UUIDs defined in `BuiltInCategoryIds` (shared between `DatabaseInitializer` and resolver), matching only active unarchived EXPENSE categories. Income categories and `TransactionType.INCOME` never receive suggestions.
+  - Draft and lifecycle management: `TransactionDraft` and `SharedPreferencesTransactionDraftStore` persist AI suggestion metadata and `categoryWasManuallySelected` with backward-compatible JSON defaults (`optString`, `optDouble`, `optJSONArray`, `optBoolean`), surviving configuration changes and process recreation without Room schema changes. Mutex-protected `updateCategorySuggestionMetadata` ensures AI completions/dismissals update only metadata and never overwrite newer user input (amount, notes, category, account, images). Sequential coroutine ordering eliminates type and image-reordering races.
+  - Manual category protection: Manual category selection always takes precedence. Persisted `categoryWasManuallySelected` ensures explicit user choices and existing transaction edits are respected across process recreation. Suggestions are optional and require an explicit user tap on [Apply] or [Dismiss]. Late or stale inference results are discarded.
+  - UI & localization: Compact black/yellow suggestion chip (`CategorySuggestionCard`) in `TransactionEditorExperience.kt` with localized copy (`AI gợi ý: <Tên danh mục>` / `AI suggestion: <Category Name>`, `Áp dụng` / `Apply`, `Bỏ qua` / `Dismiss`, `Xử lý trên thiết bị` / `Processed on device`). Localized on-device privacy disclosure in `GeneralSettingsScreen`.
+- APK size impact (JDK 17 assembleDebug):
+  - Universal debug APK baseline (`1d04311`): 26,396,219 bytes (~25.17 MiB).
+  - Universal debug APK final: 71,470,732 bytes (~68.16 MiB).
+  - Universal debug APK delta: +45,074,513 bytes (~42.99 MiB increase due to all-ABI bundled ML Kit native libraries and model weights).
+  - Per-device installed / split footprint: Not yet measured; physical installed-size measurement remains pending BL-048 device validation.
+- Automated validation status:
+  - JDK 17 `test`: Passed.
+  - JDK 17 `assembleDebug`: Passed.
+  - JDK 17 `assembleDebugAndroidTest`: Passed.
+  - JDK 17 `assembleRelease`: Passed.
+  - JDK 17 `lint`: Passed.
+  - `git diff --check`: Passed.
+- Physical-device status:
+  - ADB check (`adb devices -l`): No authorized physical device connected.
+  - Status: BL-047 implementation complete; automated validation passed; physical representative image trials pending; offline device verification pending; measured device latency/memory and per-device installed size pending; retained in BL-048.
+- Known limitations of default image-labeling model:
+  - Default model is general-purpose (trained on coarse visual objects); cannot extract text/receipt totals (OCR deferred).
+  - Visual ambiguities (e.g., stylized clothing, abstract cookware) may fall below 0.70 threshold or ambiguity margin, correctly resulting in no suggestion.
+  - Blocked generic classes (e.g. receipts, paper, selfies) intentionally yield no suggestion by design to prevent false financial classifications.
 
 ### Goal
 

@@ -89,6 +89,15 @@ data class DraftImage(
     }
 }
 
+data class DraftCategorySuggestionMetadata(
+    val analyzedPrimaryImageKey: String? = null,
+    val suggestionSemanticKey: String? = null,
+    val suggestionConfidence: Float? = null,
+    val suggestionSupportingLabels: List<String> = emptyList(),
+    val suggestionDismissedForImageKey: String? = null,
+    val categoryWasManuallySelected: Boolean = false,
+)
+
 data class TransactionDraft(
     val id: DraftId,
     val sourceTransactionId: TransactionId? = null,
@@ -101,10 +110,32 @@ data class TransactionDraft(
     val images: List<DraftImage> = emptyList(),
     val dirty: Boolean = false,
     val updatedAtEpochMillis: Long,
+    val analyzedPrimaryImageKey: String? = null,
+    val suggestionSemanticKey: String? = null,
+    val suggestionConfidence: Float? = null,
+    val suggestionSupportingLabels: List<String> = emptyList(),
+    val suggestionDismissedForImageKey: String? = null,
+    val categoryWasManuallySelected: Boolean = false,
 )
 
 interface TransactionDraftStore {
     suspend fun load(id: DraftId): TransactionDraft?
     suspend fun save(draft: TransactionDraft)
     suspend fun delete(id: DraftId)
+    suspend fun updateCategorySuggestionMetadata(
+        id: DraftId,
+        metadata: DraftCategorySuggestionMetadata,
+    ) {
+        val existing = load(id) ?: return
+        save(
+            existing.copy(
+                analyzedPrimaryImageKey = metadata.analyzedPrimaryImageKey,
+                suggestionSemanticKey = metadata.suggestionSemanticKey,
+                suggestionConfidence = metadata.suggestionConfidence,
+                suggestionSupportingLabels = metadata.suggestionSupportingLabels,
+                suggestionDismissedForImageKey = metadata.suggestionDismissedForImageKey,
+                categoryWasManuallySelected = metadata.categoryWasManuallySelected,
+            )
+        )
+    }
 }

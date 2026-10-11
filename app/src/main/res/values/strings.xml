@@ -581,4 +581,16 @@
     <string name="voice_error_service">Dịch vụ nhận dạng giọng nói không phản hồi.</string>
     <string name="voice_error_generic">Nhận dạng giọng nói thất bại. Bạn vẫn có thể nhập bằng tay.</string>
     <string name="voice_privacy_notice">BillLocket không lưu trữ âm thanh micro.</string>
+
+    <!-- On-Device Image Category Suggestions (BL-047) -->
+    <string name="ai_suggestion_prefix">AI gợi ý</string>
+    <string name="ai_suggestion_title">AI gợi ý: %1$s</string>
+    <string name="ai_apply">Áp dụng</string>
+    <string name="ai_dismiss">Bỏ qua</string>
+    <string name="ai_processed_on_device">Xử lý trên thiết bị</string>
+    <string name="ai_suggestion_cd">Gợi ý danh mục từ ảnh: %1$s</string>
+    <string name="ai_apply_cd">Áp dụng gợi ý danh mục %1$s</string>
+    <string name="ai_dismiss_cd">Bỏ qua gợi ý danh mục</string>
+    <string name="settings_ai_privacy_title">Trí tuệ nhân tạo trên thiết bị</string>
+    <string name="settings_ai_privacy_body">Gợi ý danh mục từ ảnh được xử lý trên thiết bị, không tải ảnh lên máy chủ và có thể không chính xác.</string>
 </resources>
