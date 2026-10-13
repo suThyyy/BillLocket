@@ -2,6 +2,7 @@ package com.billlocket.app.feature.transaction.voice
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -29,6 +30,8 @@ class VoiceNoteCoordinator(
     private var activeSession = false
     private var isClosed = false
     private var eventsJob: Job? = null
+    private var processingTimeoutJob: Job? = null
+    private var lastPartialText: String = ""
 
     init {
         eventsJob = coroutineScope.launch {
@@ -83,6 +86,8 @@ class VoiceNoteCoordinator(
     private fun startListening(localeTag: String) {
         if (activeSession || isClosed) return
         activeSession = true
+        lastPartialText = ""
+        processingTimeoutJob?.cancel()
         _state.value = VoiceNoteState.Listening(partialText = "")
         transcriber.start(localeTag)
     }
@@ -90,12 +95,15 @@ class VoiceNoteCoordinator(
     fun stop() {
         if (isClosed || !activeSession) return
         _state.value = VoiceNoteState.Processing
+        scheduleProcessingTimeout()
         transcriber.stop()
     }
 
     fun cancel() {
         if (isClosed || !activeSession) return
         activeSession = false
+        lastPartialText = ""
+        processingTimeoutJob?.cancel()
         transcriber.cancel()
         _state.value = if (transcriber.isAvailable()) VoiceNoteState.Idle else VoiceNoteState.Unavailable
     }
@@ -118,9 +126,27 @@ class VoiceNoteCoordinator(
         if (isClosed) return
         isClosed = true
         activeSession = false
+        lastPartialText = ""
+        processingTimeoutJob?.cancel()
         eventsJob?.cancel()
         transcriber.close()
         _state.value = VoiceNoteState.Unavailable
+    }
+
+    private fun scheduleProcessingTimeout() {
+        processingTimeoutJob?.cancel()
+        processingTimeoutJob = coroutineScope.launch {
+            delay(PROCESSING_TIMEOUT_MILLIS)
+            if (activeSession && _state.value is VoiceNoteState.Processing) {
+                activeSession = false
+                transcriber.cancel()
+                if (lastPartialText.isNotBlank()) {
+                    _state.value = VoiceNoteState.Completed(lastPartialText)
+                } else {
+                    _state.value = VoiceNoteState.Error(VoiceRecognitionError.ServiceUnavailable)
+                }
+            }
+        }
     }
 
     private fun handleTranscriberEvent(event: VoiceTranscriberEvent) {
@@ -140,18 +166,21 @@ class VoiceNoteCoordinator(
             }
             is VoiceTranscriberEvent.PartialResult -> {
                 if (activeSession && _state.value is VoiceNoteState.Listening) {
+                    lastPartialText = event.text
                     _state.value = VoiceNoteState.Listening(partialText = event.text)
                 }
             }
             VoiceTranscriberEvent.Processing -> {
                 if (activeSession && _state.value is VoiceNoteState.Listening) {
                     _state.value = VoiceNoteState.Processing
+                    scheduleProcessingTimeout()
                 }
             }
             is VoiceTranscriberEvent.FinalResult -> {
                 if (activeSession &&
                     (_state.value is VoiceNoteState.Listening || _state.value is VoiceNoteState.Processing)
                 ) {
+                    processingTimeoutJob?.cancel()
                     activeSession = false
                     _state.value = VoiceNoteState.Completed(event.text)
                 }
@@ -160,6 +189,7 @@ class VoiceNoteCoordinator(
                 if (activeSession &&
                     (_state.value is VoiceNoteState.Listening || _state.value is VoiceNoteState.Processing)
                 ) {
+                    processingTimeoutJob?.cancel()
                     activeSession = false
                     _state.value = VoiceNoteState.Error(event.error)
                 }
@@ -169,5 +199,9 @@ class VoiceNoteCoordinator(
                 // prevents a delayed cancellation callback from terminating a newer session.
             }
         }
+    }
+
+    companion object {
+        const val PROCESSING_TIMEOUT_MILLIS = 8000L
     }
 }

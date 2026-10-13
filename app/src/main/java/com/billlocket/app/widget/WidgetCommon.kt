@@ -27,6 +27,7 @@ import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.components.SingletonComponent
 import com.billlocket.app.locale.BillLocketFormatters
 import com.billlocket.app.locale.localizedContext
+import com.billlocket.app.locale.FinancialNameLocalizer
 import java.time.DayOfWeek
 import java.time.Instant
 import java.time.LocalDate
@@ -55,6 +56,7 @@ interface WidgetEntryPoint {
     fun categoryDao(): CategoryDao
     fun projectionDao(): ProjectionDao
     fun insights(): InsightsRepository
+    fun financialNames(): FinancialNameLocalizer
 }
 
 data class LatestTransactionWidgetData(
@@ -247,7 +249,11 @@ suspend fun loadLatestTransactionData(context: Context): LatestTransactionWidget
         val todayEpochDay = java.time.LocalDate.now().toEpochDay()
         val recentTx = entry.transactionDao().observeCalendarRange(0L, todayEpochDay).first().firstOrNull { it.transaction.occurredAt <= now }
         if (recentTx != null) {
-            val catName = recentTx.transaction.categoryId?.let { entry.categoryDao().findById(it)?.name }.orEmpty()
+            val catName = recentTx.transaction.categoryId?.let { categoryId ->
+                entry.categoryDao().findById(categoryId)?.let { category ->
+                    entry.financialNames().categoryName(category.id, category.name)
+                }
+            }.orEmpty()
             LatestTransactionWidgetData(
                 transactionId = recentTx.transaction.id,
                 categoryName = catName.ifBlank { defaultCategoryName },
@@ -272,9 +278,12 @@ suspend fun loadLatestTransactionData(context: Context): LatestTransactionWidget
         val bitmap = decodeWidgetBitmap(entry.media(), eligible.contentUri, maxEdge = 320)
         val txEntity = entry.transactionDao().findEntity(eligible.transactionId)
         val isExpense = txEntity?.type != "INCOME"
+        val localizedCategoryName = txEntity?.categoryId?.let { categoryId ->
+            entry.financialNames().categoryName(categoryId, eligible.categoryName)
+        }.orEmpty()
         LatestTransactionWidgetData(
             transactionId = eligible.transactionId,
-            categoryName = eligible.categoryName.ifBlank { defaultCategoryName },
+            categoryName = localizedCategoryName.ifBlank { defaultCategoryName },
             amountMinor = eligible.amountMinor,
             isExpense = isExpense,
             occurredAt = eligible.occurredAt,

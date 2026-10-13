@@ -213,7 +213,7 @@ private fun writePortableData(db: SupportSQLiteDatabase, target: File, options: 
         "images" to if (options.includeImages) "SELECT i.* FROM transaction_images i JOIN transactions t ON t.id=i.transaction_id WHERE t.deleted_at IS NULL ORDER BY i.transaction_id, i.position" else null,
         "transfers" to "SELECT * FROM transfers WHERE deleted_at IS NULL ORDER BY occurred_at, id",
         "budgets" to "SELECT * FROM budgets ORDER BY month_start_epoch_day, scope_key, id",
-        "thresholdEvents" to "SELECT e.* FROM budget_threshold_events e JOIN budgets b ON b.id=e.budget_id ORDER BY e.budget_id, e.period_start_epoch_day, e.threshold_percent",
+        "thresholdEvents" to "SELECT e.* FROM budget_threshold_events e JOIN budgets b ON b.id=e.budget_id ORDER BY e.budget_id, b.month_start_epoch_day, e.threshold_percent",
     )
     var accounts = 0; var transactions = 0; var images = 0
     val media = mutableListOf<Pair<String, String>>()

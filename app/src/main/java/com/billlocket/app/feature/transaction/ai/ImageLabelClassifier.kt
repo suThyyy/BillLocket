@@ -3,9 +3,9 @@ package com.billlocket.app.feature.transaction.ai
 import java.util.Locale
 
 object ImageLabelClassifier {
-    const val MIN_AGGREGATE_CONFIDENCE = 0.70f
+    const val MIN_AGGREGATE_CONFIDENCE = 0.60f
     const val MIN_AMBIGUITY_MARGIN = 0.10f
-    const val MIN_SINGLE_LABEL_CONFIDENCE = 0.50f
+    const val MIN_SINGLE_LABEL_CONFIDENCE = 0.45f
     const val MAX_SUPPORTING_LABELS = 5
 
     private val BLOCKED_GENERIC_LABELS = setOf(
@@ -42,17 +42,23 @@ object ImageLabelClassifier {
         listOf(
             "food", "meal", "dish", "cuisine", "restaurant", "coffee", "tea",
             "beverage", "drink", "breakfast", "lunch", "dinner", "snack",
-            "dessert", "fast food",
+            "dessert", "fast food", "fruit", "vegetable", "produce", "bread",
+            "baked goods", "cake", "ice cream", "cup", "mug", "drinkware",
+            "tableware", "plate", "bowl",
         ).forEach { put(it, SemanticCategoryKey.FOOD_DRINK) }
 
         listOf(
             "shirt", "clothing", "clothes", "dress", "footwear", "shoe",
-            "bag", "handbag", "fashion accessory",
+            "bag", "handbag", "fashion accessory", "t-shirt", "sleeve", "jacket",
+            "sportswear", "outerwear", "trousers", "jeans", "shorts", "skirt",
+            "sneaker", "textile", "fashion", "formal wear", "costume", "jersey",
+            "denim", "coat", "suit", "collar", "pocket", "uniform", "active pants",
         ).forEach { put(it, SemanticCategoryKey.CLOTHING_SHOPPING) }
 
         listOf(
             "car", "bus", "train", "motorcycle", "motor vehicle", "vehicle",
-            "fuel station", "gas station", "public transport",
+            "fuel station", "gas station", "public transport", "bicycle", "scooter",
+            "automotive tire", "wheel",
         ).forEach { put(it, SemanticCategoryKey.TRANSPORT_FUEL) }
 
         listOf(
@@ -62,17 +68,19 @@ object ImageLabelClassifier {
 
         listOf(
             "book", "stationery", "notebook", "laptop", "computer",
-            "office supplies", "office equipment", "school supplies",
+            "office supplies", "office equipment", "school supplies", "pen", "pencil",
+            "desk", "keyboard",
         ).forEach { put(it, SemanticCategoryKey.STUDY_WORK) }
 
         listOf(
             "cinema", "movie", "video game", "game", "sports equipment",
-            "musical instrument",
+            "musical instrument", "ball", "sports", "toy",
         ).forEach { put(it, SemanticCategoryKey.ENTERTAINMENT) }
 
         listOf(
             "furniture", "home appliance", "household appliance",
-            "kitchen appliance", "cookware", "home accessories",
+            "kitchen appliance", "cookware", "home accessories", "table", "chair",
+            "kitchen utensil", "small appliance",
         ).forEach { put(it, SemanticCategoryKey.HOME) }
     }
 
@@ -86,7 +94,8 @@ object ImageLabelClassifier {
             if (normalizedText.isBlank() || BLOCKED_GENERIC_LABELS.contains(normalizedText)) {
                 continue
             }
-            if (!WHITELIST.containsKey(normalizedText)) {
+            val semanticKey = semanticKeyFor(normalizedText)
+            if (semanticKey == null) {
                 continue
             }
             val validConfidence = label.confidence.coerceIn(0.0f, 1.0f)
@@ -101,7 +110,7 @@ object ImageLabelClassifier {
         // Group deduplicated labels by semantic key
         val groupScores = mutableMapOf<SemanticCategoryKey, MutableList<RecognizedLabel>>()
         for ((normalizedText, maxConfidence) in deduplicatedLabels) {
-            val key = WHITELIST[normalizedText] ?: continue
+            val key = semanticKeyFor(normalizedText) ?: continue
             groupScores.getOrPut(key) { mutableListOf() }
                 .add(RecognizedLabel(normalizedText, maxConfidence))
         }
@@ -155,4 +164,22 @@ object ImageLabelClassifier {
 
     fun normalizeLabel(text: String): String =
         text.trim().lowercase(Locale.ROOT).replace(Regex("\\s+"), " ")
+
+    private fun semanticKeyFor(label: String): SemanticCategoryKey? {
+        WHITELIST[label]?.let { return it }
+        return WHITELIST.entries
+            .asSequence()
+            .filter { (term, _) -> term.length >= 4 && containsWholePhrase(label, term) }
+            .maxByOrNull { (term, _) -> term.length }
+            ?.value
+    }
+
+    private fun containsWholePhrase(label: String, phrase: String): Boolean {
+        val start = label.indexOf(phrase)
+        if (start < 0) return false
+        val beforeOkay = start == 0 || !label[start - 1].isLetterOrDigit()
+        val end = start + phrase.length
+        val afterOkay = end == label.length || !label[end].isLetterOrDigit()
+        return beforeOkay && afterOkay
+    }
 }

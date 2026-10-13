@@ -55,7 +55,7 @@ import kotlin.coroutines.resume
 
 interface DeviceLocationPort { suspend fun current(): Outcome<GeoPoint> }
 
-internal const val AUTOMATIC_LOCATION_CACHE_MAX_AGE_MILLIS = 30_000L
+internal const val AUTOMATIC_LOCATION_CACHE_MAX_AGE_MILLIS = 10 * 60_000L
 internal const val AUTOMATIC_LOCATION_CACHE_MAX_ACCURACY_METERS = 100f
 internal const val FRESH_PROVIDER_FIX_MAX_AGE_MILLIS = 30_000L
 internal const val FRESH_PROVIDER_FIX_MAX_ACCURACY_METERS = 500f
@@ -82,6 +82,9 @@ class AndroidDeviceLocationPort @Inject constructor(@ApplicationContext private 
         private const val FRESH_REQUEST_TIMEOUT_PER_PROVIDER_MS = 4_000L
     }
 
+    @Volatile
+    private var lastAccurateLocation: Location? = null
+
     override suspend fun current(): Outcome<GeoPoint> {
         val fine = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
         val coarse = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
@@ -96,9 +99,11 @@ class AndroidDeviceLocationPort @Inject constructor(@ApplicationContext private 
                 return Outcome.Failure(DomainFailure.StorageUnavailable("location_disabled"))
             }
 
-            // 1. Fast path: check for very recent, high-accuracy fix (within 30s, accuracy <= 100m)
-            val fastRecent = enabledProviders
+            // Fast path: reuse a good fix for at most ten minutes. Capture warms this port
+            // when the screen opens, so the shutter does not normally wait for GPS.
+            val fastRecent = (listOfNotNull(lastAccurateLocation) + enabledProviders
                 .mapNotNull { p -> runCatching { manager.getLastKnownLocation(p) }.getOrNull() }
+            )
                 .filter { loc ->
                     isValidLocation(loc) &&
                     isEligibleAutomaticLocationCache(
@@ -109,6 +114,7 @@ class AndroidDeviceLocationPort @Inject constructor(@ApplicationContext private 
                 .minByOrNull { it.accuracy }
 
             if (fastRecent != null) {
+                rememberAccurate(fastRecent)
                 return Outcome.Success(GeoPoint(fastRecent.latitude, fastRecent.longitude))
             }
 
@@ -157,14 +163,23 @@ class AndroidDeviceLocationPort @Inject constructor(@ApplicationContext private 
                 .firstOrNull()
 
             if (freshLocation != null) {
+                rememberAccurate(freshLocation)
                 return Outcome.Success(GeoPoint(freshLocation.latitude, freshLocation.longitude))
             }
 
-            // Do not attach an older last-known fallback. A missing location is safer than
-            // assigning a photo to a place the user left several minutes ago.
             Outcome.Failure(DomainFailure.StorageUnavailable("location_unavailable"))
         } catch (_: SecurityException) {
             Outcome.Failure(DomainFailure.PermissionDenied("location", false))
+        }
+    }
+
+    private fun rememberAccurate(location: Location) {
+        if (isEligibleAutomaticLocationCache(
+                ageMillis = getLocationAgeMillis(location),
+                accuracyMeters = location.accuracy.takeIf { location.hasAccuracy() },
+            )
+        ) {
+            lastAccurateLocation = Location(location)
         }
     }
 

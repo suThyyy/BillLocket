@@ -10,6 +10,7 @@ import com.billlocket.app.domain.result.DomainFailure
 import com.billlocket.app.domain.result.Outcome
 import com.billlocket.app.domain.validation.ValidateBudget
 import com.billlocket.app.domain.validation.ValidateCreateTransfer
+import com.billlocket.app.locale.FinancialNameLocalizer
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
@@ -23,14 +24,22 @@ class AccountRepositoryImpl @Inject constructor(
     private val settings: SettingsRepository,
     private val ids: IdGenerator,
     private val clock: Clock,
+    private val financialNames: FinancialNameLocalizer,
 ) : AccountRepository {
     override fun observeAll(includeArchived: Boolean): Flow<List<Account>> =
-        dao.observeAll().map { rows -> rows.filter { includeArchived || !it.isArchived }.map { it.toDomain() } }
+        combine(dao.observeAll(), financialNames.languageChanges) { rows, _ ->
+            rows.filter { includeArchived || !it.isArchived }.map { row ->
+                row.toDomain().copy(name = financialNames.accountName(row.id, row.name))
+            }
+        }
 
     override fun observeDetails(id: AccountId): Flow<AccountDetails?> =
-        combine(dao.observeById(id.value), dao.observeBalance(id.value)) { account, balance ->
+        combine(dao.observeById(id.value), dao.observeBalance(id.value), financialNames.languageChanges) { account, balance, _ ->
             if (account == null || balance == null) null
-            else AccountDetails(account.toDomain(), Money(balance.balanceMinor, CurrencyCode.of(balance.currencyCode)))
+            else AccountDetails(
+                account.toDomain().copy(name = financialNames.accountName(account.id, account.name)),
+                Money(balance.balanceMinor, CurrencyCode.of(balance.currencyCode)),
+            )
         }
 
     override fun observeBalance(id: AccountId): Flow<Money?> =
@@ -83,10 +92,13 @@ class CategoryRepositoryImpl @Inject constructor(
     private val dao: CategoryDao,
     private val ids: IdGenerator,
     private val clock: Clock,
+    private val financialNames: FinancialNameLocalizer,
 ) : CategoryRepository {
     override fun observe(type: TransactionType?, includeArchived: Boolean): Flow<List<Category>> =
-        dao.observeAll().map { rows ->
-            rows.filter { (type == null || it.transactionType == type.name) && (includeArchived || !it.isArchived) }.map { it.toDomain() }
+        combine(dao.observeAll(), financialNames.languageChanges) { rows, _ ->
+            rows.filter { (type == null || it.transactionType == type.name) && (includeArchived || !it.isArchived) }.map { row ->
+                row.toDomain().copy(name = financialNames.categoryName(row.id, row.name))
+            }
         }
 
     override suspend fun create(command: CreateCategoryCommand): Outcome<CategoryId> {
@@ -264,9 +276,10 @@ class BudgetRepositoryImpl @Inject constructor(
 class InsightsRepositoryImpl @Inject constructor(
     private val dao: ProjectionDao,
     private val settings: SettingsRepository,
+    private val financialNames: FinancialNameLocalizer,
 ) : InsightsRepository {
     override fun observePeriod(query: InsightsQuery): Flow<PeriodInsights> =
-        dao.observeFinancialVersion().map {
+        combine(dao.observeFinancialVersion(), financialNames.languageChanges) { _, _ ->
             val currency = settings.settings.first().currency
             val accountId = query.accountId?.value
             val totals = dao.periodTotals(query.range.startEpochDay, query.range.endInclusiveEpochDay, accountId)
@@ -283,7 +296,13 @@ class InsightsRepositoryImpl @Inject constructor(
             }
             PeriodInsights(
                 Money(totals.incomeMinor, currency), Money(totals.expenseMinor, currency), Money(totals.incomeMinor - totals.expenseMinor, currency),
-                categories.map { CategoryDistribution(CategoryId(it.categoryId), it.categoryName, Money(it.totalMinor, currency)) },
+                categories.map {
+                    CategoryDistribution(
+                        CategoryId(it.categoryId),
+                        financialNames.categoryName(it.categoryId, it.categoryName),
+                        Money(it.totalMinor, currency),
+                    )
+                },
                 days.map { TrendPoint(it.localDateEpochDay, Money(it.incomeMinor, currency), Money(it.expenseMinor, currency)) },
                 comparison,
             )

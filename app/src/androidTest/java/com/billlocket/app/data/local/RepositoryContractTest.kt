@@ -11,6 +11,8 @@ import com.billlocket.app.domain.port.Clock
 import com.billlocket.app.domain.port.IdGenerator
 import com.billlocket.app.domain.result.DomainFailure
 import com.billlocket.app.domain.result.Outcome
+import com.billlocket.app.locale.FinancialNameLocalizer
+import com.billlocket.app.locale.AppLocaleControllerImpl
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -40,13 +42,14 @@ class RepositoryContractTest {
             .allowMainThreadQueries().addCallback(DatabaseInitializer.callback).build()
         database.openHelper.writableDatabase
         val preferences = context.getSharedPreferences("repository-contract-${System.nanoTime()}", Context.MODE_PRIVATE)
+        val financialNames = FinancialNameLocalizer(context, AppLocaleControllerImpl(context))
         settings = SettingsRepositoryImpl(preferences, database.projectionDao())
-        accounts = AccountRepositoryImpl(database.accountDao(), settings, ids, clock)
-        categories = CategoryRepositoryImpl(database.categoryDao(), ids, clock)
-        transactions = TransactionRepositoryImpl(database.transactionDao(), database.accountDao(), database.categoryDao(), database.projectionDao(), settings, ids, clock)
+        accounts = AccountRepositoryImpl(database.accountDao(), settings, ids, clock, financialNames)
+        categories = CategoryRepositoryImpl(database.categoryDao(), ids, clock, financialNames)
+        transactions = TransactionRepositoryImpl(database.transactionDao(), database.accountDao(), database.categoryDao(), database.projectionDao(), settings, ids, clock, financialNames)
         transfers = TransferRepositoryImpl(database.transferDao(), database.accountDao(), settings, ids, clock)
         budgets = BudgetRepositoryImpl(database.budgetDao(), database.projectionDao(), database.categoryDao(), settings, ids, clock)
-        insights = InsightsRepositoryImpl(database.projectionDao(), settings)
+        insights = InsightsRepositoryImpl(database.projectionDao(), settings, financialNames)
     }
 
     @After fun tearDown() = database.close()

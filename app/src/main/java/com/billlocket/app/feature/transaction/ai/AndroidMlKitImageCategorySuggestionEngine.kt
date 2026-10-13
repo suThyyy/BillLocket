@@ -37,7 +37,11 @@ class AndroidMlKitImageCategorySuggestionEngine(
 
         val uri = parseUri(imageUri) ?: return@withContext null
         val labeler = try {
-            ImageLabeling.getClient(ImageLabelerOptions.DEFAULT_OPTIONS)
+            ImageLabeling.getClient(
+                ImageLabelerOptions.Builder()
+                    .setConfidenceThreshold(MODEL_CONFIDENCE_THRESHOLD)
+                    .build()
+            )
         } catch (_: Throwable) {
             return@withContext null
         }
@@ -183,6 +187,7 @@ class AndroidMlKitImageCategorySuggestionEngine(
 
     companion object {
         const val MAX_INFERENCE_DIMENSION = 1024
+        const val MODEL_CONFIDENCE_THRESHOLD = 0.35f
     }
 }
 

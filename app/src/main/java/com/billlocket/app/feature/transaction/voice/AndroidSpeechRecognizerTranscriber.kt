@@ -2,6 +2,7 @@ package com.billlocket.app.feature.transaction.voice
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
@@ -40,7 +41,16 @@ class AndroidSpeechRecognizerTranscriber(
     private var activeGeneration = 0L
 
     override fun isAvailable(): Boolean {
-        return runCatching { SpeechRecognizer.isRecognitionAvailable(context) }.getOrDefault(false)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
+            runCatching { SpeechRecognizer.isOnDeviceRecognitionAvailable(context) }.getOrDefault(false)
+        ) {
+            return true
+        }
+        return runCatching {
+            val serviceIntent = Intent("android.speech.RecognitionService")
+            context.packageManager.queryIntentServices(serviceIntent, PackageManager.MATCH_DEFAULT_ONLY).isNotEmpty() &&
+                SpeechRecognizer.isRecognitionAvailable(context)
+        }.getOrDefault(false)
     }
 
     override fun start(localeTag: String) {
@@ -51,7 +61,7 @@ class AndroidSpeechRecognizerTranscriber(
 
             cleanupRecognizer()
 
-            val recognizer = createRecognizer()
+            val recognizer = createRecognizer(localeTag)
             if (recognizer == null) {
                 _events.tryEmit(VoiceTranscriberEvent.Error(VoiceRecognitionError.ServiceUnavailable))
                 return@runOnMainThread
@@ -106,15 +116,17 @@ class AndroidSpeechRecognizerTranscriber(
         }
     }
 
-    private fun createRecognizer(): SpeechRecognizer? {
+    private fun createRecognizer(localeTag: String): SpeechRecognizer? {
+        val appContext = context.applicationContext ?: context
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
-            runCatching { SpeechRecognizer.isOnDeviceRecognitionAvailable(context) }.getOrDefault(false)
+            localeTag.startsWith("en", ignoreCase = true) &&
+            runCatching { SpeechRecognizer.isOnDeviceRecognitionAvailable(appContext) }.getOrDefault(false)
         ) {
-            runCatching { SpeechRecognizer.createOnDeviceSpeechRecognizer(context) }
+            runCatching { SpeechRecognizer.createOnDeviceSpeechRecognizer(appContext) }
                 .getOrNull()
                 ?.let { return it }
         }
-        return runCatching { SpeechRecognizer.createSpeechRecognizer(context) }.getOrNull()
+        return runCatching { SpeechRecognizer.createSpeechRecognizer(appContext) }.getOrNull()
     }
 
     private fun cleanupRecognizer() {

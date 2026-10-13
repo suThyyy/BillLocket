@@ -5,6 +5,7 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.runCurrent
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
@@ -173,6 +174,37 @@ class VoiceNoteCoordinatorTest {
         runCurrent()
         assertEquals(VoiceNoteState.Processing, coordinator.state.value)
         assertEquals(1, fake.stoppedCount)
+    }
+
+    @Test
+    fun `processing timeout cancels recognizer and reports service unavailable without partial text`() = runTest {
+        val fake = FakeVoiceNoteTranscriber()
+        val coordinator = VoiceNoteCoordinator(fake, backgroundScope)
+
+        coordinator.onMicTapped(hasPermission = true, permanentlyDenied = false, localeTag = "vi-VN", onRequestPermission = {})
+        coordinator.stop()
+        advanceTimeBy(VoiceNoteCoordinator.PROCESSING_TIMEOUT_MILLIS)
+        runCurrent()
+
+        assertEquals(1, fake.cancelledCount)
+        assertEquals(VoiceNoteState.Error(VoiceRecognitionError.ServiceUnavailable), coordinator.state.value)
+    }
+
+    @Test
+    fun `processing timeout commits last partial text and cancels recognizer`() = runTest {
+        val fake = FakeVoiceNoteTranscriber()
+        val coordinator = VoiceNoteCoordinator(fake, backgroundScope)
+
+        coordinator.onMicTapped(hasPermission = true, permanentlyDenied = false, localeTag = "vi-VN", onRequestPermission = {})
+        runCurrent()
+        fake.emitEvent(VoiceTranscriberEvent.PartialResult("mua cà phê"))
+        runCurrent()
+        coordinator.stop()
+        advanceTimeBy(VoiceNoteCoordinator.PROCESSING_TIMEOUT_MILLIS)
+        runCurrent()
+
+        assertEquals(1, fake.cancelledCount)
+        assertEquals(VoiceNoteState.Completed("mua cà phê"), coordinator.state.value)
     }
 
     @Test

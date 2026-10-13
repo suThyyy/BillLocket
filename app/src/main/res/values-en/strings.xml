@@ -561,6 +561,54 @@
     <string name="capture_error_invalid_or_large">Invalid photo or file too large</string>
     <string name="capture_error_location_inaccurate">Unable to get accurate location; photo is still saved normally</string>
 
+    <!-- Built-in financial names (localized by stable ID; stored user data is not rewritten) -->
+    <string name="builtin_account_cash">Cash</string>
+    <string name="builtin_category_food">Food &amp; Drink</string>
+    <string name="builtin_category_shopping">Shopping</string>
+    <string name="builtin_category_transport">Transport</string>
+    <string name="builtin_category_home">Home</string>
+    <string name="builtin_category_coffee">Coffee</string>
+    <string name="builtin_category_clothing">Clothing</string>
+    <string name="builtin_category_fuel">Fuel</string>
+    <string name="builtin_category_parking">Parking</string>
+    <string name="builtin_category_electricity">Electricity</string>
+    <string name="builtin_category_water">Water</string>
+    <string name="builtin_category_internet">Internet</string>
+    <string name="builtin_category_phone">Phone</string>
+    <string name="builtin_category_study">Education</string>
+    <string name="builtin_category_books">Books</string>
+    <string name="builtin_category_beauty">Beauty</string>
+    <string name="builtin_category_health">Health</string>
+    <string name="builtin_category_medicine">Medicine</string>
+    <string name="builtin_category_entertainment">Entertainment</string>
+    <string name="builtin_category_travel">Travel</string>
+    <string name="builtin_category_gifts">Gifts</string>
+    <string name="builtin_category_family">Family</string>
+    <string name="builtin_category_children">Children</string>
+    <string name="builtin_category_pets">Pets</string>
+    <string name="builtin_category_work">Work</string>
+    <string name="builtin_category_stationery">Stationery</string>
+    <string name="builtin_category_service_fee">Service fees</string>
+    <string name="builtin_category_insurance">Insurance</string>
+    <string name="builtin_category_installment">Installments</string>
+    <string name="builtin_category_debt">Debt</string>
+    <string name="builtin_category_tax_fees">Taxes/Fees</string>
+    <string name="builtin_category_other_expense">Other</string>
+    <string name="builtin_category_salary">Salary</string>
+    <string name="builtin_category_bonus">Bonus</string>
+    <string name="builtin_category_side_job">Side job</string>
+    <string name="builtin_category_business">Business</string>
+    <string name="builtin_category_freelance">Freelance</string>
+    <string name="builtin_category_investment">Investment</string>
+    <string name="builtin_category_savings_interest">Savings interest</string>
+    <string name="builtin_category_dividends">Dividends</string>
+    <string name="builtin_category_refund">Refund</string>
+    <string name="builtin_category_item_sales">Item sales</string>
+    <string name="builtin_category_income_gifts">Gifts</string>
+    <string name="builtin_category_allowance">Allowance</string>
+    <string name="builtin_category_debt_repayment">Debt repayment</string>
+    <string name="builtin_category_other_income">Other</string>
+
     <!-- Voice Note Dictation (BL-046) -->
     <string name="voice_dictate_note">Dictate note</string>
     <string name="voice_listening">Listening…</string>

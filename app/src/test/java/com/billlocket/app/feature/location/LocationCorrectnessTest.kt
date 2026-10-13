@@ -32,11 +32,12 @@ class LocationCorrectnessTest {
     val mainDispatcherRule = MainDispatcherRule()
 
     @Test
-    fun automaticLocationCache_acceptsOnlyVeryRecentAccurateFixes() {
+    fun automaticLocationCache_acceptsAccurateFixesForAtMostTenMinutes() {
         assertTrue(isEligibleAutomaticLocationCache(ageMillis = 0L, accuracyMeters = 8f))
         assertTrue(isEligibleAutomaticLocationCache(ageMillis = 30_000L, accuracyMeters = 100f))
-        assertFalse(isEligibleAutomaticLocationCache(ageMillis = 30_001L, accuracyMeters = 8f))
-        assertFalse(isEligibleAutomaticLocationCache(ageMillis = 10 * 60_000L, accuracyMeters = 8f))
+        assertTrue(isEligibleAutomaticLocationCache(ageMillis = 30_001L, accuracyMeters = 8f))
+        assertTrue(isEligibleAutomaticLocationCache(ageMillis = 10 * 60_000L, accuracyMeters = 8f))
+        assertFalse(isEligibleAutomaticLocationCache(ageMillis = 10 * 60_000L + 1L, accuracyMeters = 8f))
         assertFalse(isEligibleAutomaticLocationCache(ageMillis = 5_000L, accuracyMeters = 100.1f))
         assertFalse(isEligibleAutomaticLocationCache(ageMillis = 5_000L, accuracyMeters = null))
     }

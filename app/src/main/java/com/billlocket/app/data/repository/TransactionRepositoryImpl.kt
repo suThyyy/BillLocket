@@ -15,9 +15,11 @@ import com.billlocket.app.domain.repository.TransactionRepository
 import com.billlocket.app.domain.result.DomainFailure
 import com.billlocket.app.domain.result.Outcome
 import com.billlocket.app.domain.validation.ValidateCreateTransaction
+import com.billlocket.app.locale.FinancialNameLocalizer
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
@@ -30,6 +32,7 @@ class TransactionRepositoryImpl @Inject constructor(
     private val settingsRepository: SettingsRepository,
     private val idGenerator: IdGenerator,
     private val clock: Clock,
+    private val financialNames: FinancialNameLocalizer,
 ) : TransactionRepository {
     private val validator = ValidateCreateTransaction()
 
@@ -84,8 +87,8 @@ class TransactionRepositoryImpl @Inject constructor(
             filter.range?.endInclusiveEpochDay ?: 365_241_780_471L,
             filter.type?.name,
             filter.accountId?.value,
-        ).map { rows ->
-            val categoryNames = categoryDao.listAll().associate { it.id to it.name }
+        ).combine(financialNames.languageChanges) { rows, _ ->
+            val categoryNames = categoryDao.listAll().associate { it.id to financialNames.categoryName(it.id, it.name) }
             rows.map { it.toDomain() }
                 .filter { it.matches(filter) }
                 .flatMap { transaction ->
@@ -106,9 +109,9 @@ class TransactionRepositoryImpl @Inject constructor(
         }
 
     override fun observeWidgetPhoto(selection: WidgetSelection): Flow<WidgetPhoto?> =
-        transactionDao.observeActive().map { rows ->
+        transactionDao.observeActive().combine(financialNames.languageChanges) { rows, _ ->
             val now = clock.nowEpochMillis()
-            val categoryNames = categoryDao.listAll().associate { it.id to it.name }
+            val categoryNames = categoryDao.listAll().associate { it.id to financialNames.categoryName(it.id, it.name) }
             rows.asSequence()
                 .map { it.toDomain() }
                 .filter { it.occurred.epochMillis <= now }
@@ -129,6 +132,8 @@ class TransactionRepositoryImpl @Inject constructor(
 
     override suspend fun widgetPhotoCandidates(limit: Int): List<WidgetPhoto> {
         val now = clock.nowEpochMillis()
+        val categoryIdsByTransaction = transactionDao.listActive()
+            .associate { it.transaction.id to it.transaction.categoryId }
         return projectionDao.widgetCandidates(limit.coerceIn(1, 100))
             .filter { it.occurredAt <= now }
             .map { row ->
@@ -137,15 +142,18 @@ class TransactionRepositoryImpl @Inject constructor(
                     imageId = TransactionImageId(row.imageId),
                     mediaUri = row.contentUri,
                     amount = Money(row.amountMinor, CurrencyCode.of(row.currencyCode)),
-                    categoryName = row.categoryName,
+                    categoryName = financialNames.categoryName(
+                        categoryIdsByTransaction[row.transactionId].orEmpty(),
+                        row.categoryName,
+                    ),
                 )
             }
     }
 
     override suspend fun page(filter: TransactionFilter, page: PageRequest): Outcome<Page<TransactionSummary>> =
         persistenceOutcome("page_transactions") {
-            val accounts = accountDao.listAll().associate { it.id to it.name }
-            val categories = categoryDao.listAll().associate { it.id to it.name }
+            val accounts = accountDao.listAll().associate { it.id to financialNames.accountName(it.id, it.name) }
+            val categories = categoryDao.listAll().associate { it.id to financialNames.categoryName(it.id, it.name) }
             val matching =
                 transactionDao.listActive().map { it.toDomain() }
                     .filter { it.matches(filter) }

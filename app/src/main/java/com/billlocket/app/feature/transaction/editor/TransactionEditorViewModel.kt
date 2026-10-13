@@ -576,7 +576,7 @@ class TransactionEditorViewModel @Inject constructor(
             return
         }
 
-        val imageKey = "${primary.id}:${primary.checksumSha256 ?: primary.mediaUri}"
+        val imageKey = primaryImageKey(images) ?: return
 
         val currentSuggestion = _state.value.suggestionState
         when (currentSuggestion) {

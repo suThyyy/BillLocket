@@ -4,6 +4,13 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class ImageLabelClassifierTest {
+    @Test
+    fun clothingPhraseLabels_areRecognizedWithoutExactStringMatch() {
+        listOf("Dress shirt", "Fashion design", "Running shoe").forEach { label ->
+            val suggestion = ImageLabelClassifier.classify(listOf(RecognizedLabel(label, 0.72f)))
+            assertEquals(SemanticCategoryKey.CLOTHING_SHOPPING, suggestion?.semanticKey)
+        }
+    }
 
     @Test
     fun `empty labels returns null`() {
@@ -138,7 +145,7 @@ class ImageLabelClassifierTest {
         val labels = listOf(
             RecognizedLabel("receipt", 0.95f),
             RecognizedLabel("document", 0.90f),
-            RecognizedLabel("food", 0.45f) // below MIN_SINGLE_LABEL_CONFIDENCE = 0.50f
+            RecognizedLabel("food", 0.44f) // below MIN_SINGLE_LABEL_CONFIDENCE = 0.45f
         )
         val suggestion = ImageLabelClassifier.classify(labels)
         assertNull(suggestion)
@@ -146,7 +153,7 @@ class ImageLabelClassifierTest {
 
     @Test
     fun `single label below single-label threshold is rejected`() {
-        val labels = listOf(RecognizedLabel("food", 0.49f))
+        val labels = listOf(RecognizedLabel("food", 0.44f))
         val suggestion = ImageLabelClassifier.classify(labels)
         assertNull(suggestion)
     }
@@ -167,9 +174,25 @@ class ImageLabelClassifierTest {
 
     @Test
     fun `aggregate confidence below min threshold is rejected`() {
-        val labels = listOf(RecognizedLabel("food", 0.65f))
+        val labels = listOf(RecognizedLabel("food", 0.59f))
         val suggestion = ImageLabelClassifier.classify(labels)
         assertNull(suggestion)
+    }
+
+    @Test
+    fun `common ML Kit fruit label classifies as food`() {
+        val suggestion = ImageLabelClassifier.classify(listOf(RecognizedLabel("fruit", 0.66f)))
+
+        assertNotNull(suggestion)
+        assertEquals(SemanticCategoryKey.FOOD_DRINK, suggestion!!.semanticKey)
+    }
+
+    @Test
+    fun `common ML Kit t-shirt label classifies as clothing`() {
+        val suggestion = ImageLabelClassifier.classify(listOf(RecognizedLabel("T-shirt", 0.68f)))
+
+        assertNotNull(suggestion)
+        assertEquals(SemanticCategoryKey.CLOTHING_SHOPPING, suggestion!!.semanticKey)
     }
 
     @Test

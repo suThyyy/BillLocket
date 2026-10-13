@@ -419,6 +419,18 @@ The mapping from image labels to semantic keys must be pure Kotlin and independe
 
 ## 10. BL-048 — Combined regression and release decision
 
+### Review checkpoint — 2026-10-12
+
+- Physical-device validation ran on a Realme RMX3370 / Android 13 through ADB serial `e56d016e`. The application was updated only with `adb install -r`; it was never uninstalled and its package data was never cleared.
+- Before device mutations, a portable backup containing the SQLite payload and 42 owned media files was exported and verified. Existing records and media survived the update. Backup import was intentionally not run on the user's real dataset.
+- Verified on device: Vietnamese/English switching and persistence, keyboard dismissal, Vietnamese voice-note flow, on-device image suggestion for a representative food image, conservative no-suggestion behavior for a generic image, CameraX capture, system photo picker, fresh location tagging, photo markers and preview cards on the map, create/search/delete/undo, account balance updates, core management screens, Monthly Recap, and portable backup export.
+- Device validation exposed and corrected three integration defects: an invalid budget-threshold backup ordering column, OEM speech-service discovery on Android 13, and a recognizer service that could remain in `Processing` indefinitely.
+- Codex review removed diagnostic logging that exposed recognition result text, made watchdog expiry cancel/release the active recognizer, and added focused timeout regression tests.
+- Independent post-review JDK 17 validation passed: `test`, `assembleDebug`, `assembleDebugAndroidTest`, `assembleRelease`, `lint`, and `git diff --check`.
+- Remaining device acceptance before merge: English dictation; explicit denied-microphone recovery; no-photo transaction; edit flow; AI dismiss and unavailable-engine behavior; all four widget families after locale/data changes; offline and missing-map-configuration behavior; large-font, TalkBack, and light-theme inspection.
+
+Current decision: **CONDITIONAL PASS — do not merge to `main` yet.** The implementation and automated gate are healthy, but the unexecuted physical-device cases above are part of BL-048's binding matrix. No destructive test is required to finish them.
+
 ### Automated gate
 
 Run under JDK 17:
