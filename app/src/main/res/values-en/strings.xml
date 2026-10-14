@@ -94,6 +94,10 @@
     <string name="capture_location_consent_message">BillLocket only tags your current location to photos you take after your consent. Library photos do not use current location and you can always edit or remove location later.</string>
     <string name="capture_location_enable">Enable location</string>
     <string name="capture_location_skip">No, take photo anyway</string>
+    <string name="capture_location_resolving">Getting location</string>
+    <string name="capture_location_attached">Location added</string>
+    <string name="capture_location_unavailable">No location · Add later</string>
+    <string name="capture_location_permission_denied">Location permission is off. Your photo is still saved.</string>
     <string name="capture_flash_desc">Flash</string>
     <string name="capture_flash_toggle_desc">Toggle flash</string>
     <string name="capture_switch_camera_desc">Switch camera</string>

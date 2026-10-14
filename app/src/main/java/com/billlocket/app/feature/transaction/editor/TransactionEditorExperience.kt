@@ -62,6 +62,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.*
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -957,7 +959,7 @@ private fun TypeSegment(
 }
 
 @Composable
-private fun CompactPhotoStrip(
+internal fun CompactPhotoStrip(
     images: List<DraftImage>,
     onAdd: () -> Unit,
     onRemove: (String) -> Unit,
@@ -977,44 +979,66 @@ private fun CompactPhotoStrip(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             itemsIndexed(images, key = { _, image -> image.id }) { _, image ->
-                Box(
-                    Modifier
-                        .size(44.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .border(1.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(12.dp)),
+                val locationDesc = stringResource(
+                    if (image.confirmedLocation != null) R.string.editor_location_view else R.string.editor_location_add,
+                )
+                val deleteDesc = stringResource(R.string.action_delete)
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    AsyncImage(
-                        image.previewUri,
-                        null,
-                        Modifier.fillMaxSize(),
-                        contentScale = ContentScale.Crop,
-                    )
-                    Surface(
-                        onClick = { onRemove(image.id) },
+                    Box(
                         modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(2.dp),
-                        shape = CircleShape,
-                        color = Color.Black.copy(alpha = 0.75f),
-                        contentColor = Color.White,
+                            .size(48.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .border(1.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(12.dp))
+                            .background(Color(0xFF181615))
+                            .clickable(
+                                onClick = { onLocation(image.id) },
+                                onClickLabel = locationDesc,
+                            )
+                            .semantics { contentDescription = locationDesc },
                     ) {
-                        Box(Modifier.size(16.dp), contentAlignment = Alignment.Center) {
-                            Icon(Icons.Filled.Close, stringResource(R.string.action_delete), Modifier.size(10.dp))
-                        }
-                    }
-                    if (image.confirmedLocation != null) {
+                        AsyncImage(
+                            image.previewUri,
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop,
+                        )
                         Surface(
-                            onClick = { onLocation(image.id) },
                             modifier = Modifier
                                 .align(Alignment.BottomStart)
                                 .padding(2.dp),
                             shape = CircleShape,
-                            color = MaterialTheme.colorScheme.primary,
-                            contentColor = Color(0xFF1E1400),
+                            color = if (image.confirmedLocation != null) MaterialTheme.colorScheme.primary else Color.Black.copy(alpha = 0.75f),
+                            contentColor = if (image.confirmedLocation != null) Color(0xFF1E1400) else Color.White,
                         ) {
                             Box(Modifier.size(16.dp), contentAlignment = Alignment.Center) {
-                                Icon(Icons.Filled.LocationOn, stringResource(R.string.destination_image_location), Modifier.size(10.dp))
+                                Icon(
+                                    if (image.confirmedLocation != null) Icons.Filled.LocationOn else Icons.Filled.LocationOff,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(10.dp),
+                                    tint = if (image.confirmedLocation != null) Color(0xFF1E1400) else Color.White,
+                                )
                             }
+                        }
+                    }
+                    Surface(
+                        onClick = { onRemove(image.id) },
+                        modifier = Modifier.semantics { contentDescription = deleteDesc },
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color.White.copy(alpha = 0.08f),
+                        contentColor = Color.White,
+                    ) {
+                        Box(
+                            modifier = Modifier.size(48.dp),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                Icons.Filled.DeleteOutline,
+                                contentDescription = null,
+                                modifier = Modifier.size(20.dp),
+                            )
                         }
                     }
                 }
@@ -1026,7 +1050,7 @@ private fun CompactPhotoStrip(
             color = Color.White.copy(alpha = 0.1f),
             contentColor = Color.White,
         ) {
-            Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) {
+            Box(Modifier.size(48.dp), contentAlignment = Alignment.Center) {
                 Icon(Icons.Filled.AddAPhoto, stringResource(R.string.editor_add_photo), Modifier.size(18.dp))
             }
         }

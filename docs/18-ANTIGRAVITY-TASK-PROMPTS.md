@@ -2,7 +2,7 @@
 
 Use one prompt at a time. Prefer replacing `<BASE_COMMIT>` with the accepted commit from the preceding task. If the Base Sprint is still an uncommitted working-tree checkpoint, the fallback instruction in the global preamble applies; do not run two agents against that working tree. Do not allow Antigravity to proceed to the next prompt when acceptance evidence is missing.
 
-Current handoff status (2026-10-14): Base Sprint and `LOC-01` are implemented and Codex-reviewed. The focused capture suite (including the immediate-dispatcher regression) and the five-test Realme draft-store instrumentation suite pass. Before starting Prompt 2, create the mandatory `codex/demo-stabilization` branch and accepted checkpoint described below; the current checkout is still `main` with an uncommitted mixed Base Sprint + LOC-01 working tree.
+Current handoff status (2026-10-14): Base Sprint and `LOC-01` are accepted in checkpoint `804beb8` on `codex/demo-stabilization`. `LOC-02/03` has passed Codex review under the demo happy-path profile and is ready for its separate checkpoint. Prompt 3 must start from that resulting checkpoint hash.
 
 ## Global preamble to prepend to every prompt
 
@@ -17,11 +17,19 @@ Use JDK 17. Inspect existing code/tests before editing. Preserve user changes. I
 
 Terminal execution policy:
 - Run ordinary read-only inspection commands and safe in-repository build/test commands directly; do not stop to ask the user conversationally for permission before each command.
-- This includes rg/Get-Content/git status/git diff, Gradle build/unit-test/lint tasks, adb devices, adb shell am instrument, logcat filtering, and narrowly scoped non-destructive device inspection required by this task.
+- This includes rg/Get-Content/git status/git diff, Gradle build/unit-test/lint tasks, adb devices, logcat filtering, and narrowly scoped non-destructive device inspection required by this task.
 - Group related validation tasks into as few terminal invocations as practical so the user is not interrupted repeatedly.
 - Never bypass a platform approval dialog. If the execution environment itself requires approval, make one narrowly scoped approval request containing the exact command category and reason, then continue automatically after approval.
 - Ask the user before destructive or externally consequential actions: deleting/resetting files, git reset/clean, uninstalling the app, clearing app data, revoking permissions, overwriting user data, publishing/pushing, or installing/upgrading unrelated dependencies.
 - If a safe command fails because of sandbox/permission restrictions, retry through the environment's official approval mechanism once. Do not replace it with a riskier workaround and do not repeatedly ask the same question in chat.
+
+Physical-device deployment policy:
+- Never run `connectedDebugAndroidTest`, `installDebugAndroidTest`, or any Gradle task that installs APKs on the user's Realme.
+- JVM tests, lint, and APK assembly run on the computer without ADB.
+- Repeated UI validation must reuse the installed app via `adb shell am start`, scoped inspection, screenshots, and manual interaction.
+- Do not run `adb install`, `adb uninstall`, or `pm clear` without explicit user approval. When a changed build must be tested, announce it first and install only the main app APK once with `adb install -r`; do not use `-d` unless a downgrade is necessary.
+- Never install the test APK automatically. `adb shell am instrument` is allowed only when the matching test package is already installed. If it is absent, skip instrumentation unless the user explicitly approves the additional test-APK installation and its separate OEM Install prompt.
+- Never describe `adb install -r` as "not reinstalling". It preserves app data but is still an APK installation and may display an OEM confirmation dialog.
 
 Mandatory Git workflow:
 - Before implementation, run `git branch --show-current`, `git status --short --branch`, and `git log -3 --oneline --decorate`.

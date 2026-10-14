@@ -50,9 +50,15 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import coil3.compose.AsyncImage
 import com.billlocket.app.R
 import com.billlocket.app.domain.model.DraftId
+import com.billlocket.app.domain.model.ThemeMode
 import com.billlocket.app.feature.transaction.draft.DraftImage
+import com.billlocket.app.feature.transaction.draft.DraftImageKind
 import com.billlocket.app.ui.common.CollectEffects
 import com.billlocket.app.ui.common.collectUiState
+import com.billlocket.app.ui.theme.AppTheme
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.tooling.preview.Preview
 
 @Composable
 fun CaptureScreen(
@@ -65,6 +71,17 @@ fun CaptureScreen(
     val lifecycleOwner = LocalLifecycleOwner.current
     val controller = remember { LifecycleCameraController(context) }
     var isShutterFlashing by remember { mutableStateOf(false) }
+    var selectedImageId by remember { mutableStateOf<String?>(null) }
+    var previousImageIds by remember { mutableStateOf<Set<String>>(emptySet()) }
+
+    LaunchedEffect(state.images) {
+        selectedImageId = resolveSelectedImageId(
+            previousImageIds = previousImageIds,
+            currentImages = state.images,
+            currentSelectedId = selectedImageId,
+        )
+        previousImageIds = state.images.map { it.id }.toSet()
+    }
 
     val isInitiallyGranted = remember(context) {
         ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
@@ -196,8 +213,43 @@ fun CaptureScreen(
                     Box(Modifier.padding(horizontal = 18.dp)) {
                         LocketDraftStrip(
                             images = state.images,
+                            locationStatusByImageId = state.locationStatusByImageId,
+                            selectedImageId = selectedImageId,
+                            onSelect = { selectedImageId = it },
                             onRemove = { viewModel.onAction(CaptureAction.RemoveImage(it)) },
                             onMove = { from, to -> viewModel.onAction(CaptureAction.MoveImage(from, to)) },
+                        )
+                    }
+                    val activeImage = state.images.find { it.id == selectedImageId } ?: state.images.lastOrNull()
+                    val activeStatus = activeImage?.let {
+                        state.locationStatusByImageId[it.id]
+                            ?: if (it.confirmedLocation != null) CaptureLocationStatus.Attached else CaptureLocationStatus.NotRequested
+                    } ?: CaptureLocationStatus.NotRequested
+
+                    if (activeImage != null && activeStatus != CaptureLocationStatus.NotRequested) {
+                        Spacer(Modifier.height(6.dp))
+                        CaptureLocationStatusRow(status = activeStatus)
+                    }
+                }
+                if (state.locationPermissionDeniedNotice) {
+                    Spacer(Modifier.height(6.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier
+                            .padding(horizontal = 18.dp)
+                            .semantics(mergeDescendants = true) {},
+                    ) {
+                        Icon(
+                            Icons.Filled.LocationOff,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp),
+                            tint = Color.White.copy(alpha = 0.85f),
+                        )
+                        Text(
+                            text = stringResource(R.string.capture_location_permission_denied),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = Color.White.copy(alpha = 0.85f),
                         )
                     }
                 }
@@ -511,19 +563,382 @@ private fun CaptureBottomControls(
 }
 
 @Composable
-private fun LocketDraftStrip(images: List<DraftImage>, onRemove: (String) -> Unit, onMove: (Int, Int) -> Unit) {
-    LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp), contentPadding = PaddingValues(vertical = 2.dp)) {
+fun LocketDraftStrip(
+    images: List<DraftImage>,
+    locationStatusByImageId: Map<String, CaptureLocationStatus>,
+    onRemove: (String) -> Unit,
+    onMove: (Int, Int) -> Unit,
+    modifier: Modifier = Modifier,
+    selectedImageId: String? = null,
+    onSelect: ((String) -> Unit)? = null,
+) {
+    LazyRow(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        contentPadding = PaddingValues(vertical = 2.dp),
+    ) {
         itemsIndexed(images, key = { _, image -> image.id }) { index, image ->
-            Box(Modifier.size(76.dp).clip(RoundedCornerShape(19.dp)).border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(19.dp))) {
-                AsyncImage(image.previewUri, stringResource(R.string.capture_photo_desc, index + 1), Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                Surface(onClick = { onRemove(image.id) }, modifier = Modifier.align(Alignment.TopEnd).padding(3.dp), shape = CircleShape, color = Color.Black.copy(alpha = 0.7f), contentColor = Color.White) {
-                    Box(Modifier.size(24.dp), contentAlignment = Alignment.Center) { Icon(Icons.Filled.Close, stringResource(R.string.capture_delete_photo), Modifier.size(14.dp)) }
+            val isSelected = selectedImageId == image.id
+            val status = locationStatusByImageId[image.id]
+                ?: if (image.confirmedLocation != null) CaptureLocationStatus.Attached else CaptureLocationStatus.NotRequested
+
+            Box(
+                Modifier
+                    .size(76.dp)
+                    .clip(RoundedCornerShape(19.dp))
+                    .border(
+                        width = if (isSelected) 3.dp else 2.dp,
+                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                        shape = RoundedCornerShape(19.dp),
+                    )
+                    .clickable(enabled = onSelect != null) { onSelect?.invoke(image.id) },
+            ) {
+                AsyncImage(
+                    image.previewUri,
+                    stringResource(R.string.capture_photo_desc, index + 1),
+                    Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop,
+                )
+                LocationThumbnailBadge(
+                    status = status,
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(3.dp),
+                )
+                Surface(
+                    onClick = { onRemove(image.id) },
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(3.dp),
+                    shape = CircleShape,
+                    color = Color.Black.copy(alpha = 0.7f),
+                    contentColor = Color.White,
+                ) {
+                    Box(Modifier.size(24.dp), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Filled.Close, stringResource(R.string.capture_delete_photo), Modifier.size(14.dp))
+                    }
                 }
-                Row(Modifier.align(Alignment.BottomCenter).fillMaxWidth().background(Color.Black.copy(alpha = 0.58f)), horizontalArrangement = Arrangement.SpaceBetween) {
-                    IconButton(onClick = { onMove(index, index - 1) }, enabled = index > 0, modifier = Modifier.size(28.dp)) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, stringResource(R.string.capture_move_left), Modifier.size(16.dp), tint = Color.White) }
-                    IconButton(onClick = { onMove(index, index + 1) }, enabled = index < images.lastIndex, modifier = Modifier.size(28.dp)) { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, stringResource(R.string.capture_move_right), Modifier.size(16.dp), tint = Color.White) }
+                Row(
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .background(Color.Black.copy(alpha = 0.58f)),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    IconButton(
+                        onClick = { onMove(index, index - 1) },
+                        enabled = index > 0,
+                        modifier = Modifier.size(28.dp),
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                            stringResource(R.string.capture_move_left),
+                            Modifier.size(16.dp),
+                            tint = Color.White,
+                        )
+                    }
+                    IconButton(
+                        onClick = { onMove(index, index + 1) },
+                        enabled = index < images.lastIndex,
+                        modifier = Modifier.size(28.dp),
+                    ) {
+                        Icon(
+                            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            stringResource(R.string.capture_move_right),
+                            Modifier.size(16.dp),
+                            tint = Color.White,
+                        )
+                    }
                 }
             }
+        }
+    }
+}
+
+fun resolveSelectedImageId(
+    previousImageIds: Set<String>,
+    currentImages: List<DraftImage>,
+    currentSelectedId: String?,
+): String? {
+    if (currentImages.isEmpty()) return null
+    val currentIds = currentImages.map { it.id }
+    val newIds = currentIds.filter { it !in previousImageIds }
+    return when {
+        newIds.isNotEmpty() -> newIds.last()
+        currentSelectedId != null && currentIds.contains(currentSelectedId) -> currentSelectedId
+        else -> currentImages.last().id
+    }
+}
+
+@Composable
+fun LocationThumbnailBadge(
+    status: CaptureLocationStatus,
+    modifier: Modifier = Modifier,
+) {
+    when (status) {
+        CaptureLocationStatus.NotRequested -> Unit
+        CaptureLocationStatus.Resolving -> {
+            val description = stringResource(R.string.capture_location_resolving)
+            Surface(
+                shape = CircleShape,
+                color = Color.Black.copy(alpha = 0.75f),
+                contentColor = Color.White,
+                modifier = modifier.semantics { contentDescription = description },
+            ) {
+                Box(Modifier.size(24.dp), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(12.dp),
+                        strokeWidth = 2.dp,
+                        color = Color.White.copy(alpha = 0.9f),
+                    )
+                }
+            }
+        }
+        CaptureLocationStatus.Attached -> {
+            val description = stringResource(R.string.capture_location_attached)
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primary,
+                contentColor = Color(0xFF1E1400),
+                modifier = modifier.semantics { contentDescription = description },
+            ) {
+                Box(Modifier.size(24.dp), contentAlignment = Alignment.Center) {
+                    Icon(
+                        Icons.Filled.LocationOn,
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                        tint = Color(0xFF1E1400),
+                    )
+                }
+            }
+        }
+        CaptureLocationStatus.Unavailable -> {
+            val description = stringResource(R.string.capture_location_unavailable)
+            Surface(
+                shape = CircleShape,
+                color = Color.Black.copy(alpha = 0.75f),
+                contentColor = Color.White.copy(alpha = 0.85f),
+                modifier = modifier.semantics { contentDescription = description },
+            ) {
+                Box(Modifier.size(24.dp), contentAlignment = Alignment.Center) {
+                    Icon(
+                        Icons.Filled.LocationOff,
+                        contentDescription = null,
+                        modifier = Modifier.size(14.dp),
+                        tint = Color.White.copy(alpha = 0.85f),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun CaptureLocationStatusRow(
+    status: CaptureLocationStatus,
+    modifier: Modifier = Modifier,
+) {
+    when (status) {
+        CaptureLocationStatus.NotRequested -> Unit
+        CaptureLocationStatus.Resolving -> {
+            Row(
+                modifier = modifier.semantics(mergeDescendants = true) {},
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(12.dp),
+                    strokeWidth = 2.dp,
+                    color = Color.White.copy(alpha = 0.9f),
+                )
+                Text(
+                    text = stringResource(R.string.capture_location_resolving),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White.copy(alpha = 0.9f),
+                )
+            }
+        }
+        CaptureLocationStatus.Attached -> {
+            Row(
+                modifier = modifier.semantics(mergeDescendants = true) {},
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Icon(
+                    Icons.Filled.LocationOn,
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                    tint = MaterialTheme.colorScheme.primary,
+                )
+                Text(
+                    text = stringResource(R.string.capture_location_attached),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+        }
+        CaptureLocationStatus.Unavailable -> {
+            Row(
+                modifier = modifier.semantics(mergeDescendants = true) {},
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Icon(
+                    Icons.Filled.LocationOff,
+                    contentDescription = null,
+                    modifier = Modifier.size(14.dp),
+                    tint = Color.White.copy(alpha = 0.85f),
+                )
+                Text(
+                    text = stringResource(R.string.capture_location_unavailable),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = Color.White.copy(alpha = 0.85f),
+                )
+            }
+        }
+    }
+}
+
+@Preview(name = "Capture Location Resolving Dark", showBackground = true, backgroundColor = 0xFF080807)
+@Composable
+private fun CaptureLocationResolvingDarkPreview() {
+    AppTheme(mode = ThemeMode.DARK) {
+        Column(Modifier.padding(16.dp)) {
+            CaptureLocationStatusRow(status = CaptureLocationStatus.Resolving)
+        }
+    }
+}
+
+@Preview(name = "Capture Location Resolving Light", showBackground = true, backgroundColor = 0xFF080807)
+@Composable
+private fun CaptureLocationResolvingLightPreview() {
+    AppTheme(mode = ThemeMode.LIGHT) {
+        Column(Modifier.padding(16.dp)) {
+            CaptureLocationStatusRow(status = CaptureLocationStatus.Resolving)
+        }
+    }
+}
+
+@Preview(name = "Capture Location Attached Dark", showBackground = true, backgroundColor = 0xFF080807)
+@Composable
+private fun CaptureLocationAttachedDarkPreview() {
+    AppTheme(mode = ThemeMode.DARK) {
+        Column(Modifier.padding(16.dp)) {
+            CaptureLocationStatusRow(status = CaptureLocationStatus.Attached)
+        }
+    }
+}
+
+@Preview(name = "Capture Location Attached Light", showBackground = true, backgroundColor = 0xFF080807)
+@Composable
+private fun CaptureLocationAttachedLightPreview() {
+    AppTheme(mode = ThemeMode.LIGHT) {
+        Column(Modifier.padding(16.dp)) {
+            CaptureLocationStatusRow(status = CaptureLocationStatus.Attached)
+        }
+    }
+}
+
+@Preview(name = "Capture Location Unavailable Dark", showBackground = true, backgroundColor = 0xFF080807)
+@Composable
+private fun CaptureLocationUnavailableDarkPreview() {
+    AppTheme(mode = ThemeMode.DARK) {
+        Column(Modifier.padding(16.dp)) {
+            CaptureLocationStatusRow(status = CaptureLocationStatus.Unavailable)
+        }
+    }
+}
+
+@Preview(name = "Capture Location Unavailable Light", showBackground = true, backgroundColor = 0xFF080807)
+@Composable
+private fun CaptureLocationUnavailableLightPreview() {
+    AppTheme(mode = ThemeMode.LIGHT) {
+        Column(Modifier.padding(16.dp)) {
+            CaptureLocationStatusRow(status = CaptureLocationStatus.Unavailable)
+        }
+    }
+}
+
+@Preview(name = "Capture Location Multi Status Dark", showBackground = true, backgroundColor = 0xFF080807)
+@Composable
+private fun CaptureLocationMultiStatusDarkPreview() {
+    AppTheme(mode = ThemeMode.DARK) {
+        val sampleImages = listOf(
+            DraftImage(
+                id = "img-1",
+                kind = DraftImageKind.STAGED,
+                previewUri = "content://media/1",
+                mediaUri = "content://media/1",
+                widthPx = 100,
+                heightPx = 100,
+                sizeBytes = 1024L,
+            ),
+            DraftImage(
+                id = "img-2",
+                kind = DraftImageKind.STAGED,
+                previewUri = "content://media/2",
+                mediaUri = "content://media/2",
+                widthPx = 100,
+                heightPx = 100,
+                sizeBytes = 1024L,
+            ),
+        )
+        val statusMap = mapOf(
+            "img-1" to CaptureLocationStatus.Attached,
+            "img-2" to CaptureLocationStatus.Resolving,
+        )
+        Column(Modifier.padding(16.dp)) {
+            LocketDraftStrip(
+                images = sampleImages,
+                locationStatusByImageId = statusMap,
+                selectedImageId = "img-2",
+                onRemove = {},
+                onMove = { _, _ -> },
+            )
+            Spacer(Modifier.height(8.dp))
+            CaptureLocationStatusRow(status = CaptureLocationStatus.Resolving)
+        }
+    }
+}
+
+@Preview(name = "Capture Location Multi Status Light", showBackground = true)
+@Composable
+private fun CaptureLocationMultiStatusLightPreview() {
+    AppTheme(mode = ThemeMode.LIGHT) {
+        val sampleImages = listOf(
+            DraftImage(
+                id = "img-1",
+                kind = DraftImageKind.STAGED,
+                previewUri = "content://media/1",
+                mediaUri = "content://media/1",
+                widthPx = 100,
+                heightPx = 100,
+                sizeBytes = 1024L,
+            ),
+            DraftImage(
+                id = "img-2",
+                kind = DraftImageKind.STAGED,
+                previewUri = "content://media/2",
+                mediaUri = "content://media/2",
+                widthPx = 100,
+                heightPx = 100,
+                sizeBytes = 1024L,
+            ),
+        )
+        val statusMap = mapOf(
+            "img-1" to CaptureLocationStatus.Attached,
+            "img-2" to CaptureLocationStatus.Unavailable,
+        )
+        Column(Modifier.padding(16.dp)) {
+            LocketDraftStrip(
+                images = sampleImages,
+                locationStatusByImageId = statusMap,
+                selectedImageId = "img-2",
+                onRemove = {},
+                onMove = { _, _ -> },
+            )
+            Spacer(Modifier.height(8.dp))
+            CaptureLocationStatusRow(status = CaptureLocationStatus.Unavailable)
         }
     }
 }

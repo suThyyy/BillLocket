@@ -862,8 +862,9 @@ internal fun createTestViewModel(
     deviceLocation: DeviceLocationPort = object : DeviceLocationPort {
         override suspend fun current() = Outcome.Success(GeoPoint(10.0, 106.0))
     },
+    draftId: String = "draft-1",
 ) = CaptureViewModel(
-    SavedStateHandle(mapOf("draftId" to "draft-1")),
+    SavedStateHandle(mapOf("draftId" to draftId)),
     store,
     media,
     CameraCaptureTarget { File("capture.jpg") },

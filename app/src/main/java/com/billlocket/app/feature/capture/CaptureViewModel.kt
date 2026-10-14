@@ -61,6 +61,7 @@ data class CaptureState(
     val showLocationConsent: Boolean = false,
     val autoLocationEnabled: Boolean = false,
     val locationStatusByImageId: Map<String, CaptureLocationStatus> = emptyMap(),
+    val locationPermissionDeniedNotice: Boolean = false,
 )
 
 sealed interface CaptureAction {
@@ -89,6 +90,7 @@ sealed interface CaptureAction {
     data object Back : CaptureAction
     data object KeepDraft : CaptureAction
     data object DiscardDraft : CaptureAction
+    data object DismissLocationNotice : CaptureAction
 }
 
 sealed interface CaptureEffect {
@@ -128,7 +130,7 @@ class CaptureViewModel @Inject constructor(
             val restored = draft.copy(images = verified)
             draftStore.save(restored)
             val initialStatusMap = restored.images.associate { image ->
-                image.id to if (image.confirmedLocation != null) CaptureLocationStatus.Attached else CaptureLocationStatus.Unavailable
+                image.id to if (image.confirmedLocation != null) CaptureLocationStatus.Attached else CaptureLocationStatus.NotRequested
             }
             _state.update { current ->
                 current.copy(
@@ -174,7 +176,7 @@ class CaptureViewModel @Inject constructor(
             }
             CaptureAction.EnableAutomaticLocation -> {
                 locationPreference.set(CaptureLocationChoice.ENABLED)
-                _state.update { it.copy(showLocationConsent = false, autoLocationEnabled = true) }
+                _state.update { it.copy(showLocationConsent = false, autoLocationEnabled = true, locationPermissionDeniedNotice = false) }
                 emit(CaptureEffect.LaunchLocationPermission)
             }
             CaptureAction.DisableAutomaticLocation -> {
@@ -196,12 +198,16 @@ class CaptureViewModel @Inject constructor(
                     pendingLocationJob = null
                     pendingLocationResult = null
                     pendingLocationStartedAtEpochMillis = null
-                    _state.update { it.copy(autoLocationEnabled = false) }
-                } else if (locationPreference.get() == CaptureLocationChoice.ENABLED) {
-                    warmAutomaticLocation()
+                    _state.update { it.copy(autoLocationEnabled = false, locationPermissionDeniedNotice = true) }
+                } else {
+                    _state.update { it.copy(locationPermissionDeniedNotice = false) }
+                    if (locationPreference.get() == CaptureLocationChoice.ENABLED) {
+                        warmAutomaticLocation()
+                    }
                 }
                 prepareCapture()
             }
+            CaptureAction.DismissLocationNotice -> _state.update { it.copy(locationPermissionDeniedNotice = false) }
             is CaptureAction.PhotoCaptured -> normalizeAndAdd(action.staged, attachCurrentLocation = locationPreference.get() == CaptureLocationChoice.ENABLED)
             is CaptureAction.CaptureFailed -> viewModelScope.launch {
                 removeSnapshot(action.staged.imageId.value, cancelJob = true)

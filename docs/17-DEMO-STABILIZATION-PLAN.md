@@ -72,7 +72,12 @@ If Antigravity must do everything, give it one prompt at a time from `docs/18-AN
 - Do not add OpenAI, Gemini, Firebase-hosted models, or paid speech/vision APIs to the demo implementation. Gemini belongs only in future-work documentation.
 - Do not train a custom classifier for the final demo unless all tasks in this plan are already accepted.
 - Do not redesign unrelated screens or change the established black/yellow BillLocket visual language.
-- Do not uninstall the app or clear application data on the Realme device. Use `adb install -r` only after a verified backup.
+- Do not uninstall the app or clear application data on the Realme device.
+- Never use `connectedDebugAndroidTest`, `installDebugAndroidTest`, or an equivalent Gradle install task on the user's daily device.
+- JVM tests, lint, and builds run on the computer and must not involve ADB.
+- Reuse the installed app for repeated UI checks. `adb shell am start`, scoped `logcat`, accessibility inspection, screenshots, and manual interaction do not require reinstalling it.
+- Installing a new build requires an explicit notice to the user and exactly one `adb install -r` of the main app APK. Do not add `-d` unless a downgrade is actually required.
+- Do not install the test APK automatically. Run `am instrument` only when a matching test APK is already installed. If a new instrumentation test genuinely requires a new test APK, explain the extra OEM Install prompt and obtain explicit approval first.
 
 ## 5. Architecture overview
 
@@ -299,6 +304,8 @@ Physical matrix:
 5. Location permission denied.
 6. Airplane mode with GPS on.
 7. Continue to editor immediately after capture.
+
+Editor control acceptance on the Realme must additionally verify through accessibility bounds that the thumbnail/location action and delete action are separate, non-overlapping targets of at least 48 dp. A JVM test that invokes locally declared callbacks is not UI evidence and must not be reported as such.
 
 ### Sprint 2 — trustworthy speech-to-text UX
 

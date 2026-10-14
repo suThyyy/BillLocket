@@ -94,6 +94,10 @@
     <string name="capture_location_consent_message">BillLocket chỉ gắn vị trí hiện tại vào ảnh bạn chụp sau khi bạn đồng ý. Ảnh nhập từ thư viện không dùng vị trí hiện tại và bạn luôn có thể sửa hoặc xóa vị trí sau.</string>
     <string name="capture_location_enable">Bật vị trí</string>
     <string name="capture_location_skip">Không, vẫn chụp</string>
+    <string name="capture_location_resolving">Đang lấy vị trí</string>
+    <string name="capture_location_attached">Đã thêm vị trí</string>
+    <string name="capture_location_unavailable">Chưa có vị trí · Có thể thêm sau</string>
+    <string name="capture_location_permission_denied">Không có quyền vị trí. Ảnh vẫn được lưu.</string>
     <string name="capture_flash_desc">Đèn flash</string>
     <string name="capture_flash_toggle_desc">Bật hoặc tắt đèn flash</string>
     <string name="capture_switch_camera_desc">Đổi camera</string>
