@@ -2,11 +2,11 @@ package com.billlocket.app.feature.transaction.voice
 
 import android.content.Context
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.os.SystemClock
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -39,6 +39,9 @@ class AndroidSpeechRecognizerTranscriber(
     private var isCancelled = false
     private var isClosed = false
     private var activeGeneration = 0L
+    private val audioLevelNormalizer = VoiceAudioLevelNormalizer(
+        nowMillis = SystemClock::elapsedRealtime,
+    )
 
     override fun isAvailable(): Boolean {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
@@ -46,11 +49,7 @@ class AndroidSpeechRecognizerTranscriber(
         ) {
             return true
         }
-        return runCatching {
-            val serviceIntent = Intent("android.speech.RecognitionService")
-            context.packageManager.queryIntentServices(serviceIntent, PackageManager.MATCH_DEFAULT_ONLY).isNotEmpty() &&
-                SpeechRecognizer.isRecognitionAvailable(context)
-        }.getOrDefault(false)
+        return runCatching { SpeechRecognizer.isRecognitionAvailable(context) }.getOrDefault(false)
     }
 
     override fun start(localeTag: String) {
@@ -58,11 +57,13 @@ class AndroidSpeechRecognizerTranscriber(
             if (isClosed) return@runOnMainThread
             isCancelled = false
             val generation = ++activeGeneration
+            audioLevelNormalizer.reset()
 
             cleanupRecognizer()
 
             val recognizer = createRecognizer(localeTag)
             if (recognizer == null) {
+                audioLevelNormalizer.reset()
                 _events.tryEmit(VoiceTranscriberEvent.Error(VoiceRecognitionError.ServiceUnavailable))
                 return@runOnMainThread
             }
@@ -83,6 +84,7 @@ class AndroidSpeechRecognizerTranscriber(
                 recognizer.startListening(intent)
             } catch (t: Throwable) {
                 if (generation != activeGeneration) return@runOnMainThread
+                audioLevelNormalizer.reset()
                 cleanupRecognizer()
                 _events.tryEmit(VoiceTranscriberEvent.Error(VoiceRecognitionError.ClientError))
             }
@@ -101,6 +103,7 @@ class AndroidSpeechRecognizerTranscriber(
             if (isClosed) return@runOnMainThread
             isCancelled = true
             activeGeneration++
+            audioLevelNormalizer.reset()
             runCatching { speechRecognizer?.cancel() }
             cleanupRecognizer()
         }
@@ -112,6 +115,7 @@ class AndroidSpeechRecognizerTranscriber(
             isClosed = true
             isCancelled = true
             activeGeneration++
+            audioLevelNormalizer.reset()
             cleanupRecognizer()
         }
     }
@@ -157,7 +161,10 @@ class AndroidSpeechRecognizerTranscriber(
             }
 
             override fun onRmsChanged(rmsdB: Float) {
-                // Not recording audio
+                if (!isCurrentGeneration(generation)) return
+                audioLevelNormalizer.sample(rmsdB)?.let { normalized ->
+                    _events.tryEmit(VoiceTranscriberEvent.AudioLevel(normalized))
+                }
             }
 
             override fun onBufferReceived(buffer: ByteArray?) {
@@ -166,12 +173,14 @@ class AndroidSpeechRecognizerTranscriber(
 
             override fun onEndOfSpeech() {
                 if (!isCurrentGeneration(generation)) return
+                resetAudioLevel()
                 _events.tryEmit(VoiceTranscriberEvent.Processing)
             }
 
             override fun onError(error: Int) {
                 if (!isCurrentGeneration(generation)) return
                 val mapped = mapSpeechRecognizerError(error)
+                resetAudioLevel()
                 _events.tryEmit(VoiceTranscriberEvent.Error(mapped))
                 cleanupRecognizer()
             }
@@ -180,6 +189,7 @@ class AndroidSpeechRecognizerTranscriber(
                 if (!isCurrentGeneration(generation)) return
                 val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                 val text = matches?.firstOrNull()?.trim().orEmpty()
+                resetAudioLevel()
                 if (text.isNotEmpty()) {
                     _events.tryEmit(VoiceTranscriberEvent.FinalResult(text))
                 } else {
@@ -205,6 +215,11 @@ class AndroidSpeechRecognizerTranscriber(
 
     private fun isCurrentGeneration(generation: Long): Boolean {
         return !isClosed && !isCancelled && generation == activeGeneration
+    }
+
+    private fun resetAudioLevel() {
+        audioLevelNormalizer.reset()
+        _events.tryEmit(VoiceTranscriberEvent.AudioLevel(0f))
     }
 
     private fun mapSpeechRecognizerError(error: Int): VoiceRecognitionError {
