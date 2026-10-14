@@ -122,6 +122,34 @@ interface TransactionDraftStore {
     suspend fun load(id: DraftId): TransactionDraft?
     suspend fun save(draft: TransactionDraft)
     suspend fun delete(id: DraftId)
+
+    /**
+     * Updates only one draft image's confirmed location.
+     *
+     * Production stores override this method so the read-modify-write operation is atomic.
+     * The default keeps lightweight test stores source-compatible.
+     */
+    suspend fun updateImageLocation(
+        draftId: DraftId,
+        imageId: String,
+        location: PhotoLocation?,
+    ): Boolean {
+        val existing = load(draftId) ?: return false
+        if (existing.images.none { it.id == imageId }) return false
+        save(
+            existing.copy(
+                images = existing.images.map { image ->
+                    if (image.id == imageId) image.copy(confirmedLocation = location) else image
+                },
+                updatedAtEpochMillis = maxOf(
+                    System.currentTimeMillis(),
+                    existing.updatedAtEpochMillis + 1L,
+                ),
+            )
+        )
+        return true
+    }
+
     suspend fun updateCategorySuggestionMetadata(
         id: DraftId,
         metadata: DraftCategorySuggestionMetadata,

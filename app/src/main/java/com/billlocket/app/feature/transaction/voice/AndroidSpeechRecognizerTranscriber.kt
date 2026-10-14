@@ -153,7 +153,7 @@ class AndroidSpeechRecognizerTranscriber(
 
             override fun onBeginningOfSpeech() {
                 if (!isCurrentGeneration(generation)) return
-                _events.tryEmit(VoiceTranscriberEvent.Listening)
+                _events.tryEmit(VoiceTranscriberEvent.SpeechStarted)
             }
 
             override fun onRmsChanged(rmsdB: Float) {

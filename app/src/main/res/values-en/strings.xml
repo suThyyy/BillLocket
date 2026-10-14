@@ -639,6 +639,10 @@
     <string name="ai_suggestion_cd">Category suggestion from photo: %1$s</string>
     <string name="ai_apply_cd">Apply category suggestion %1$s</string>
     <string name="ai_dismiss_cd">Dismiss category suggestion</string>
+    <string name="ai_analyzing">Analyzing photo on device…</string>
+    <string name="ai_no_suggestion">Not enough information to suggest a category</string>
+    <string name="ai_analysis_failed">Could not analyze the photo. You can still choose manually.</string>
+    <string name="ai_analysis_status_cd">Photo analysis status: %1$s</string>
     <string name="settings_ai_privacy_title">On-device AI</string>
     <string name="settings_ai_privacy_body">Image category suggestions are processed on device, do not upload photos to a server, and may be inaccurate.</string>
 </resources>

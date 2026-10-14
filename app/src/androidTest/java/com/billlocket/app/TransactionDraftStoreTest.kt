@@ -7,6 +7,8 @@ import com.billlocket.app.domain.model.*
 import com.billlocket.app.domain.port.CandidateLocation
 import com.billlocket.app.feature.transaction.draft.*
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Before
@@ -93,4 +95,106 @@ class TransactionDraftStoreTest {
         assertEquals(listOf("coffee", "beverage"), updated.suggestionSupportingLabels)
         assertEquals(true, updated.categoryWasManuallySelected)
     }
+
+    @Test
+    fun updateImageLocationChangesOnlyTargetImageAndTimestamp() = runBlocking {
+        val id = DraftId("draft-location")
+        val original = draftWithTwoImages(id)
+        store.save(original)
+        val location = PhotoLocation(
+            point = GeoPoint(10.7769, 106.7009),
+            source = LocationSource.CURRENT,
+            confirmedAtEpochMillis = 1_700_000_000_500,
+        )
+
+        assertEquals(true, store.updateImageLocation(id, "image-2", location))
+
+        val updated = requireNotNull(store.load(id))
+        assertEquals(original.amountText, updated.amountText)
+        assertEquals(original.note, updated.note)
+        assertEquals(original.categoryId, updated.categoryId)
+        assertEquals(original.accountId, updated.accountId)
+        assertEquals(original.images.map { it.id }, updated.images.map { it.id })
+        assertEquals(null, updated.images[0].confirmedLocation)
+        assertEquals(location, updated.images[1].confirmedLocation)
+        assertEquals(original.suggestionSemanticKey, updated.suggestionSemanticKey)
+        assertEquals(true, updated.updatedAtEpochMillis > original.updatedAtEpochMillis)
+    }
+
+    @Test
+    fun updateImageLocationDoesNotRecreateMissingImage() = runBlocking {
+        val id = DraftId("draft-missing-image")
+        val original = draftWithTwoImages(id).copy(images = draftWithTwoImages(id).images.take(1))
+        store.save(original)
+
+        val changed = store.updateImageLocation(
+            id,
+            "image-2",
+            PhotoLocation(GeoPoint(10.0, 106.0), LocationSource.CURRENT, 123L),
+        )
+
+        assertEquals(false, changed)
+        assertEquals(original, store.load(id))
+    }
+
+    @Test
+    fun concurrentSuggestionAndLocationUpdatesPreserveBothChanges() = runBlocking {
+        val id = DraftId("draft-atomic-updates")
+        store.save(draftWithTwoImages(id))
+        val location = PhotoLocation(
+            point = GeoPoint(21.0285, 105.8542),
+            source = LocationSource.CURRENT,
+            confirmedAtEpochMillis = 1_700_000_000_700,
+        )
+        val metadata = DraftCategorySuggestionMetadata(
+            analyzedPrimaryImageKey = "image-1:key",
+            suggestionSemanticKey = "FOOD_DRINK",
+            suggestionConfidence = 0.88f,
+            suggestionSupportingLabels = listOf("coffee"),
+        )
+
+        listOf(
+            async { store.updateImageLocation(id, "image-1", location) },
+            async { store.updateCategorySuggestionMetadata(id, metadata) },
+        ).awaitAll()
+
+        val updated = requireNotNull(store.load(id))
+        assertEquals(location, updated.images.first().confirmedLocation)
+        assertEquals("FOOD_DRINK", updated.suggestionSemanticKey)
+        assertEquals(listOf("coffee"), updated.suggestionSupportingLabels)
+        assertEquals("125000", updated.amountText)
+        assertEquals("Keep all fields", updated.note)
+    }
+
+    private fun draftWithTwoImages(id: DraftId): TransactionDraft = TransactionDraft(
+        id = id,
+        type = TransactionType.EXPENSE,
+        amountText = "125000",
+        categoryId = CategoryId("category-1"),
+        accountId = AccountId("account-1"),
+        note = "Keep all fields",
+        occurred = InstantAtZone(1_700_000_000_000, 19_675, "Asia/Ho_Chi_Minh"),
+        images = listOf(
+            draftImage("image-1", "operation-1"),
+            draftImage("image-2", "operation-2"),
+        ),
+        dirty = true,
+        updatedAtEpochMillis = 1_700_000_000_000,
+        analyzedPrimaryImageKey = "old-key",
+        suggestionSemanticKey = "HOME",
+        suggestionConfidence = 0.75f,
+        suggestionSupportingLabels = listOf("table"),
+    )
+
+    private fun draftImage(imageId: String, operationId: String) = DraftImage(
+        id = imageId,
+        kind = DraftImageKind.STAGED,
+        previewUri = "content://com.billlocket.app.media/drafts/$operationId/$imageId",
+        mediaUri = "content://com.billlocket.app.media/images/$imageId",
+        operationId = operationId,
+        widthPx = 100,
+        heightPx = 200,
+        sizeBytes = 300,
+        checksumSha256 = imageId.padEnd(64, 'a'),
+    )
 }

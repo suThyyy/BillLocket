@@ -88,7 +88,7 @@ class VoiceNoteCoordinator(
         activeSession = true
         lastPartialText = ""
         processingTimeoutJob?.cancel()
-        _state.value = VoiceNoteState.Listening(partialText = "")
+        _state.value = VoiceNoteState.Listening()
         transcriber.start(localeTag)
     }
 
@@ -154,20 +154,34 @@ class VoiceNoteCoordinator(
         when (event) {
             VoiceTranscriberEvent.Ready -> {
                 if (activeSession && _state.value is VoiceNoteState.Listening) {
-                    val currentPartial = (_state.value as? VoiceNoteState.Listening)?.partialText.orEmpty()
-                    _state.value = VoiceNoteState.Listening(partialText = currentPartial)
+                    val current = _state.value as VoiceNoteState.Listening
+                    _state.value = current.copy(phase = VoiceListeningPhase.READY)
                 }
             }
-            VoiceTranscriberEvent.Listening -> {
+            VoiceTranscriberEvent.SpeechStarted -> {
                 if (activeSession && _state.value is VoiceNoteState.Listening) {
-                    val currentPartial = (_state.value as? VoiceNoteState.Listening)?.partialText.orEmpty()
-                    _state.value = VoiceNoteState.Listening(partialText = currentPartial)
+                    val current = _state.value as VoiceNoteState.Listening
+                    _state.value = current.copy(phase = VoiceListeningPhase.SPEECH_DETECTED)
+                }
+            }
+            is VoiceTranscriberEvent.AudioLevel -> {
+                if (activeSession && _state.value is VoiceNoteState.Listening) {
+                    val current = _state.value as VoiceNoteState.Listening
+                    val normalized = event.normalized
+                        .takeIf(Float::isFinite)
+                        ?.coerceIn(0f, 1f)
+                        ?: 0f
+                    _state.value = current.copy(inputLevel = normalized)
                 }
             }
             is VoiceTranscriberEvent.PartialResult -> {
                 if (activeSession && _state.value is VoiceNoteState.Listening) {
                     lastPartialText = event.text
-                    _state.value = VoiceNoteState.Listening(partialText = event.text)
+                    val current = _state.value as VoiceNoteState.Listening
+                    _state.value = current.copy(
+                        partialText = event.text,
+                        phase = VoiceListeningPhase.SPEECH_DETECTED,
+                    )
                 }
             }
             VoiceTranscriberEvent.Processing -> {

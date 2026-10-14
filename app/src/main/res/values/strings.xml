@@ -639,6 +639,10 @@
     <string name="ai_suggestion_cd">Gợi ý danh mục từ ảnh: %1$s</string>
     <string name="ai_apply_cd">Áp dụng gợi ý danh mục %1$s</string>
     <string name="ai_dismiss_cd">Bỏ qua gợi ý danh mục</string>
+    <string name="ai_analyzing">Đang phân tích ảnh trên thiết bị…</string>
+    <string name="ai_no_suggestion">Chưa đủ thông tin để gợi ý danh mục</string>
+    <string name="ai_analysis_failed">Không thể phân tích ảnh. Bạn vẫn có thể chọn thủ công.</string>
+    <string name="ai_analysis_status_cd">Trạng thái phân tích ảnh: %1$s</string>
     <string name="settings_ai_privacy_title">Trí tuệ nhân tạo trên thiết bị</string>
     <string name="settings_ai_privacy_body">Gợi ý danh mục từ ảnh được xử lý trên thiết bị, không tải ảnh lên máy chủ và có thể không chính xác.</string>
 </resources>

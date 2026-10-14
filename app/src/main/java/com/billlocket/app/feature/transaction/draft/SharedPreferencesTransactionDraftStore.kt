@@ -38,6 +38,31 @@ class SharedPreferencesTransactionDraftStore @Inject constructor(
         }
     }
 
+    override suspend fun updateImageLocation(
+        draftId: DraftId,
+        imageId: String,
+        location: PhotoLocation?,
+    ): Boolean = withContext(Dispatchers.IO) {
+        mutex.withLock {
+            val encoded = preferences.getString(key(draftId), null) ?: return@withLock false
+            val existing = runCatching { JSONObject(encoded).toDraft(draftId) }.getOrNull()
+                ?: return@withLock false
+            if (existing.images.none { it.id == imageId }) return@withLock false
+
+            val updated = existing.copy(
+                images = existing.images.map { image ->
+                    if (image.id == imageId) image.copy(confirmedLocation = location) else image
+                },
+                updatedAtEpochMillis = maxOf(
+                    System.currentTimeMillis(),
+                    existing.updatedAtEpochMillis + 1L,
+                ),
+            )
+            check(preferences.edit().putString(key(draftId), updated.toJson().toString()).commit())
+            true
+        }
+    }
+
     override suspend fun updateCategorySuggestionMetadata(
         id: DraftId,
         metadata: DraftCategorySuggestionMetadata,

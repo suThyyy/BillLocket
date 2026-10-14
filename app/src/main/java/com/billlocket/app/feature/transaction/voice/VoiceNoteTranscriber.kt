@@ -17,7 +17,8 @@ interface VoiceNoteTranscriber {
 
 sealed interface VoiceTranscriberEvent {
     data object Ready : VoiceTranscriberEvent
-    data object Listening : VoiceTranscriberEvent
+    data object SpeechStarted : VoiceTranscriberEvent
+    data class AudioLevel(val normalized: Float) : VoiceTranscriberEvent
     data class PartialResult(val text: String) : VoiceTranscriberEvent
     data object Processing : VoiceTranscriberEvent
     data class FinalResult(val text: String) : VoiceTranscriberEvent

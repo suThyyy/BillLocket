@@ -156,11 +156,69 @@ class VoiceNoteCoordinatorTest {
 
         fake.emitEvent(VoiceTranscriberEvent.PartialResult("mua"))
         runCurrent()
-        assertEquals(VoiceNoteState.Listening("mua"), coordinator.state.value)
+        assertEquals(
+            VoiceNoteState.Listening("mua", phase = VoiceListeningPhase.SPEECH_DETECTED),
+            coordinator.state.value,
+        )
 
         fake.emitEvent(VoiceTranscriberEvent.PartialResult("mua cà phê"))
         runCurrent()
-        assertEquals(VoiceNoteState.Listening("mua cà phê"), coordinator.state.value)
+        assertEquals(
+            VoiceNoteState.Listening("mua cà phê", phase = VoiceListeningPhase.SPEECH_DETECTED),
+            coordinator.state.value,
+        )
+    }
+
+    @Test
+    fun `ready speech and audio events expose observable listening state`() = runTest {
+        val fake = FakeVoiceNoteTranscriber()
+        val coordinator = VoiceNoteCoordinator(fake, backgroundScope)
+
+        coordinator.onMicTapped(hasPermission = true, permanentlyDenied = false, localeTag = "vi-VN", onRequestPermission = {})
+        runCurrent()
+        assertEquals(
+            VoiceNoteState.Listening(phase = VoiceListeningPhase.STARTING),
+            coordinator.state.value,
+        )
+
+        fake.emitEvent(VoiceTranscriberEvent.Ready)
+        runCurrent()
+        assertEquals(
+            VoiceNoteState.Listening(phase = VoiceListeningPhase.READY),
+            coordinator.state.value,
+        )
+
+        fake.emitEvent(VoiceTranscriberEvent.SpeechStarted)
+        fake.emitEvent(VoiceTranscriberEvent.AudioLevel(0.65f))
+        runCurrent()
+        assertEquals(
+            VoiceNoteState.Listening(
+                phase = VoiceListeningPhase.SPEECH_DETECTED,
+                inputLevel = 0.65f,
+            ),
+            coordinator.state.value,
+        )
+    }
+
+    @Test
+    fun `audio level is finite and clamped at coordinator boundary`() = runTest {
+        val fake = FakeVoiceNoteTranscriber()
+        val coordinator = VoiceNoteCoordinator(fake, backgroundScope)
+
+        coordinator.onMicTapped(hasPermission = true, permanentlyDenied = false, localeTag = "en-US", onRequestPermission = {})
+        runCurrent()
+
+        fake.emitEvent(VoiceTranscriberEvent.AudioLevel(4f))
+        runCurrent()
+        assertEquals(1f, (coordinator.state.value as VoiceNoteState.Listening).inputLevel, 0f)
+
+        fake.emitEvent(VoiceTranscriberEvent.AudioLevel(Float.NaN))
+        runCurrent()
+        assertEquals(0f, (coordinator.state.value as VoiceNoteState.Listening).inputLevel, 0f)
+
+        fake.emitEvent(VoiceTranscriberEvent.AudioLevel(-2f))
+        runCurrent()
+        assertEquals(0f, (coordinator.state.value as VoiceNoteState.Listening).inputLevel, 0f)
     }
 
     @Test
@@ -218,7 +276,7 @@ class VoiceNoteCoordinatorTest {
         assertEquals(VoiceNoteState.Processing, coordinator.state.value)
 
         fake.emitEvent(VoiceTranscriberEvent.Ready)
-        fake.emitEvent(VoiceTranscriberEvent.Listening)
+        fake.emitEvent(VoiceTranscriberEvent.SpeechStarted)
         fake.emitEvent(VoiceTranscriberEvent.PartialResult("late partial"))
         runCurrent()
 

@@ -16,12 +16,54 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.tooling.preview.Preview
 import com.billlocket.app.R
+import com.billlocket.app.domain.model.ThemeMode
+import com.billlocket.app.ui.theme.AppTheme
+
+@Composable
+fun VoiceInputMeter(
+    inputLevel: Float,
+    modifier: Modifier = Modifier,
+    color: Color = Color(0xFFFFB800),
+) {
+    val normalized = inputLevel.takeIf(Float::isFinite)?.coerceIn(0f, 1f) ?: 0f
+    val barWeights = listOf(0.55f, 0.82f, 1f, 0.74f, 0.48f)
+
+    Row(
+        modifier = modifier
+            .widthIn(min = 34.dp, max = 42.dp)
+            .height(24.dp)
+            .clearAndSetSemantics { },
+        horizontalArrangement = Arrangement.spacedBy(3.dp, Alignment.CenterHorizontally),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        barWeights.forEachIndexed { index, weight ->
+            val activity = if (normalized == 0f) {
+                0f
+            } else {
+                (normalized * weight + normalized * 0.12f * (index % 2)).coerceIn(0f, 1f)
+            }
+            val height by animateDpAsState(
+                targetValue = (4f + 18f * activity).dp,
+                animationSpec = tween(durationMillis = 110, easing = FastOutSlowInEasing),
+                label = "voiceMeterBar$index",
+            )
+            Box(
+                modifier = Modifier
+                    .width(3.dp)
+                    .height(height)
+                    .background(color.copy(alpha = 0.55f + activity * 0.45f), RoundedCornerShape(2.dp)),
+            )
+        }
+    }
+}
 
 @Composable
 fun VoicePermissionRationaleDialog(
@@ -255,4 +297,28 @@ fun mapVoiceError(error: VoiceRecognitionError): String = when (error) {
     VoiceRecognitionError.ServiceUnavailable -> stringResource(R.string.voice_error_service)
     VoiceRecognitionError.ClientError,
     VoiceRecognitionError.Unknown -> stringResource(R.string.voice_error_generic)
+}
+
+@Preview(name = "Voice meter dark", showBackground = true, backgroundColor = 0xFF080807)
+@Composable
+private fun VoiceInputMeterDarkPreview() {
+    AppTheme(mode = ThemeMode.DARK) {
+        Surface(color = MaterialTheme.colorScheme.background) {
+            VoiceInputMeter(inputLevel = 0.72f, modifier = Modifier.padding(16.dp))
+        }
+    }
+}
+
+@Preview(name = "Voice meter light", showBackground = true)
+@Composable
+private fun VoiceInputMeterLightPreview() {
+    AppTheme(mode = ThemeMode.LIGHT) {
+        Surface(color = MaterialTheme.colorScheme.background) {
+            VoiceInputMeter(
+                inputLevel = 0.35f,
+                modifier = Modifier.padding(16.dp),
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
+    }
 }
