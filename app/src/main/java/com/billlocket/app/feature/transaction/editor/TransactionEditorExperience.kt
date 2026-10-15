@@ -7,7 +7,9 @@ import android.app.TimePickerDialog
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.provider.Settings
+import android.speech.RecognizerIntent
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -110,6 +112,27 @@ fun TransactionEditorScreen(
     val voiceState by voiceCoordinator.state.collectAsState()
     val appLocale = activeAppLocale()
     val speechLocaleTag = remember(appLocale) { VoiceLocaleMapper.resolveLocaleTag(appLocale) }
+    val useSpeechActivityFallback = remember {
+        Build.MANUFACTURER.equals("realme", ignoreCase = true) ||
+            Build.MANUFACTURER.equals("oppo", ignoreCase = true) ||
+            Build.MANUFACTURER.equals("oneplus", ignoreCase = true)
+    }
+
+    val speechActivityLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult(),
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val recognizedText = result.data
+                ?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
+                ?.firstOrNull()
+                ?.trim()
+                .orEmpty()
+            if (recognizedText.isNotEmpty()) {
+                val mergedNote = VoiceNoteTextMerger.merge(state.note, recognizedText)
+                viewModel.onAction(TransactionEditorAction.NoteChanged(mergedNote))
+            }
+        }
+    }
 
     var showPermissionRationale by remember { mutableStateOf(false) }
     var hasRequestedPermissionOnce by rememberSaveable { mutableStateOf(false) }
@@ -242,24 +265,37 @@ fun TransactionEditorScreen(
                         onStartVoice = {
                             keyboard?.hide()
                             focusManager.clearFocus()
-                            val hasPermission = ContextCompat.checkSelfPermission(
-                                context,
-                                Manifest.permission.RECORD_AUDIO,
-                            ) == PackageManager.PERMISSION_GRANTED
-                            val activity = context as? Activity
-                            val permanentlyDenied = !hasPermission && activity != null &&
-                                !ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.RECORD_AUDIO) &&
-                                hasRequestedPermissionOnce
-
-                            if (!hasPermission && !permanentlyDenied) {
-                                showPermissionRationale = true
+                            if (useSpeechActivityFallback) {
+                                val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                                    putExtra(
+                                        RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                                        RecognizerIntent.LANGUAGE_MODEL_FREE_FORM,
+                                    )
+                                    putExtra(RecognizerIntent.EXTRA_LANGUAGE, speechLocaleTag)
+                                    putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
+                                    putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+                                }
+                                speechActivityLauncher.launch(intent)
                             } else {
-                                voiceCoordinator.onMicTapped(
-                                    hasPermission = hasPermission,
-                                    permanentlyDenied = permanentlyDenied,
-                                    localeTag = speechLocaleTag,
-                                    onRequestPermission = { permissionLauncher.launch(Manifest.permission.RECORD_AUDIO) },
-                                )
+                                val hasPermission = ContextCompat.checkSelfPermission(
+                                    context,
+                                    Manifest.permission.RECORD_AUDIO,
+                                ) == PackageManager.PERMISSION_GRANTED
+                                val activity = context as? Activity
+                                val permanentlyDenied = !hasPermission && activity != null &&
+                                    !ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.RECORD_AUDIO) &&
+                                    hasRequestedPermissionOnce
+
+                                if (!hasPermission && !permanentlyDenied) {
+                                    showPermissionRationale = true
+                                } else {
+                                    voiceCoordinator.onMicTapped(
+                                        hasPermission = hasPermission,
+                                        permanentlyDenied = permanentlyDenied,
+                                        localeTag = speechLocaleTag,
+                                        onRequestPermission = { permissionLauncher.launch(Manifest.permission.RECORD_AUDIO) },
+                                    )
+                                }
                             }
                         },
                         onStopVoice = { voiceCoordinator.stop() },

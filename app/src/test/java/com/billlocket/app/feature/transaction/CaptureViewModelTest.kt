@@ -134,11 +134,11 @@ class CaptureViewModelTest {
     }
 
     @Test
-    fun `warm request in flight times out at exactly 150 ms without blocking thumbnail`() = runTest {
+    fun `warm request in flight times out after background window without blocking thumbnail`() = runTest {
         val preference = FakeCaptureLocationPreference(CaptureLocationChoice.ENABLED)
         val slowLocation = object : DeviceLocationPort {
             override suspend fun current(): Outcome<GeoPoint> {
-                delay(500)
+                delay(CaptureViewModel.WARMED_LOCATION_TIMEOUT_MILLIS + 500)
                 return Outcome.Success(GeoPoint(21.033, 105.771))
             }
         }
@@ -168,13 +168,13 @@ class CaptureViewModelTest {
         assertNull(viewModel.state.value.images.single().confirmedLocation)
         assertEquals(CaptureLocationStatus.Resolving, viewModel.state.value.locationStatusByImageId[imgId])
 
-        // Advance 149 ms: still resolving
-        advanceTimeBy(149)
+        // The photo stays usable while the location warm-up continues in background.
+        advanceTimeBy(CaptureViewModel.WARMED_LOCATION_TIMEOUT_MILLIS - 1)
         runCurrent()
         assertEquals(CaptureLocationStatus.Resolving, viewModel.state.value.locationStatusByImageId[imgId])
         assertNull(viewModel.state.value.images.single().confirmedLocation)
 
-        // Advance 1 ms (total 150 ms = WARMED_LOCATION_TIMEOUT_MILLIS): timeout fires
+        // The bounded background window eventually exposes the recoverable fallback.
         advanceTimeBy(1)
         runCurrent()
         assertEquals(CaptureLocationStatus.Unavailable, viewModel.state.value.locationStatusByImageId[imgId])
@@ -184,7 +184,7 @@ class CaptureViewModelTest {
     }
 
     @Test
-    fun `warm request in flight completing within 150 ms attaches location to image`() = runTest {
+    fun `warm request completing inside background window attaches location to image`() = runTest {
         val preference = FakeCaptureLocationPreference(CaptureLocationChoice.ENABLED)
         val store = FakeDraftStore()
         val quickLocation = object : DeviceLocationPort {
@@ -407,7 +407,7 @@ class CaptureViewModelTest {
             override suspend fun current(): Outcome<GeoPoint> {
                 callCount++
                 return if (callCount == 1) {
-                    delay(500)
+                    delay(CaptureViewModel.WARMED_LOCATION_TIMEOUT_MILLIS + 350)
                     Outcome.Success(GeoPoint(11.11, 111.11))
                 } else {
                     Outcome.Success(GeoPoint(22.22, 122.22))
@@ -436,12 +436,12 @@ class CaptureViewModelTest {
 
         val id1 = req1.staged.imageId.value
 
-        // Photo 1 times out at 150 ms
-        advanceTimeBy(150)
+        // Photo 1 reaches the bounded background timeout.
+        advanceTimeBy(CaptureViewModel.WARMED_LOCATION_TIMEOUT_MILLIS)
         runCurrent()
         assertEquals(CaptureLocationStatus.Unavailable, viewModel.state.value.locationStatusByImageId[id1])
 
-        // At 500 ms, call 1 finishes
+        // The old request finishes after the timeout.
         advanceTimeBy(350)
         runCurrent()
 
@@ -485,8 +485,8 @@ class CaptureViewModelTest {
         assertFalse(viewModel.state.value.isProcessing)
         assertNull(viewModel.state.value.errorMessage)
 
-        // Advance past 150 ms timeout
-        advanceTimeBy(150)
+        // The provider reports failure without blocking the captured image.
+        advanceTimeBy(200)
         runCurrent()
 
         assertEquals(1, viewModel.state.value.images.size)

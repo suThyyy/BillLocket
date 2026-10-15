@@ -79,7 +79,9 @@ internal fun isEligibleFreshProviderFix(
 @Singleton
 class AndroidDeviceLocationPort @Inject constructor(@ApplicationContext private val context: Context) : DeviceLocationPort {
     companion object {
-        private const val FRESH_REQUEST_TIMEOUT_PER_PROVIDER_MS = 4_000L
+        // ColorOS often needs several seconds to replace a stale fix after the user
+        // changes places. Providers run concurrently, so this is one shared window.
+        private const val FRESH_REQUEST_TIMEOUT_PER_PROVIDER_MS = 12_000L
     }
 
     @Volatile

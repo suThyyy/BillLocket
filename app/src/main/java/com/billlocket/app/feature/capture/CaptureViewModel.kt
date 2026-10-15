@@ -562,7 +562,9 @@ class CaptureViewModel @Inject constructor(
 
     companion object {
         const val MAX_IMAGES = 10
-        const val WARMED_LOCATION_TIMEOUT_MILLIS = 150L
+        // The photo is added immediately while this background attachment keeps
+        // waiting for the warm provider request. Never block the shutter on GPS.
+        const val WARMED_LOCATION_TIMEOUT_MILLIS = 12_000L
         const val LOCATION_PREFETCH_MAX_AGE_MILLIS = 30_000L
     }
 }

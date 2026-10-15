@@ -84,7 +84,6 @@ class AndroidSpeechRecognizerTranscriber(
                 putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, localeTag)
                 putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
                 putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
-                putExtra(RecognizerIntent.EXTRA_CALLING_PACKAGE, context.packageName)
             }
 
             try {
@@ -137,15 +136,18 @@ class AndroidSpeechRecognizerTranscriber(
                 .getOrNull()
                 ?.let { return it }
         }
-        // Prefer the framework's default binding path. On some ColorOS versions the
-        // configured Google component is visible in Settings.Secure, but binding to
-        // that component explicitly never reaches onReadyForSpeech.
+        // Prefer the framework binding because it preserves the caller attribution
+        // required for microphone access on ColorOS. Keep the configured component
+        // only as a construction fallback for OEMs whose availability check lies.
         runCatching { SpeechRecognizer.createSpeechRecognizer(appContext) }
             .getOrNull()
             ?.let { return it }
-        return configuredRecognitionService()?.let { component ->
-            runCatching { SpeechRecognizer.createSpeechRecognizer(appContext, component) }.getOrNull()
+        configuredRecognitionService()?.let { component ->
+            runCatching { SpeechRecognizer.createSpeechRecognizer(appContext, component) }
+                .getOrNull()
+                ?.let { return it }
         }
+        return null
     }
 
     private fun configuredRecognitionService(): ComponentName? {
