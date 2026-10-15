@@ -1,5 +1,6 @@
 package com.billlocket.app.feature.transaction.voice
 
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.os.Build
@@ -7,6 +8,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.os.SystemClock
+import android.provider.Settings
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
@@ -49,7 +51,12 @@ class AndroidSpeechRecognizerTranscriber(
         ) {
             return true
         }
-        return runCatching { SpeechRecognizer.isRecognitionAvailable(context) }.getOrDefault(false)
+        if (runCatching { SpeechRecognizer.isRecognitionAvailable(context) }.getOrDefault(false)) {
+            return true
+        }
+        // Some ColorOS builds expose a valid configured service while the framework
+        // preflight still returns false. Let the explicit service attempt decide.
+        return configuredRecognitionService() != null
     }
 
     override fun start(localeTag: String) {
@@ -130,7 +137,25 @@ class AndroidSpeechRecognizerTranscriber(
                 .getOrNull()
                 ?.let { return it }
         }
-        return runCatching { SpeechRecognizer.createSpeechRecognizer(appContext) }.getOrNull()
+        // Prefer the framework's default binding path. On some ColorOS versions the
+        // configured Google component is visible in Settings.Secure, but binding to
+        // that component explicitly never reaches onReadyForSpeech.
+        runCatching { SpeechRecognizer.createSpeechRecognizer(appContext) }
+            .getOrNull()
+            ?.let { return it }
+        return configuredRecognitionService()?.let { component ->
+            runCatching { SpeechRecognizer.createSpeechRecognizer(appContext, component) }.getOrNull()
+        }
+    }
+
+    private fun configuredRecognitionService(): ComponentName? {
+        return runCatching {
+            val flattened = Settings.Secure.getString(
+                context.contentResolver,
+                "voice_recognition_service",
+            )
+            flattened?.takeIf(String::isNotBlank)?.let(ComponentName::unflattenFromString)
+        }.getOrNull()
     }
 
     private fun cleanupRecognizer() {

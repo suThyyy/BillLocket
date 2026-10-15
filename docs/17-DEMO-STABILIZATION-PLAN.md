@@ -414,9 +414,23 @@ Realme phrase set, repeated in Vietnamese and English:
 5. Thanh toán tiền thuốc.
 6. Breakfast with a friend.
 7. Coffee at the shop.
+
 8. Fuel for the motorbike.
 9. Bought a book and a pen.
 10. Paid for medicine.
+
+#### Sprint 2 checkpoint — 2026-10-15
+
+`VOICE-01` through `VOICE-04` are implemented on `codex/demo-stabilization`:
+
+- ColorOS availability falls back to the configured secure recognition service when the framework preflight incorrectly returns `false`.
+- The framework default binding path is preferred; explicit component binding remains a construction fallback.
+- RMS input is normalized, smoothed, throttled, and displayed by the five-bar meter without retaining audio buffers.
+- The editor exposes `STARTING`, `READY`, `SPEECH_DETECTED`, and `Processing`, with separate 48 dp stop and cancel targets.
+- Ready, session, and processing watchdogs prevent an unresponsive provider from trapping the editor.
+- The focused voice suite passes 46 JVM tests. The Realme validation passed the permission rationale, Android permission request, enabled mic entry point, listening capsule, and service-unavailable recovery.
+
+Realme demo preflight: Android can auto-revoke `RECORD_AUDIO` from the configured Google app after long inactivity. When that happens, BillLocket correctly reaches `Starting microphone…` and exits through the five-second watchdog, but Google never emits `onReadyForSpeech`. Before the final demo, open **Settings > Apps > Google > Permissions > Microphone** and choose **Allow only while using the app**, then verify one Vietnamese and one English phrase. This is a device/provider permission and must not be changed silently by BillLocket. Manual note entry remains available when the provider is unavailable.
 
 Record expected, recognized, pass/fail, network state, latency to ready, and latency to final text. Do not record or retain audio.
 

@@ -640,6 +640,8 @@ private fun HeroCard(
                     is VoiceNoteState.Listening -> {
                         VoiceListeningCapsule(
                             partialText = vs.partialText,
+                            phase = vs.phase,
+                            inputLevel = vs.inputLevel,
                             onStop = onStopVoice,
                             onCancel = onCancelVoice,
                         )
@@ -653,9 +655,9 @@ private fun HeroCard(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(38.dp)
-                                .background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(19.dp))
-                                .padding(horizontal = 12.dp),
+                                .heightIn(min = 52.dp)
+                                .background(Color.White.copy(alpha = 0.1f), RoundedCornerShape(20.dp))
+                                .padding(start = 12.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
@@ -690,7 +692,7 @@ private fun HeroCard(
                             IconButton(
                                 onClick = onStartVoice,
                                 enabled = vs !is VoiceNoteState.Unavailable,
-                                modifier = Modifier.size(28.dp),
+                                modifier = Modifier.size(48.dp),
                             ) {
                                 Icon(
                                     Icons.Filled.Mic,

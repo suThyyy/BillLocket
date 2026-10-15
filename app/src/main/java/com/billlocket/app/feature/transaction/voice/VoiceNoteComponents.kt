@@ -6,9 +6,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -113,6 +113,8 @@ fun VoicePermissionRationaleDialog(
 @Composable
 fun VoiceListeningCapsule(
     partialText: String,
+    phase: VoiceListeningPhase,
+    inputLevel: Float,
     onStop: () -> Unit,
     onCancel: () -> Unit,
     modifier: Modifier = Modifier,
@@ -131,35 +133,45 @@ fun VoiceListeningCapsule(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(38.dp)
-            .background(Color(0xFF2A2415), RoundedCornerShape(19.dp))
-            .padding(horizontal = 10.dp),
+            .heightIn(min = 52.dp)
+            .background(Color(0xFF2A2415), RoundedCornerShape(20.dp))
+            .padding(start = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Icon(
-            Icons.Filled.Mic,
-            contentDescription = null,
-            modifier = Modifier.size(16.dp),
-            tint = Color(0xFFFFB800).copy(alpha = pulseAlpha),
-        )
-
-        Box(
-            modifier = Modifier.weight(1f),
-            contentAlignment = Alignment.CenterStart,
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            if (partialText.isBlank()) {
-                Text(
-                    text = stringResource(R.string.voice_listening),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color(0xFFFFB800),
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 1,
-                )
-            } else {
+            Icon(
+                Icons.Filled.Mic,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+                tint = Color(0xFFFFB800).copy(alpha = pulseAlpha),
+            )
+            VoiceInputMeter(inputLevel = inputLevel)
+        }
+
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text(
+                text = when (phase) {
+                    VoiceListeningPhase.STARTING -> stringResource(R.string.voice_listening_starting)
+                    VoiceListeningPhase.READY -> stringResource(R.string.voice_listening_ready)
+                    VoiceListeningPhase.SPEECH_DETECTED -> stringResource(R.string.voice_speech_detected)
+                },
+                style = MaterialTheme.typography.labelMedium,
+                color = Color(0xFFFFB800),
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            if (partialText.isNotBlank()) {
                 Text(
                     text = "“$partialText”",
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodySmall,
                     color = Color(0xFFFFE082),
                     fontStyle = FontStyle.Italic,
                     maxLines = 1,
@@ -170,19 +182,19 @@ fun VoiceListeningCapsule(
 
         IconButton(
             onClick = onStop,
-            modifier = Modifier.size(28.dp),
+            modifier = Modifier.size(48.dp),
         ) {
             Icon(
-                Icons.Filled.Check,
+                Icons.Filled.Stop,
                 contentDescription = stringResource(R.string.voice_stop),
-                tint = Color(0xFF81C784),
-                modifier = Modifier.size(18.dp),
+                tint = Color(0xFFFFB800),
+                modifier = Modifier.size(22.dp),
             )
         }
 
         IconButton(
             onClick = onCancel,
-            modifier = Modifier.size(28.dp),
+            modifier = Modifier.size(48.dp),
         ) {
             Icon(
                 Icons.Filled.Close,
@@ -202,9 +214,9 @@ fun VoiceProcessingCapsule(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(38.dp)
-            .background(Color(0xFF2A2415), RoundedCornerShape(19.dp))
-            .padding(horizontal = 12.dp),
+            .heightIn(min = 52.dp)
+            .background(Color(0xFF2A2415), RoundedCornerShape(20.dp))
+            .padding(start = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
@@ -222,7 +234,7 @@ fun VoiceProcessingCapsule(
         )
         IconButton(
             onClick = onCancel,
-            modifier = Modifier.size(28.dp),
+            modifier = Modifier.size(48.dp),
         ) {
             Icon(
                 Icons.Filled.Close,
@@ -320,5 +332,35 @@ private fun VoiceInputMeterLightPreview() {
                 color = MaterialTheme.colorScheme.primary,
             )
         }
+    }
+}
+
+@Preview(name = "Listening capsule dark", widthDp = 360, showBackground = true, backgroundColor = 0xFF080807)
+@Composable
+private fun VoiceListeningCapsuleDarkPreview() {
+    AppTheme(mode = ThemeMode.DARK) {
+        VoiceListeningCapsule(
+            partialText = "mua cà phê ở cửa hàng",
+            phase = VoiceListeningPhase.SPEECH_DETECTED,
+            inputLevel = 0.72f,
+            onStop = {},
+            onCancel = {},
+            modifier = Modifier.padding(12.dp),
+        )
+    }
+}
+
+@Preview(name = "Listening capsule light", widthDp = 360, showBackground = true)
+@Composable
+private fun VoiceListeningCapsuleLightPreview() {
+    AppTheme(mode = ThemeMode.LIGHT) {
+        VoiceListeningCapsule(
+            partialText = "",
+            phase = VoiceListeningPhase.READY,
+            inputLevel = 0.2f,
+            onStop = {},
+            onCancel = {},
+            modifier = Modifier.padding(12.dp),
+        )
     }
 }

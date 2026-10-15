@@ -616,6 +616,9 @@
     <!-- Voice Note Dictation (BL-046) -->
     <string name="voice_dictate_note">Đọc ghi chú</string>
     <string name="voice_listening">Đang nghe…</string>
+    <string name="voice_listening_starting">Đang mở micro…</string>
+    <string name="voice_listening_ready">Đang nghe · Hãy nói</string>
+    <string name="voice_speech_detected">Đã nhận âm thanh</string>
     <string name="voice_processing">Đang xử lý giọng nói…</string>
     <string name="voice_stop">Dừng</string>
     <string name="voice_cancel">Hủy</string>

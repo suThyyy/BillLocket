@@ -30,6 +30,8 @@ class VoiceNoteCoordinator(
     private var activeSession = false
     private var isClosed = false
     private var eventsJob: Job? = null
+    private var readyTimeoutJob: Job? = null
+    private var sessionCeilingJob: Job? = null
     private var processingTimeoutJob: Job? = null
     private var lastPartialText: String = ""
 
@@ -87,15 +89,16 @@ class VoiceNoteCoordinator(
         if (activeSession || isClosed) return
         activeSession = true
         lastPartialText = ""
-        processingTimeoutJob?.cancel()
+        cancelWatchdogs()
         _state.value = VoiceNoteState.Listening()
+        scheduleReadyTimeout()
+        scheduleSessionCeiling()
         transcriber.start(localeTag)
     }
 
     fun stop() {
         if (isClosed || !activeSession) return
-        _state.value = VoiceNoteState.Processing
-        scheduleProcessingTimeout()
+        transitionToProcessing()
         transcriber.stop()
     }
 
@@ -103,7 +106,7 @@ class VoiceNoteCoordinator(
         if (isClosed || !activeSession) return
         activeSession = false
         lastPartialText = ""
-        processingTimeoutJob?.cancel()
+        cancelWatchdogs()
         transcriber.cancel()
         _state.value = if (transcriber.isAvailable()) VoiceNoteState.Idle else VoiceNoteState.Unavailable
     }
@@ -127,7 +130,7 @@ class VoiceNoteCoordinator(
         isClosed = true
         activeSession = false
         lastPartialText = ""
-        processingTimeoutJob?.cancel()
+        cancelWatchdogs()
         eventsJob?.cancel()
         transcriber.close()
         _state.value = VoiceNoteState.Unavailable
@@ -139,6 +142,7 @@ class VoiceNoteCoordinator(
             delay(PROCESSING_TIMEOUT_MILLIS)
             if (activeSession && _state.value is VoiceNoteState.Processing) {
                 activeSession = false
+                cancelWatchdogs()
                 transcriber.cancel()
                 if (lastPartialText.isNotBlank()) {
                     _state.value = VoiceNoteState.Completed(lastPartialText)
@@ -149,17 +153,62 @@ class VoiceNoteCoordinator(
         }
     }
 
+    private fun scheduleReadyTimeout() {
+        readyTimeoutJob?.cancel()
+        readyTimeoutJob = coroutineScope.launch {
+            delay(READY_TIMEOUT_MILLIS)
+            val current = _state.value
+            if (activeSession && current is VoiceNoteState.Listening && current.phase == VoiceListeningPhase.STARTING) {
+                activeSession = false
+                cancelWatchdogs()
+                transcriber.cancel()
+                _state.value = VoiceNoteState.Error(VoiceRecognitionError.ServiceUnavailable)
+            }
+        }
+    }
+
+    private fun scheduleSessionCeiling() {
+        sessionCeilingJob?.cancel()
+        sessionCeilingJob = coroutineScope.launch {
+            delay(SESSION_CEILING_MILLIS)
+            if (activeSession && _state.value is VoiceNoteState.Listening) {
+                transitionToProcessing()
+                transcriber.stop()
+            }
+        }
+    }
+
+    private fun transitionToProcessing() {
+        readyTimeoutJob?.cancel()
+        sessionCeilingJob?.cancel()
+        _state.value = VoiceNoteState.Processing
+        scheduleProcessingTimeout()
+    }
+
+    private fun cancelWatchdogs() {
+        readyTimeoutJob?.cancel()
+        readyTimeoutJob = null
+        sessionCeilingJob?.cancel()
+        sessionCeilingJob = null
+        processingTimeoutJob?.cancel()
+        processingTimeoutJob = null
+    }
+
     private fun handleTranscriberEvent(event: VoiceTranscriberEvent) {
         if (isClosed) return
         when (event) {
             VoiceTranscriberEvent.Ready -> {
                 if (activeSession && _state.value is VoiceNoteState.Listening) {
+                    readyTimeoutJob?.cancel()
+                    readyTimeoutJob = null
                     val current = _state.value as VoiceNoteState.Listening
                     _state.value = current.copy(phase = VoiceListeningPhase.READY)
                 }
             }
             VoiceTranscriberEvent.SpeechStarted -> {
                 if (activeSession && _state.value is VoiceNoteState.Listening) {
+                    readyTimeoutJob?.cancel()
+                    readyTimeoutJob = null
                     val current = _state.value as VoiceNoteState.Listening
                     _state.value = current.copy(phase = VoiceListeningPhase.SPEECH_DETECTED)
                 }
@@ -186,15 +235,14 @@ class VoiceNoteCoordinator(
             }
             VoiceTranscriberEvent.Processing -> {
                 if (activeSession && _state.value is VoiceNoteState.Listening) {
-                    _state.value = VoiceNoteState.Processing
-                    scheduleProcessingTimeout()
+                    transitionToProcessing()
                 }
             }
             is VoiceTranscriberEvent.FinalResult -> {
                 if (activeSession &&
                     (_state.value is VoiceNoteState.Listening || _state.value is VoiceNoteState.Processing)
                 ) {
-                    processingTimeoutJob?.cancel()
+                    cancelWatchdogs()
                     activeSession = false
                     _state.value = VoiceNoteState.Completed(event.text)
                 }
@@ -203,7 +251,7 @@ class VoiceNoteCoordinator(
                 if (activeSession &&
                     (_state.value is VoiceNoteState.Listening || _state.value is VoiceNoteState.Processing)
                 ) {
-                    processingTimeoutJob?.cancel()
+                    cancelWatchdogs()
                     activeSession = false
                     _state.value = VoiceNoteState.Error(event.error)
                 }
@@ -216,6 +264,8 @@ class VoiceNoteCoordinator(
     }
 
     companion object {
+        const val READY_TIMEOUT_MILLIS = 5000L
         const val PROCESSING_TIMEOUT_MILLIS = 8000L
+        const val SESSION_CEILING_MILLIS = 30000L
     }
 }

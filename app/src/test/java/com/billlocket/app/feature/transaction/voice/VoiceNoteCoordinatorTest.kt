@@ -201,6 +201,56 @@ class VoiceNoteCoordinatorTest {
     }
 
     @Test
+    fun `ready timeout cancels an unresponsive recognizer`() = runTest {
+        val fake = FakeVoiceNoteTranscriber()
+        val coordinator = VoiceNoteCoordinator(fake, backgroundScope)
+
+        coordinator.onMicTapped(hasPermission = true, permanentlyDenied = false, localeTag = "vi-VN", onRequestPermission = {})
+        advanceTimeBy(VoiceNoteCoordinator.READY_TIMEOUT_MILLIS)
+        runCurrent()
+
+        assertEquals(1, fake.cancelledCount)
+        assertEquals(VoiceNoteState.Error(VoiceRecognitionError.ServiceUnavailable), coordinator.state.value)
+    }
+
+    @Test
+    fun `ready callback cancels ready timeout`() = runTest {
+        val fake = FakeVoiceNoteTranscriber()
+        val coordinator = VoiceNoteCoordinator(fake, backgroundScope)
+
+        coordinator.onMicTapped(hasPermission = true, permanentlyDenied = false, localeTag = "vi-VN", onRequestPermission = {})
+        runCurrent()
+        fake.emitEvent(VoiceTranscriberEvent.Ready)
+        runCurrent()
+
+        advanceTimeBy(VoiceNoteCoordinator.READY_TIMEOUT_MILLIS)
+        runCurrent()
+
+        assertEquals(0, fake.cancelledCount)
+        assertEquals(
+            VoiceNoteState.Listening(phase = VoiceListeningPhase.READY),
+            coordinator.state.value,
+        )
+    }
+
+    @Test
+    fun `session ceiling stops listening and enters processing`() = runTest {
+        val fake = FakeVoiceNoteTranscriber()
+        val coordinator = VoiceNoteCoordinator(fake, backgroundScope)
+
+        coordinator.onMicTapped(hasPermission = true, permanentlyDenied = false, localeTag = "en-US", onRequestPermission = {})
+        runCurrent()
+        fake.emitEvent(VoiceTranscriberEvent.Ready)
+        runCurrent()
+
+        advanceTimeBy(VoiceNoteCoordinator.SESSION_CEILING_MILLIS)
+        runCurrent()
+
+        assertEquals(1, fake.stoppedCount)
+        assertEquals(VoiceNoteState.Processing, coordinator.state.value)
+    }
+
+    @Test
     fun `audio level is finite and clamped at coordinator boundary`() = runTest {
         val fake = FakeVoiceNoteTranscriber()
         val coordinator = VoiceNoteCoordinator(fake, backgroundScope)

@@ -616,6 +616,9 @@
     <!-- Voice Note Dictation (BL-046) -->
     <string name="voice_dictate_note">Dictate note</string>
     <string name="voice_listening">Listening…</string>
+    <string name="voice_listening_starting">Starting microphone…</string>
+    <string name="voice_listening_ready">Listening · Start speaking</string>
+    <string name="voice_speech_detected">Voice detected</string>
     <string name="voice_processing">Processing speech…</string>
     <string name="voice_stop">Stop</string>
     <string name="voice_cancel">Cancel</string>
