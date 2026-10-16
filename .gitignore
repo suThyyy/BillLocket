@@ -90,5 +90,3 @@ apikey.properties
 secrets.properties
 # Android Studio may generate a machine-specific Gradle daemon JVM criterion.
 gradle/gradle-daemon-jvm.properties
-# Local product-reference screenshots. Do not distribute or commit them.
-UIUX_Capmoney/

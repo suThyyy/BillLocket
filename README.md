@@ -41,7 +41,7 @@ BillLocket uses the authorized [`luucaohoanq/nocket-compose`](https://github.com
 
 Files under `Sources/assets/` are retained only as historical upstream references. They are not BillLocket product screenshots or reusable product assets.
 
-## Design documents
+## Project documents
 
 - [V1 architecture](docs/03-ARCHITECTURE.md)
 - [Room database design](docs/04-DATABASE.md)
@@ -49,12 +49,9 @@ Files under `Sources/assets/` are retained only as historical upstream reference
 - [Repository and use-case contracts](docs/06-REPOSITORIES-USE-CASES.md)
 - [Google Maps provider decision](docs/07-MAP-PROVIDER.md)
 - [Media storage, cleanup and backup](docs/08-MEDIA-STORAGE-BACKUP.md)
-- [Navigation and UI-state contracts](docs/09-NAVIGATION-UI-STATE.md)
-- [UI/UX specification](docs/12-UIUX-SPEC.md)
-- [UI state matrix](docs/14-UI-STATE-MATRIX.md)
 - [Current product specification and roadmap](docs/15-CURRENT-PRODUCT-SPEC-AND-ROADMAP.md)
 - [Voice, localization and on-device AI delivery plan](docs/16-VOICE-LOCALIZATION-AI-PLAN.md)
 - [Demo stabilization plan](docs/17-DEMO-STABILIZATION-PLAN.md)
-- [Antigravity execution prompts](docs/18-ANTIGRAVITY-TASK-PROMPTS.md)
+- [Project defense handbook](docs/BILLOCKET-DEFENSE-HANDBOOK.md)
 - [Architecture decisions](docs/DECISIONS.md)
 - [Future feature ideas](docs/FUTURE_FEATURES.md)

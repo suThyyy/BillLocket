@@ -32,7 +32,7 @@
 
 ## ADR-006 Narrow V1
 
-**Decision:** V1 includes CapMoney-style visual tracking, a Locket-style widget, and a transaction photo map. OCR, cloud sync, social features, advanced finance, and AI remain deferred.
+**Decision:** V1 includes visual expense tracking, a photo-focused home-screen widget, and a transaction photo map. OCR, cloud sync, social features, advanced finance, and AI remain deferred.
 
 **Reason:** The course project must become stable and explainable before scope is expanded.
 
@@ -138,7 +138,7 @@ V1 opts financial data/media out of automatic Android cloud/device backup and pr
 
 Every feature exposes immutable `StateFlow<State>`, typed user/system `Action`s and one-time `Effect`s. Composables render/dispatch only; ViewModels call use cases. Permission/picker/SAF/navigation launches are effects, never composition side effects. Draft IDs connect saved state to restart-safe draft/media storage; routes never contain money, notes, coordinates, URI or image bytes.
 
-**Reason:** The contract prevents duplicate navigation/effects, supports process recreation and permission denial, keeps platform objects out of state, and makes ViewModels/navigation testable. See [navigation and UI-state contracts](09-NAVIGATION-UI-STATE.md).
+**Reason:** The contract prevents duplicate navigation/effects, supports process recreation and permission denial, keeps platform objects out of state, and makes ViewModels/navigation testable. The current implementation in the application module is authoritative for route and UI-state details.
 
 ## Pending decisions
 

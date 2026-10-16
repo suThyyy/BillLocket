@@ -27,7 +27,7 @@ The product is not intended to be a full accounting suite. Its core promise is:
 ### Product identity
 
 - Visual language: Locket-inspired black/charcoal surfaces with restrained amber/gold accents.
-- Information hierarchy: influenced by the supplied CapMoney references, without copying branding or assets.
+- Information hierarchy: optimized for fast transaction capture and clear financial review.
 - Semantic colors: coral/red for expense, mint/green for income.
 - Primary platform: native Android, Kotlin and Jetpack Compose.
 - Primary language: Vietnamese.
@@ -605,5 +605,5 @@ Before modifying BillLocket:
 3. Preserve the committed Accounts/navigation behavior unless a task explicitly changes it.
 4. Confirm the active map provider from source and the latest ADR before changing dependencies or secrets.
 5. Work on one bounded task; do not start the next roadmap feature automatically.
-6. Do not copy CapMoney/Locket assets or branding.
+6. Preserve BillLocket's own identity and use only assets that the project is authorized to distribute.
 7. Do not commit API keys, signing material, personal receipt images or local UI-reference media.

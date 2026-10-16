@@ -19,15 +19,9 @@ Keep both experimental features, but change their implementation boundaries:
 
 This plan intentionally avoids cloud APIs, custom model training, background microphone capture, and automatic transaction saving. Those additions create privacy, cost, and demo-reliability risks without improving the core assessment enough.
 
-## 2. Recommended ownership
+## 2. Implementation ownership
 
-The safest split is:
-
-- Codex builds the base contracts and the UX-sensitive components in Base Sprint: atomic draft mutation, capture/location state contract, voice level event/state contract, and the two reusable status components.
-- Antigravity implements the bounded tasks after the base compiles and its tests pass.
-- Codex performs final review against this document and the physical-device evidence.
-
-If Antigravity must do everything, give it one prompt at a time from `docs/18-ANTIGRAVITY-TASK-PROMPTS.md`. Do not give it the whole roadmap as a single task. Each task must be committed and tested independently before the next begins.
+Each stabilization task must remain narrowly scoped, independently tested, and reviewed against this document and physical-device evidence before the next task begins.
 
 ## 3. Product success criteria
 
@@ -674,16 +668,15 @@ Fallback decisions:
 
 All stabilization work must live on `codex/demo-stabilization`, not directly on `main`. The first accepted checkpoint may create that branch from the current HEAD while preserving the existing uncommitted Base Sprint + LOC-01 working tree.
 
-Use this lifecycle for every delegated task:
+Use this lifecycle for every stabilization task:
 
 1. Confirm the current branch, working tree, and accepted starting commit before implementation.
-2. Antigravity implements exactly one task and runs its validation, but does **not** commit.
-3. Codex reviews the diff and evidence. Fixes remain in the same uncommitted task until Codex explicitly accepts it.
-4. Run the separate checkpoint prompt from `docs/18-ANTIGRAVITY-TASK-PROMPTS.md` only after acceptance.
-5. Stage accepted files with explicit paths and create one checkpoint commit. Never use `git add .` or `git add -A` in a mixed working tree.
-6. Use that checkpoint hash as `<BASE_COMMIT>` for the next prompt. Do not start the next implementation task before the checkpoint is clean.
+2. Implement exactly one task and run its validation before committing.
+3. Review the diff and evidence. Keep fixes in the same uncommitted task until the checkpoint is accepted.
+4. Stage accepted files with explicit paths and create one checkpoint commit. Never use `git add .` or `git add -A` in a mixed working tree.
+5. Use that checkpoint hash as the base for the next task. Do not start the next implementation task before the checkpoint is clean.
 
-Never commit `docs/BILLOCKET-DEFENSE-HANDBOOK.md`, `local.properties`, secrets, APKs, build outputs, private transaction media, device logs, or unrelated user changes. If the handbook is already staged, unstage it with `git restore --staged -- docs/BILLOCKET-DEFENSE-HANDBOOK.md` without deleting or modifying the file. Never push, amend, rebase, merge, reset, or clean unless the user separately and explicitly authorizes that operation.
+Never commit `local.properties`, secrets, APKs, build outputs, private transaction media, device logs, or unrelated user changes. Never push, amend, rebase, merge, reset, or clean unless the user separately and explicitly authorizes that operation.
 
 The accumulated Base Sprint + accepted LOC-01 work is the one documented exception to the one-task-per-commit preference. Its first checkpoint should use:
 
