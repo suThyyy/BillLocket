@@ -7,9 +7,7 @@ import android.app.TimePickerDialog
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
-import android.os.Build
 import android.provider.Settings
-import android.speech.RecognizerIntent
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -112,28 +110,6 @@ fun TransactionEditorScreen(
     val voiceState by voiceCoordinator.state.collectAsState()
     val appLocale = activeAppLocale()
     val speechLocaleTag = remember(appLocale) { VoiceLocaleMapper.resolveLocaleTag(appLocale) }
-    val useSpeechActivityFallback = remember {
-        Build.MANUFACTURER.equals("realme", ignoreCase = true) ||
-            Build.MANUFACTURER.equals("oppo", ignoreCase = true) ||
-            Build.MANUFACTURER.equals("oneplus", ignoreCase = true)
-    }
-
-    val speechActivityLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.StartActivityForResult(),
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            val recognizedText = result.data
-                ?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)
-                ?.firstOrNull()
-                ?.trim()
-                .orEmpty()
-            if (recognizedText.isNotEmpty()) {
-                val mergedNote = VoiceNoteTextMerger.merge(state.note, recognizedText)
-                viewModel.onAction(TransactionEditorAction.NoteChanged(mergedNote))
-            }
-        }
-    }
-
     var showPermissionRationale by remember { mutableStateOf(false) }
     var hasRequestedPermissionOnce by rememberSaveable { mutableStateOf(false) }
 
@@ -150,16 +126,6 @@ fun TransactionEditorScreen(
     DisposableEffect(voiceCoordinator) {
         onDispose {
             voiceCoordinator.close()
-        }
-    }
-
-    // Automatically merge recognized speech into draft note upon completion
-    LaunchedEffect(voiceState) {
-        val currentVoiceState = voiceState
-        if (currentVoiceState is VoiceNoteState.Completed) {
-            val mergedNote = VoiceNoteTextMerger.merge(state.note, currentVoiceState.text)
-            viewModel.onAction(TransactionEditorAction.NoteChanged(mergedNote))
-            voiceCoordinator.dismissCompleted()
         }
     }
 
@@ -209,10 +175,42 @@ fun TransactionEditorScreen(
     }
 
     val isVoiceActive = voiceState is VoiceNoteState.Listening || voiceState is VoiceNoteState.Processing
-    BackHandler(enabled = isVoiceActive) { voiceCoordinator.cancel() }
+    val isVoicePanelVisible = isVoiceActive || voiceState is VoiceNoteState.Completed || voiceState is VoiceNoteState.Error
+    BackHandler(enabled = isVoicePanelVisible) {
+        when (voiceState) {
+            is VoiceNoteState.Listening, VoiceNoteState.Processing -> voiceCoordinator.cancel()
+            is VoiceNoteState.Completed -> voiceCoordinator.dismissCompleted()
+            is VoiceNoteState.Error -> voiceCoordinator.dismissError()
+            else -> Unit
+        }
+    }
 
     val imeVisible = WindowInsets.isImeVisible
-    BackHandler(enabled = !imeVisible && !isVoiceActive) { viewModel.onAction(TransactionEditorAction.Back) }
+    BackHandler(enabled = !imeVisible && !isVoicePanelVisible) { viewModel.onAction(TransactionEditorAction.Back) }
+
+    val startInAppVoice: () -> Unit = {
+        keyboard?.hide()
+        focusManager.clearFocus()
+        val hasPermission = ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.RECORD_AUDIO,
+        ) == PackageManager.PERMISSION_GRANTED
+        val activity = context as? Activity
+        val permanentlyDenied = !hasPermission && activity != null &&
+            !ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.RECORD_AUDIO) &&
+            hasRequestedPermissionOnce
+
+        if (!hasPermission && !permanentlyDenied) {
+            showPermissionRationale = true
+        } else {
+            voiceCoordinator.onMicTapped(
+                hasPermission = hasPermission,
+                permanentlyDenied = permanentlyDenied,
+                localeTag = speechLocaleTag,
+                onRequestPermission = { permissionLauncher.launch(Manifest.permission.RECORD_AUDIO) },
+            )
+        }
+    }
 
     Scaffold(containerColor = Color(0xFF0F0E0D)) { padding ->
         if (state.fatalError != null) {
@@ -262,44 +260,15 @@ fun TransactionEditorScreen(
                         animatedTint = animatedTint,
                         focusRequester = focusRequester,
                         voiceState = voiceState,
-                        onStartVoice = {
-                            keyboard?.hide()
-                            focusManager.clearFocus()
-                            if (useSpeechActivityFallback) {
-                                val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
-                                    putExtra(
-                                        RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-                                        RecognizerIntent.LANGUAGE_MODEL_FREE_FORM,
-                                    )
-                                    putExtra(RecognizerIntent.EXTRA_LANGUAGE, speechLocaleTag)
-                                    putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false)
-                                    putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 1)
-                                }
-                                speechActivityLauncher.launch(intent)
-                            } else {
-                                val hasPermission = ContextCompat.checkSelfPermission(
-                                    context,
-                                    Manifest.permission.RECORD_AUDIO,
-                                ) == PackageManager.PERMISSION_GRANTED
-                                val activity = context as? Activity
-                                val permanentlyDenied = !hasPermission && activity != null &&
-                                    !ActivityCompat.shouldShowRequestPermissionRationale(activity, Manifest.permission.RECORD_AUDIO) &&
-                                    hasRequestedPermissionOnce
-
-                                if (!hasPermission && !permanentlyDenied) {
-                                    showPermissionRationale = true
-                                } else {
-                                    voiceCoordinator.onMicTapped(
-                                        hasPermission = hasPermission,
-                                        permanentlyDenied = permanentlyDenied,
-                                        localeTag = speechLocaleTag,
-                                        onRequestPermission = { permissionLauncher.launch(Manifest.permission.RECORD_AUDIO) },
-                                    )
-                                }
-                            }
-                        },
+                        onStartVoice = startInAppVoice,
                         onStopVoice = { voiceCoordinator.stop() },
                         onCancelVoice = { voiceCoordinator.cancel() },
+                        onUseVoiceResult = { recognizedText ->
+                            val mergedNote = VoiceNoteTextMerger.merge(state.note, recognizedText)
+                            viewModel.onAction(TransactionEditorAction.NoteChanged(mergedNote))
+                            voiceCoordinator.dismissCompleted()
+                        },
+                        onRetryVoice = startInAppVoice,
                         onDismissVoiceError = { voiceCoordinator.dismissError() },
                         onOpenSettings = {
                             val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
@@ -459,6 +428,8 @@ private fun HeroCard(
     onStartVoice: () -> Unit,
     onStopVoice: () -> Unit,
     onCancelVoice: () -> Unit,
+    onUseVoiceResult: (String) -> Unit,
+    onRetryVoice: () -> Unit,
     onDismissVoiceError: () -> Unit,
     onOpenSettings: () -> Unit,
     onAction: (TransactionEditorAction) -> Unit,
@@ -674,7 +645,7 @@ private fun HeroCard(
                 // Bottom: Inline Note Input Capsule with Voice Dictation (BL-046)
                 when (val vs = voiceState) {
                     is VoiceNoteState.Listening -> {
-                        VoiceListeningCapsule(
+                        VoiceListeningPanel(
                             partialText = vs.partialText,
                             phase = vs.phase,
                             inputLevel = vs.inputLevel,
@@ -683,8 +654,23 @@ private fun HeroCard(
                         )
                     }
                     VoiceNoteState.Processing -> {
-                        VoiceProcessingCapsule(
+                        VoiceProcessingPanel(
                             onCancel = onCancelVoice,
+                        )
+                    }
+                    is VoiceNoteState.Completed -> {
+                        VoiceResultPanel(
+                            recognizedText = vs.text,
+                            onUseResult = { onUseVoiceResult(vs.text) },
+                            onRecordAgain = onRetryVoice,
+                        )
+                    }
+                    is VoiceNoteState.Error -> {
+                        VoiceErrorPanel(
+                            error = vs.error,
+                            onRetry = onRetryVoice,
+                            onCancel = onDismissVoiceError,
+                            onOpenSettings = onOpenSettings,
                         )
                     }
                     else -> {
@@ -739,14 +725,6 @@ private fun HeroCard(
                             }
                         }
                     }
-                }
-                if (voiceState is VoiceNoteState.Error) {
-                    Spacer(Modifier.height(8.dp))
-                    VoiceErrorBanner(
-                        error = (voiceState as VoiceNoteState.Error).error,
-                        onDismiss = onDismissVoiceError,
-                        onOpenSettings = onOpenSettings,
-                    )
                 }
             }
         }
