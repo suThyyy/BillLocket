@@ -636,6 +636,13 @@
     <string name="voice_error_service">Speech recognition service is not responding.</string>
     <string name="voice_error_generic">Voice recognition failed. You can still type manually.</string>
     <string name="voice_privacy_notice">BillLocket does not retain microphone audio.</string>
+    <string name="voice_note_only_hint">Say what you want to add to the note</string>
+    <string name="voice_processing_hint">BillLocket is finishing your note</string>
+    <string name="voice_recognition_complete">Recognition complete</string>
+    <string name="voice_recognition_failed">Couldn’t recognize speech</string>
+    <string name="voice_use_result">Use this result</string>
+    <string name="voice_record_again">Record again</string>
+    <string name="voice_retry">Try again</string>
 
     <!-- On-Device Image Category Suggestions (BL-047) -->
     <string name="ai_suggestion_prefix">AI suggestion</string>
