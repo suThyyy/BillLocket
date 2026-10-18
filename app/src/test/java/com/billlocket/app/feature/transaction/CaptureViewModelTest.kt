@@ -72,6 +72,24 @@ class CaptureViewModelTest {
     }
 
     @Test
+    fun `imports at most ten images and ignores further capture requests`() = runTest {
+        val viewModel = viewModel()
+        advanceUntilIdle()
+
+        viewModel.onAction(CaptureAction.ImagesPicked((1..12).map { "content://media/import-$it" }))
+        advanceUntilIdle()
+
+        assertEquals(MAX_CAPTURE_IMAGES, viewModel.state.value.images.size)
+        assertFalse(viewModel.state.value.isProcessing)
+
+        viewModel.onAction(CaptureAction.TakePhoto)
+        advanceUntilIdle()
+
+        assertFalse(viewModel.state.value.showLocationConsent)
+        assertEquals(MAX_CAPTURE_IMAGES, viewModel.state.value.images.size)
+    }
+
+    @Test
     fun `enabled automatic location attaches current point without changing import policy`() = runTest {
         val preference = FakeCaptureLocationPreference(CaptureLocationChoice.ENABLED)
         val viewModel = viewModel(locationPreference = preference)

@@ -211,14 +211,17 @@ private fun LegacyCaptureScreen(
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                OutlinedButton(onClick = { viewModel.onAction(CaptureAction.PickImages) }, enabled = !state.isProcessing) {
+                OutlinedButton(
+                    onClick = { viewModel.onAction(CaptureAction.PickImages) },
+                    enabled = !state.isProcessing && state.images.size < MAX_CAPTURE_IMAGES,
+                ) {
                     Icon(Icons.Filled.PhotoLibrary, contentDescription = null)
                     Text(" " + stringResource(R.string.capture_pick_photos))
                 }
                 if (state.permission == CameraPermissionState.GRANTED && state.cameraAvailable) {
                     FilledIconButton(
                         onClick = { viewModel.onAction(CaptureAction.TakePhoto) },
-                        enabled = !state.isProcessing,
+                        enabled = !state.isProcessing && state.images.size < MAX_CAPTURE_IMAGES,
                         modifier = Modifier.size(64.dp),
                     ) {
                         Icon(Icons.Filled.CameraAlt, contentDescription = stringResource(R.string.capture_take_photo))

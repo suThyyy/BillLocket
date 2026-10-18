@@ -35,6 +35,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
+internal const val MAX_CAPTURE_IMAGES = 10
+
 enum class CameraPermissionState { UNKNOWN, GRANTED, DENIED, DENIED_PERMANENTLY }
 enum class CameraLens { BACK, FRONT }
 
@@ -167,12 +169,14 @@ class CaptureViewModel @Inject constructor(
                     CaptureEffect.OpenAppSettings
                 } else CaptureEffect.LaunchCameraPermission,
             )
-            CaptureAction.PickImages -> emit(CaptureEffect.LaunchPhotoPicker)
+            CaptureAction.PickImages -> if (canAddImages()) emit(CaptureEffect.LaunchPhotoPicker)
             is CaptureAction.ImagesPicked -> importImages(action.uris)
-            CaptureAction.TakePhoto -> when (locationPreference.get()) {
-                CaptureLocationChoice.UNKNOWN -> _state.update { it.copy(showLocationConsent = true) }
-                CaptureLocationChoice.ENABLED -> emit(CaptureEffect.LaunchLocationPermission)
-                CaptureLocationChoice.DISABLED -> prepareCapture()
+            CaptureAction.TakePhoto -> if (canAddImages()) {
+                when (locationPreference.get()) {
+                    CaptureLocationChoice.UNKNOWN -> _state.update { it.copy(showLocationConsent = true) }
+                    CaptureLocationChoice.ENABLED -> emit(CaptureEffect.LaunchLocationPermission)
+                    CaptureLocationChoice.DISABLED -> prepareCapture()
+                }
             }
             CaptureAction.EnableAutomaticLocation -> {
                 locationPreference.set(CaptureLocationChoice.ENABLED)
@@ -313,6 +317,7 @@ class CaptureViewModel @Inject constructor(
     }
 
     private fun prepareCapture() = viewModelScope.launch {
+        if (!canAddImages()) return@launch
         _state.update { it.copy(isProcessing = true, errorMessage = null) }
         if (locationPreference.get() == CaptureLocationChoice.ENABLED) {
             warmAutomaticLocation()
@@ -332,7 +337,8 @@ class CaptureViewModel @Inject constructor(
 
     private fun importImages(uris: List<String>) = viewModelScope.launch {
         _state.update { it.copy(isProcessing = true, errorMessage = null) }
-        uris.take(MAX_IMAGES - _state.value.images.size).forEach { raw ->
+        val remainingSlots = (MAX_CAPTURE_IMAGES - _state.value.images.size).coerceAtLeast(0)
+        uris.take(remainingSlots).forEach { raw ->
             val staged = when (val result = photoImportSource.stage(
                 raw,
                 newOperationId(),
@@ -345,6 +351,8 @@ class CaptureViewModel @Inject constructor(
         }
         _state.update { it.copy(isProcessing = false) }
     }
+
+    private fun canAddImages(): Boolean = _state.value.images.size < MAX_CAPTURE_IMAGES
 
     private fun normalizeAndAdd(staged: StagedMedia, attachCurrentLocation: Boolean) = viewModelScope.launch {
         normalizeAndAddNow(staged, attachCurrentLocation, isImport = false)
@@ -561,7 +569,6 @@ class CaptureViewModel @Inject constructor(
     }
 
     companion object {
-        const val MAX_IMAGES = 10
         // The photo is added immediately while this background attachment keeps
         // waiting for the warm provider request. Never block the shutter on GPS.
         const val WARMED_LOCATION_TIMEOUT_MILLIS = 12_000L

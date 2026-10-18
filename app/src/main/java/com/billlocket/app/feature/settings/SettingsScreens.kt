@@ -142,7 +142,6 @@ fun GeneralSettingsScreen(onBack: () -> Unit, onWidget: () -> Unit, onStorage: (
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { ThemeMode.entries.forEach { mode -> FilterChip(value.theme == mode, { viewModel.setTheme(mode) }, { Text(when (mode) { ThemeMode.SYSTEM -> stringResource(R.string.settings_theme_system); ThemeMode.LIGHT -> stringResource(R.string.settings_theme_light); ThemeMode.DARK -> stringResource(R.string.settings_theme_dark) }) }) } }
                 Text(stringResource(R.string.settings_amount_visibility), style = MaterialTheme.typography.titleMedium)
                 Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { AmountVisibility.entries.forEach { mode -> FilterChip(value.amountVisibility == mode, { viewModel.setAmounts(mode) }, { Text(when (mode) { AmountVisibility.SHOWN -> stringResource(R.string.settings_amount_show); AmountVisibility.HIDDEN -> stringResource(R.string.settings_amount_hide); AmountVisibility.OBSCURED -> stringResource(R.string.settings_amount_obscure) }) }) } }
-                OutlinedButton(onClick = { viewModel.setCurrency("VND") }, shape = RoundedCornerShape(16.dp)) { Text(stringResource(R.string.settings_currency_format, value.currency.value)) }
             }
             BillLocketSectionCard {
                 Text(stringResource(R.string.settings_permissions), style = MaterialTheme.typography.titleMedium)

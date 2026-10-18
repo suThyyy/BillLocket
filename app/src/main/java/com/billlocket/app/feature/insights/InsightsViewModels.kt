@@ -123,8 +123,17 @@ fun periodQuery(kind: PeriodKind, anchor: LocalDate, accountId: AccountId? = nul
         PeriodKind.MONTH -> YearMonth.from(anchor).let { DateRange(it.atDay(1).toEpochDay(), it.atEndOfMonth().toEpochDay()) }
         PeriodKind.YEAR -> DateRange(LocalDate.of(anchor.year, 1, 1).toEpochDay(), LocalDate.of(anchor.year, 12, 31).toEpochDay())
     }
-    val days = current.endInclusiveEpochDay - current.startEpochDay + 1
-    return InsightsQuery(current, DateRange(current.startEpochDay - days, current.startEpochDay - 1), accountId, when (kind) {
+    val comparison = when (kind) {
+        PeriodKind.WEEK -> anchor.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).minusWeeks(1)
+            .let { DateRange(it.toEpochDay(), it.plusDays(6).toEpochDay()) }
+        PeriodKind.MONTH -> YearMonth.from(anchor).minusMonths(1)
+            .let { DateRange(it.atDay(1).toEpochDay(), it.atEndOfMonth().toEpochDay()) }
+        PeriodKind.YEAR -> DateRange(
+            LocalDate.of(anchor.year - 1, 1, 1).toEpochDay(),
+            LocalDate.of(anchor.year - 1, 12, 31).toEpochDay(),
+        )
+    }
+    return InsightsQuery(current, comparison, accountId, when (kind) {
         PeriodKind.WEEK, PeriodKind.MONTH -> TrendGranularity.DAY
         PeriodKind.YEAR -> TrendGranularity.MONTH
     })
