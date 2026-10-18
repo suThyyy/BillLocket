@@ -488,7 +488,8 @@ private fun CaptureBottomControls(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        val canCapture = state.permission == CameraPermissionState.GRANTED && state.cameraAvailable
+        val canAddImages = state.images.size < MAX_CAPTURE_IMAGES
+        val canCapture = state.permission == CameraPermissionState.GRANTED && state.cameraAvailable && canAddImages
         Box(
             Modifier
                 .size(84.dp)
@@ -510,7 +511,7 @@ private fun CaptureBottomControls(
 
         Surface(
             onClick = onPick,
-            enabled = !state.isProcessing,
+            enabled = !state.isProcessing && canAddImages,
             shape = RoundedCornerShape(22.dp),
             color = MaterialTheme.colorScheme.surfaceVariant,
             modifier = Modifier.height(44.dp),
