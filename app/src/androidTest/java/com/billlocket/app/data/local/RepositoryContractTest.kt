@@ -71,6 +71,22 @@ class RepositoryContractTest {
     }
 
     @Test
+    fun transactionSearchUsesFtsFiltersAndKeysetPages() = runBlocking {
+        val firstCoffee = (transactions.create(transactionCommand().copy(note = "cà phê sáng")) as Outcome.Success).value
+        transactions.create(transactionCommand().copy(note = "trà chiều"))
+        val latestCoffee = (transactions.create(transactionCommand().copy(note = "cà phê tối")) as Outcome.Success).value
+
+        val filter = TransactionFilter(noteQuery = "phê")
+        val firstPage = (transactions.page(filter, PageRequest(limit = 1)) as Outcome.Success).value
+        assertEquals(listOf(latestCoffee), firstPage.items.map { it.id })
+        assertTrue(firstPage.next != null)
+
+        val secondPage = (transactions.page(filter, requireNotNull(firstPage.next)) as Outcome.Success).value
+        assertEquals(listOf(firstCoffee), secondPage.items.map { it.id })
+        assertEquals(null, secondPage.next)
+    }
+
+    @Test
     fun transfersChangeAccountBalancesButRemainNetNeutral() = runBlocking {
         val secondId = (accounts.create(CreateAccountCommand("Ngân hàng", AccountType.BANK, money(0))) as Outcome.Success).value
         val cash = accountRef(DatabaseInitializer.INITIAL_ACCOUNT_ID)
@@ -80,6 +96,9 @@ class RepositoryContractTest {
 
         assertEquals(-25_000, accounts.observeBalance(cash.id).first()?.minorUnits)
         assertEquals(25_000, accounts.observeBalance(bank.id).first()?.minorUnits)
+        val accountDetails = accounts.observeAllDetails(includeArchived = true).first().associateBy { it.account.id }
+        assertEquals(-25_000, accountDetails[cash.id]?.balance?.minorUnits)
+        assertEquals(25_000, accountDetails[bank.id]?.balance?.minorUnits)
         assertEquals(0, accounts.observeNetWorth().first().minorUnits)
         assertEquals(0, insights.observePeriod(InsightsQuery(DateRange(DAY, DAY))).first().net.minorUnits)
     }

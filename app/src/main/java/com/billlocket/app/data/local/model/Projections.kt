@@ -24,7 +24,10 @@ data class TransactionSummary(
     val note: String?,
     @ColumnInfo(name = "occurred_at") val occurredAt: Long,
     @ColumnInfo(name = "local_date_epoch_day") val localDateEpochDay: Long,
+    @ColumnInfo(name = "zone_id") val zoneId: String,
+    @ColumnInfo(name = "account_id") val accountId: String,
     @ColumnInfo(name = "account_name") val accountName: String,
+    @ColumnInfo(name = "category_id") val categoryId: String,
     @ColumnInfo(name = "category_name") val categoryName: String,
     @ColumnInfo(name = "thumbnail_uri") val thumbnailUri: String?,
 )

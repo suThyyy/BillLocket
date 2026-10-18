@@ -7,6 +7,7 @@ import com.billlocket.app.data.local.dao.ProjectionDao
 import com.billlocket.app.data.local.entity.TransactionEntity
 import com.billlocket.app.data.local.entity.TransactionImageEntity
 import com.billlocket.app.data.local.entity.TransactionSearchEntity
+import com.billlocket.app.data.local.model.TransactionSummary as TransactionSummaryRow
 import com.billlocket.app.domain.model.*
 import com.billlocket.app.domain.port.Clock
 import com.billlocket.app.domain.port.IdGenerator
@@ -152,26 +153,36 @@ class TransactionRepositoryImpl @Inject constructor(
 
     override suspend fun page(filter: TransactionFilter, page: PageRequest): Outcome<Page<TransactionSummary>> =
         persistenceOutcome("page_transactions") {
-            val accounts = accountDao.listAll().associate { it.id to financialNames.accountName(it.id, it.name) }
-            val categories = categoryDao.listAll().associate { it.id to financialNames.categoryName(it.id, it.name) }
-            val matching =
-                transactionDao.listActive().map { it.toDomain() }
-                    .filter { it.matches(filter) }
-                    .filter { row ->
-                        page.before?.let { cursor ->
-                            row.occurred.epochMillis < cursor.epochMillis ||
-                                (row.occurred.epochMillis == cursor.epochMillis && row.id.value < cursor.id)
-                        } ?: true
-                    }
-                    .sortedWith(compareByDescending<TransactionDetails> { it.occurred.epochMillis }.thenByDescending { it.id.value })
-            val selected = matching.take(page.limit)
-            val summaries = selected.map { it.toSummary(accounts, categories) }
-            val next =
-                if (matching.size > page.limit && selected.isNotEmpty()) {
-                    val last = selected.last()
-                    PageRequest(page.limit, PageCursor(last.occurred.epochMillis, last.id.value))
-                } else null
-            Page(summaries, next)
+            val query = filter.noteQuery?.takeIf { it.isNotBlank() }?.toFtsMatchQuery()
+            val fetchLimit = page.limit + 1
+            val rows = if (query == null) {
+                transactionDao.pageFiltered(
+                    fromDay = filter.range?.startEpochDay,
+                    toDay = filter.range?.endInclusiveEpochDay,
+                    type = filter.type?.name,
+                    accountId = filter.accountId?.value,
+                    categoryId = filter.categoryId?.value,
+                    beforeEpochMillis = page.before?.epochMillis,
+                    beforeId = page.before?.id,
+                    limit = fetchLimit,
+                )
+            } else {
+                transactionDao.searchFiltered(
+                    query = query,
+                    fromDay = filter.range?.startEpochDay,
+                    toDay = filter.range?.endInclusiveEpochDay,
+                    type = filter.type?.name,
+                    accountId = filter.accountId?.value,
+                    categoryId = filter.categoryId?.value,
+                    beforeEpochMillis = page.before?.epochMillis,
+                    beforeId = page.before?.id,
+                    limit = fetchLimit,
+                )
+            }
+            val selected = rows.take(page.limit)
+            val next = selected.lastOrNull()?.takeIf { rows.size > page.limit }
+                ?.let { PageRequest(page.limit, PageCursor(it.occurredAt, it.id)) }
+            Page(selected.map { it.toDomainSummary(financialNames) }, next)
         }
 
     override suspend fun create(command: CreateTransactionCommand): Outcome<TransactionId> {
@@ -240,6 +251,14 @@ class TransactionRepositoryImpl @Inject constructor(
         } else Outcome.Failure(DomainFailure.NotFound("category", command.category.id.value))
 }
 
+internal fun String.toFtsMatchQuery(): String? =
+    Regex("[\\p{L}\\p{N}]+")
+        .findAll(this)
+        .map { match -> "\"${match.value}\"*" }
+        .toList()
+        .takeIf { it.isNotEmpty() }
+        ?.joinToString(" AND ")
+
 private fun TransactionDetails.matches(filter: TransactionFilter): Boolean =
     (filter.range == null || occurred.localDateEpochDay in filter.range.startEpochDay..filter.range.endInclusiveEpochDay) &&
         (filter.type == null || type == filter.type) &&
@@ -247,8 +266,17 @@ private fun TransactionDetails.matches(filter: TransactionFilter): Boolean =
         (filter.categoryId == null || categoryId == filter.categoryId) &&
         (filter.noteQuery.isNullOrBlank() || note.orEmpty().contains(filter.noteQuery.trim(), ignoreCase = true))
 
-private fun TransactionDetails.toSummary(accounts: Map<String, String>, categories: Map<String, String>) =
-    TransactionSummary(id, type, amount, categories[categoryId.value].orEmpty(), accounts[accountId.value].orEmpty(), note, occurred, images.firstOrNull()?.mediaUri)
+private fun TransactionSummaryRow.toDomainSummary(financialNames: FinancialNameLocalizer) =
+    TransactionSummary(
+        id = TransactionId(id),
+        type = TransactionType.valueOf(type),
+        amount = Money(amountMinor, CurrencyCode.of(currencyCode)),
+        categoryName = financialNames.categoryName(categoryId, categoryName),
+        accountName = financialNames.accountName(accountId, accountName),
+        note = note,
+        occurred = InstantAtZone(occurredAt, localDateEpochDay, zoneId),
+        representativeImageUri = thumbnailUri,
+    )
 
 private fun CreateTransactionCommand.toEntity(id: TransactionId, createdAt: Long, updatedAt: Long) =
     TransactionEntity(

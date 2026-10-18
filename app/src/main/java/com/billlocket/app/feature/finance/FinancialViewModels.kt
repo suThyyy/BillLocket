@@ -61,10 +61,9 @@ class AccountsViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            repository.observeAll(includeArchived = true).flatMapLatest { accounts ->
-                if (accounts.isEmpty()) flowOf(emptyList())
-                else combine(accounts.map { account -> repository.observeBalance(account.id).map { AccountBalanceItem(account, it) } }) { it.toList() }
-            }.catch { _state.update { state -> state.copy(isLoading = false, errorMessage = "Không thể tải tài khoản") } }
+            repository.observeAllDetails(includeArchived = true)
+                .map { details -> details.map { AccountBalanceItem(it.account, it.balance) } }
+                .catch { _state.update { state -> state.copy(isLoading = false, errorMessage = "Không thể tải tài khoản") } }
                 .collect { items -> _state.update { it.copy(items = items, isLoading = false) } }
         }
 

@@ -79,6 +79,39 @@ interface AccountDao {
     )
     fun observeBalance(id: String): Flow<AccountBalance?>
 
+    @Query(
+        """
+        SELECT a.id AS account_id, a.currency_code,
+          a.opening_balance_minor
+          + COALESCE(tx.balance_delta, 0)
+          + COALESCE(incoming.total_minor, 0)
+          - COALESCE(outgoing.total_minor, 0) AS balance_minor
+        FROM accounts a
+        LEFT JOIN (
+          SELECT account_id,
+            SUM(CASE WHEN type = 'INCOME' THEN amount_minor ELSE -amount_minor END) AS balance_delta
+          FROM transactions
+          WHERE deleted_at IS NULL
+          GROUP BY account_id
+        ) tx ON tx.account_id = a.id
+        LEFT JOIN (
+          SELECT to_account_id AS account_id, SUM(amount_minor) AS total_minor
+          FROM transfers
+          WHERE deleted_at IS NULL
+          GROUP BY to_account_id
+        ) incoming ON incoming.account_id = a.id
+        LEFT JOIN (
+          SELECT from_account_id AS account_id, SUM(amount_minor) AS total_minor
+          FROM transfers
+          WHERE deleted_at IS NULL
+          GROUP BY from_account_id
+        ) outgoing ON outgoing.account_id = a.id
+        WHERE (:includeArchived OR a.is_archived = 0)
+        ORDER BY a.is_archived, a.sort_order, a.id
+        """
+    )
+    fun observeAllBalances(includeArchived: Boolean): Flow<List<AccountBalance>>
+
     @Query("UPDATE accounts SET sort_order = :position, updated_at = :updatedAt WHERE id = :id")
     suspend fun updateSortOrder(id: String, position: Int, updatedAt: Long): Int
 
@@ -216,33 +249,68 @@ interface TransactionDao {
     @Query(
         """
         SELECT t.id, t.type, t.amount_minor, t.currency_code, t.note, t.occurred_at,
-          t.local_date_epoch_day, a.name AS account_name, c.name AS category_name,
+          t.local_date_epoch_day, t.zone_id, t.account_id, a.name AS account_name,
+          t.category_id, c.name AS category_name,
           (SELECT i.content_uri FROM transaction_images i WHERE i.transaction_id = t.id ORDER BY i.position, i.id LIMIT 1) AS thumbnail_uri
         FROM transactions t
         JOIN accounts a ON a.id = t.account_id
         JOIN categories c ON c.id = t.category_id
         WHERE t.deleted_at IS NULL
-        ORDER BY t.occurred_at DESC, t.id DESC
-        LIMIT :limit OFFSET :offset
-        """
-    )
-    suspend fun page(limit: Int, offset: Int): List<TransactionSummary>
-
-    @Query(
-        """
-        SELECT t.id, t.type, t.amount_minor, t.currency_code, t.note, t.occurred_at,
-          t.local_date_epoch_day, a.name AS account_name, c.name AS category_name,
-          (SELECT i.content_uri FROM transaction_images i WHERE i.transaction_id = t.id ORDER BY i.position, i.id LIMIT 1) AS thumbnail_uri
-        FROM transaction_search s
-        JOIN transactions t ON t.id = s.transaction_id
-        JOIN accounts a ON a.id = t.account_id
-        JOIN categories c ON c.id = t.category_id
-        WHERE transaction_search MATCH :query AND t.deleted_at IS NULL
+          AND (:fromDay IS NULL OR t.local_date_epoch_day >= :fromDay)
+          AND (:toDay IS NULL OR t.local_date_epoch_day <= :toDay)
+          AND (:type IS NULL OR t.type = :type)
+          AND (:accountId IS NULL OR t.account_id = :accountId)
+          AND (:categoryId IS NULL OR t.category_id = :categoryId)
+          AND (:beforeEpochMillis IS NULL OR t.occurred_at < :beforeEpochMillis
+            OR (t.occurred_at = :beforeEpochMillis AND t.id < :beforeId))
         ORDER BY t.occurred_at DESC, t.id DESC
         LIMIT :limit
         """
     )
-    suspend fun search(query: String, limit: Int): List<TransactionSummary>
+    suspend fun pageFiltered(
+        fromDay: Long?,
+        toDay: Long?,
+        type: String?,
+        accountId: String?,
+        categoryId: String?,
+        beforeEpochMillis: Long?,
+        beforeId: String?,
+        limit: Int,
+    ): List<TransactionSummary>
+
+    @Query(
+        """
+        SELECT t.id, t.type, t.amount_minor, t.currency_code, t.note, t.occurred_at,
+          t.local_date_epoch_day, t.zone_id, t.account_id, a.name AS account_name,
+          t.category_id, c.name AS category_name,
+          (SELECT i.content_uri FROM transaction_images i WHERE i.transaction_id = t.id ORDER BY i.position, i.id LIMIT 1) AS thumbnail_uri
+        FROM transaction_search
+        JOIN transactions t ON t.id = transaction_search.transaction_id
+        JOIN accounts a ON a.id = t.account_id
+        JOIN categories c ON c.id = t.category_id
+        WHERE transaction_search MATCH :query AND t.deleted_at IS NULL
+          AND (:fromDay IS NULL OR t.local_date_epoch_day >= :fromDay)
+          AND (:toDay IS NULL OR t.local_date_epoch_day <= :toDay)
+          AND (:type IS NULL OR t.type = :type)
+          AND (:accountId IS NULL OR t.account_id = :accountId)
+          AND (:categoryId IS NULL OR t.category_id = :categoryId)
+          AND (:beforeEpochMillis IS NULL OR t.occurred_at < :beforeEpochMillis
+            OR (t.occurred_at = :beforeEpochMillis AND t.id < :beforeId))
+        ORDER BY t.occurred_at DESC, t.id DESC
+        LIMIT :limit
+        """
+    )
+    suspend fun searchFiltered(
+        query: String,
+        fromDay: Long?,
+        toDay: Long?,
+        type: String?,
+        accountId: String?,
+        categoryId: String?,
+        beforeEpochMillis: Long?,
+        beforeId: String?,
+        limit: Int,
+    ): List<TransactionSummary>
 }
 
 @Dao
@@ -261,6 +329,28 @@ interface TransferDao {
 
     @Query("SELECT * FROM transfers ORDER BY occurred_at DESC, id DESC")
     suspend fun listAll(): List<TransferEntity>
+
+    @Query(
+        """
+        SELECT * FROM transfers
+        WHERE deleted_at IS NULL
+          AND (:accountId IS NULL OR from_account_id = :accountId OR to_account_id = :accountId)
+          AND (:fromDay IS NULL OR local_date_epoch_day >= :fromDay)
+          AND (:toDay IS NULL OR local_date_epoch_day <= :toDay)
+          AND (:beforeEpochMillis IS NULL OR occurred_at < :beforeEpochMillis
+            OR (occurred_at = :beforeEpochMillis AND id < :beforeId))
+        ORDER BY occurred_at DESC, id DESC
+        LIMIT :limit
+        """
+    )
+    suspend fun pageFiltered(
+        accountId: String?,
+        fromDay: Long?,
+        toDay: Long?,
+        beforeEpochMillis: Long?,
+        beforeId: String?,
+        limit: Int,
+    ): List<TransferEntity>
 
     @Query("UPDATE transfers SET deleted_at = :deletedAt, updated_at = :deletedAt WHERE id = :id AND deleted_at IS NULL")
     suspend fun softDelete(id: String, deletedAt: Long): Int

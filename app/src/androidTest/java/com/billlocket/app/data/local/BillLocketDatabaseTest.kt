@@ -81,11 +81,14 @@ class BillLocketDatabaseTest {
         val detail = database.transactionDao().detail(transaction.id)
         assertNotNull(detail)
         assertEquals(listOf(image.id), detail?.images?.map { it.id })
-        assertEquals(listOf(transaction.id), database.transactionDao().search("phê", 20).map { it.id })
+        assertEquals(
+            listOf(transaction.id),
+            database.transactionDao().searchFiltered("phê", null, null, null, null, null, null, null, 20).map { it.id },
+        )
 
         assertEquals(1, database.transactionDao().hardDelete(transaction.id))
         assertEquals(null, database.transactionDao().detail(transaction.id))
-        assertTrue(database.transactionDao().search("phê", 20).isEmpty())
+        assertTrue(database.transactionDao().searchFiltered("phê", null, null, null, null, null, null, null, 20).isEmpty())
     }
 
     @Test

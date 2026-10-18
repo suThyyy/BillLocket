@@ -701,6 +701,7 @@ private class FakeCategoryRepository(private val items: List<Category>) : Catego
 
 private class FakeAccountRepository(private val items: List<Account>) : AccountRepository {
     override fun observeAll(includeArchived: Boolean) = flowOf(items)
+    override fun observeAllDetails(includeArchived: Boolean) = flowOf(items.map { AccountDetails(it, it.openingBalance) })
     override fun observeDetails(id: AccountId) = flowOf(null)
     override fun observeBalance(id: AccountId) = flowOf(null)
     override fun observeNetWorth(): Flow<Money> = flowOf(Money(0L, CurrencyCode.of("VND")))

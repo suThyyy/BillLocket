@@ -33,6 +33,19 @@ class AccountRepositoryImpl @Inject constructor(
             }
         }
 
+    override fun observeAllDetails(includeArchived: Boolean): Flow<List<AccountDetails>> =
+        combine(dao.observeAll(), dao.observeAllBalances(includeArchived), financialNames.languageChanges) { rows, balances, _ ->
+            val balancesById = balances.associateBy { it.accountId }
+            rows.filter { includeArchived || !it.isArchived }.mapNotNull { row ->
+                balancesById[row.id]?.let { balance ->
+                    AccountDetails(
+                        row.toDomain().copy(name = financialNames.accountName(row.id, row.name)),
+                        Money(balance.balanceMinor, CurrencyCode.of(balance.currencyCode)),
+                    )
+                }
+            }
+        }
+
     override fun observeDetails(id: AccountId): Flow<AccountDetails?> =
         combine(dao.observeById(id.value), dao.observeBalance(id.value), financialNames.languageChanges) { account, balance, _ ->
             if (account == null || balance == null) null
@@ -46,9 +59,8 @@ class AccountRepositoryImpl @Inject constructor(
         dao.observeBalance(id.value).map { it?.let { value -> Money(value.balanceMinor, CurrencyCode.of(value.currencyCode)) } }
 
     override fun observeNetWorth(): Flow<Money> =
-        dao.observeAll().map { accounts ->
-            val currency = settings.settings.first().currency
-            Money(accounts.sumOf { dao.balance(it.id)?.balanceMinor ?: 0 }, currency)
+        combine(dao.observeAllBalances(includeArchived = false), settings.settings) { balances, config ->
+            Money(balances.sumOf { it.balanceMinor }, config.currency)
         }
 
     override suspend fun create(command: CreateAccountCommand): Outcome<AccountId> {
@@ -152,13 +164,17 @@ class TransferRepositoryImpl @Inject constructor(
 
     override suspend fun page(accountId: AccountId?, range: DateRange?, page: PageRequest): Outcome<Page<Transfer>> =
         persistenceOutcome("page_transfers") {
-            val rows = dao.listAll().asSequence().filter { it.deletedAt == null }
-                .filter { accountId == null || it.fromAccountId == accountId.value || it.toAccountId == accountId.value }
-                .filter { range == null || it.localDateEpochDay in range.startEpochDay..range.endInclusiveEpochDay }
-                .filter { row -> page.before?.let { row.occurredAt < it.epochMillis || (row.occurredAt == it.epochMillis && row.id < it.id) } ?: true }
-                .sortedWith(compareByDescending<TransferEntity> { it.occurredAt }.thenByDescending { it.id }).toList()
+            val rows = dao.pageFiltered(
+                accountId = accountId?.value,
+                fromDay = range?.startEpochDay,
+                toDay = range?.endInclusiveEpochDay,
+                beforeEpochMillis = page.before?.epochMillis,
+                beforeId = page.before?.id,
+                limit = page.limit + 1,
+            )
             val selected = rows.take(page.limit)
-            val next = selected.lastOrNull()?.takeIf { rows.size > page.limit }?.let { PageRequest(page.limit, PageCursor(it.occurredAt, it.id)) }
+            val next = selected.lastOrNull()?.takeIf { rows.size > page.limit }
+                ?.let { PageRequest(page.limit, PageCursor(it.occurredAt, it.id)) }
             Page(selected.map { it.toDomain() }, next)
         }
 

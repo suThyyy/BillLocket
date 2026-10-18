@@ -21,6 +21,7 @@ interface TransactionRepository {
 
 interface AccountRepository {
     fun observeAll(includeArchived: Boolean = false): Flow<List<Account>>
+    fun observeAllDetails(includeArchived: Boolean = false): Flow<List<AccountDetails>>
     fun observeDetails(id: AccountId): Flow<AccountDetails?>
     fun observeBalance(id: AccountId): Flow<Money?>
     fun observeNetWorth(): Flow<Money>
