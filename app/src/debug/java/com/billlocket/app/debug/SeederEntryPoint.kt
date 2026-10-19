@@ -1,6 +1,7 @@
 package com.billlocket.app.debug
 
 import com.billlocket.app.domain.port.Clock
+import com.billlocket.app.domain.port.BackupPort
 import com.billlocket.app.domain.port.MediaStorePort
 import com.billlocket.app.domain.repository.AccountRepository
 import com.billlocket.app.domain.repository.CategoryRepository
@@ -15,6 +16,8 @@ import dagger.hilt.components.SingletonComponent
 @EntryPoint
 @InstallIn(SingletonComponent::class)
 interface SeederEntryPoint {
+    fun database(): com.billlocket.app.data.local.BillLocketDatabase
+    fun backup(): BackupPort
     fun transactionRepository(): TransactionRepository
     fun accountRepository(): AccountRepository
     fun categoryRepository(): CategoryRepository

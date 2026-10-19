@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Script chuan bi va khoi chay Demo Seeder cho Monthly Recap thang 9/2026 tren thiet bi Android debug.
+    Script chuan bi va khoi chay Demo Seeder cho 98 giao dich thang 9-10/2026 tren thiet bi Android debug.
 #>
 
 [CmdletBinding()]
@@ -15,7 +15,7 @@ $RepoRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $RepoRoot
 
 Write-Host "==========================================================" -ForegroundColor Cyan
-Write-Host "   BillLocket - Monthly Recap Demo Seeder (Thang 9/2026)  " -ForegroundColor Cyan
+Write-Host "   BillLocket - Monthly Recap Demo Seeder (98 giao dich)   " -ForegroundColor Cyan
 Write-Host "==========================================================" -ForegroundColor Cyan
 
 # 1. Phat hien ADB
@@ -93,8 +93,8 @@ $imageFiles = @($allFiles | Where-Object {
 })
 
 $imageCount = $imageFiles.Count
-if ($imageCount -eq 0) {
-    Write-Error "Khong tim thay anh (.jpg, .jpeg, .png, .heic, .webp) trong $resolvedImageDir"
+if ($imageCount -ne 49) {
+    Write-Error "Can dung 49 anh (.jpg, .jpeg, .png, .heic, .webp), hien co $imageCount anh trong $resolvedImageDir"
     exit 1
 }
 
@@ -150,6 +150,6 @@ Write-Host ""
 Write-Host "==========================================================" -ForegroundColor Green
 Write-Host "[HOAN THANH] Demo Seeder da san sang tren man hinh thiet bi!" -ForegroundColor Green
 Write-Host "1. Kiem tra so luong anh tren man hinh ($imageCount anh)." -ForegroundColor Cyan
-Write-Host "2. Bam 'Tao du lieu demo thang 9/2026' tren thiet bi de seed du lieu." -ForegroundColor Cyan
+Write-Host "2. Bam nut thay the 98 giao dich demo thang 9-10/2026 tren thiet bi." -ForegroundColor Cyan
 Write-Host "3. Mo BillLocket de kiem tra Home calendar, Stats va Map." -ForegroundColor Cyan
 Write-Host "==========================================================" -ForegroundColor Green

@@ -152,6 +152,15 @@ interface CategoryDao {
 
 @Dao
 interface TransactionDao {
+    @Query("DELETE FROM transaction_search")
+    suspend fun deleteAllSearch()
+
+    @Query("DELETE FROM transaction_images")
+    suspend fun deleteAllImages()
+
+    @Query("DELETE FROM transactions")
+    suspend fun deleteAllTransactions()
+
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertTransaction(transaction: TransactionEntity)
 
@@ -315,6 +324,9 @@ interface TransactionDao {
 
 @Dao
 interface TransferDao {
+    @Query("DELETE FROM transfers")
+    suspend fun deleteAll()
+
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insert(transfer: TransferEntity)
 

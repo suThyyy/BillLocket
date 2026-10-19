@@ -12,21 +12,18 @@ import java.time.ZoneId
  *
  * Characteristics:
  * - Deterministic, reproducible, and idempotent
- * - 20 transactions strictly between 2026-09-01 and 2026-09-30
- * - 2026-09-20 is designed to be the most active day (3 transactions)
- * - "Ăn uống" is designed to be the leading expense category
- * - At least 3 transactions without photos
- * - 4 transactions with multiple photos
- * - 22 photo slots rotating across 10 distinct fake Hanoi locations
+ * - 49 transactions in each of September and October 2026
+ * - Every transaction has exactly one source photo
+ * - The two months use different amounts, times, and location distributions
  * - Uses Vietnam local time (Asia/Ho_Chi_Minh)
  */
 object MonthlyRecapSeedPlanner {
 
-    const val DEMO_MARKER = "DEMO_MONTHLY_RECAP_2026_09"
+    const val DEMO_MARKER = "DEMO_MONTHLY_RECAP_2026_09_10"
     val ZONE_VIETNAM: ZoneId = ZoneId.of("Asia/Ho_Chi_Minh")
 
-    const val MAX_IMAGE_BOUND = 22
-    const val MIN_RECOMMENDED_IMAGES = 6
+    const val MAX_IMAGE_BOUND = 49
+    const val MIN_RECOMMENDED_IMAGES = 49
 
     data class FakeLocation(
         val name: String,
@@ -297,50 +294,55 @@ object MonthlyRecapSeedPlanner {
         require(availableImageFileNames.isNotEmpty()) {
             "Không tìm thấy ảnh demo nào trong thư mục đầu vào."
         }
+        require(availableImageFileNames.size == 49) {
+            "Bộ ảnh demo phải có đúng 49 ảnh, hiện có ${availableImageFileNames.size}."
+        }
 
-        val sortedImages = availableImageFileNames.sorted().take(MAX_IMAGE_BOUND)
-        val isWarningFewImages = sortedImages.size < MIN_RECOMMENDED_IMAGES
-
-        var imagePointer = 0
-        var locationPointer = 0
-        val plannedTransactions = mutableListOf<PlannedTransaction>()
-        var totalPhotos = 0
-
-        BLUEPRINTS.forEach { blueprint ->
-            val dateTime = LocalDateTime.of(blueprint.date, blueprint.time)
-            val zonedDateTime = dateTime.atZone(ZONE_VIETNAM)
-            val occurred = InstantAtZone(
-                epochMillis = zonedDateTime.toInstant().toEpochMilli(),
-                localDateEpochDay = blueprint.date.toEpochDay(),
-                zoneId = ZONE_VIETNAM.id,
-            )
-
-            val transactionPhotos = mutableListOf<PlannedPhoto>()
-            for (i in 0 until blueprint.targetPhotoCount) {
-                if (imagePointer < sortedImages.size) {
-                    val imageName = sortedImages[imagePointer++]
-                    val location = FAKE_LOCATIONS[locationPointer % FAKE_LOCATIONS.size]
-                    locationPointer++
-                    transactionPhotos += PlannedPhoto(
-                        fileName = imageName,
-                        location = location,
+        val sortedImages = availableImageFileNames.sorted()
+        val plannedTransactions = buildList {
+            listOf(
+                LocalDate.of(2026, 9, 1) to 30,
+                LocalDate.of(2026, 10, 1) to 31,
+            ).forEachIndexed { monthIndex, (monthStart, monthDays) ->
+                repeat(49) { index ->
+                    val date = monthStart.plusDays((index * 3L + monthIndex * 2L) % monthDays)
+                    val type = if (index == 0) TransactionType.INCOME else TransactionType.EXPENSE
+                    val amount = if (type == TransactionType.INCOME) {
+                        25_000_000L + monthIndex * 1_500_000L
+                    } else {
+                        (75_000L + ((index * 47_000L + monthIndex * 31_000L) % 1_900_000L))
+                    }
+                    val time = LocalTime.of(
+                        7 + ((index * 2 + monthIndex) % 14),
+                        (index * 11 + monthIndex * 7) % 60,
+                    )
+                    val locationPool = if (monthIndex == 0) FAKE_LOCATIONS else FAKE_LOCATIONS.asReversed()
+                    val location = locationPool[index % locationPool.size]
+                    val dateTime = LocalDateTime.of(date, time).atZone(ZONE_VIETNAM)
+                    add(
+                        PlannedTransaction(
+                            occurred = InstantAtZone(
+                                dateTime.toInstant().toEpochMilli(),
+                                date.toEpochDay(),
+                                ZONE_VIETNAM.id,
+                            ),
+                            localDate = date,
+                            type = type,
+                            preferredCategoryName = if (type == TransactionType.INCOME) "Lương" else
+                                listOf("Ăn uống", "Mua sắm", "Di chuyển", "Cà phê", "Giải trí")[index % 5],
+                            fallbackCategoryName = if (type == TransactionType.INCOME) "Thu nhập khác" else "Ăn uống",
+                            amountMinor = amount,
+                            note = "Giao dịch demo ${if (monthIndex == 0) "tháng 9" else "tháng 10"} #${index + 1} [$DEMO_MARKER]",
+                            photos = listOf(
+                                PlannedPhoto(
+                                    sortedImages[index],
+                                    location,
+                                ),
+                            ),
+                        ),
                     )
                 }
             }
-            totalPhotos += transactionPhotos.size
-
-            val formattedNote = "${blueprint.baseNote} [$DEMO_MARKER]"
-
-            plannedTransactions += PlannedTransaction(
-                occurred = occurred,
-                localDate = blueprint.date,
-                type = blueprint.type,
-                preferredCategoryName = blueprint.preferredCategoryName,
-                fallbackCategoryName = blueprint.fallbackCategoryName,
-                amountMinor = blueprint.amountMinor,
-                note = formattedNote,
-                photos = transactionPhotos,
-            )
         }
 
         val totalIncome = plannedTransactions.filter { it.type == TransactionType.INCOME }.sumOf { it.amountMinor }
@@ -349,9 +351,9 @@ object MonthlyRecapSeedPlanner {
 
         return SeedPlan(
             transactions = plannedTransactions,
-            totalPhotosPlanned = totalPhotos,
+            totalPhotosPlanned = plannedTransactions.sumOf { it.photos.size },
             availableImagesCount = availableImageFileNames.size,
-            isWarningFewImages = isWarningFewImages,
+            isWarningFewImages = false,
             totalIncomeMinor = totalIncome,
             totalExpenseMinor = totalExpense,
             mostActiveDate = mostActive?.key ?: LocalDate.of(2026, 9, 20),
@@ -360,5 +362,5 @@ object MonthlyRecapSeedPlanner {
     }
 
     fun isDemoTransaction(note: String?): Boolean =
-        note?.contains(DEMO_MARKER) == true
+        note?.contains(DEMO_MARKER) == true || note?.contains("DEMO_MONTHLY_RECAP_2026_09") == true
 }

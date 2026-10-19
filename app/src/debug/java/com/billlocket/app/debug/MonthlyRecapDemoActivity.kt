@@ -89,7 +89,7 @@ class MonthlyRecapDemoActivity : ComponentActivity() {
                     Scaffold(
                         topBar = {
                             TopAppBar(
-                                title = { Text("Demo Seeder Tháng 9/2026") },
+                                title = { Text("Demo Seeder Tháng 9-10/2026") },
                                 colors = TopAppBarDefaults.topAppBarColors(
                                     containerColor = Color(0xFF1A1A1A),
                                     titleContentColor = Color(0xFFFFB300),
@@ -289,7 +289,7 @@ private fun SeederContent(
                 Icon(Icons.Default.AutoAwesome, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Tạo dữ liệu demo tháng 9/2026",
+                    text = "Thay thế bằng 98 giao dịch demo tháng 9-10/2026",
                     fontWeight = FontWeight.Bold,
                     fontSize = 15.sp,
                 )
@@ -306,7 +306,7 @@ private fun SeederContent(
                             val count = seeder.cleanupPreviousSeededData { msg ->
                                 progressMessage = msg
                             }
-                            infoMessage = "Đã xóa thành công $count giao dịch demo tháng 9/2026."
+                            infoMessage = "Đã xóa thành công $count giao dịch demo tháng 9-10/2026."
                         } catch (e: Exception) {
                             errorMessage = e.message ?: "Lỗi dọn dẹp dữ liệu."
                         } finally {
@@ -323,7 +323,7 @@ private fun SeederContent(
             ) {
                 Icon(Icons.Default.Delete, contentDescription = null, tint = Color(0xFFEF5350))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Xóa dữ liệu demo tháng 9/2026", color = Color(0xFFEF5350))
+                Text("Xóa dữ liệu demo tháng 9-10/2026", color = Color(0xFFEF5350))
             }
         }
 
@@ -479,7 +479,7 @@ private fun SeederContent(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "• Mọi giao dịch được gắn marker DEMO_MONTHLY_RECAP_2026_09.\n" +
+                    text = "• Mọi giao dịch được gắn marker DEMO_MONTHLY_RECAP_2026_09_10.\n" +
                         "• Thao tác chạy lại hoặc xóa chỉ tác động lên dữ liệu demo, tuyệt đối không ảnh hưởng đến giao dịch cá nhân khác.\n" +
                         "• Ảnh được chuẩn hóa JPEG và loại bỏ EXIF tự động, tọa độ là dữ liệu giả lập.",
                     fontSize = 11.sp,

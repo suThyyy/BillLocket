@@ -4,7 +4,7 @@
         <activity
             android:name=".debug.MonthlyRecapDemoActivity"
             android:exported="true"
-            android:label="Demo Seeder Tháng 9/2026"
+            android:label="Demo Seeder Tháng 9-10/2026"
             android:theme="@style/Theme.BillLocket">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
