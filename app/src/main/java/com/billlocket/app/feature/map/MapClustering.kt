@@ -5,23 +5,25 @@ import com.billlocket.app.domain.model.MapPhoto
 import java.util.Locale
 import kotlin.math.atan2
 import kotlin.math.cos
+import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.math.sqrt
 
 data class MapCluster(val id: String, val center: GeoPoint, val photos: List<MapPhoto>)
 
-enum class MapClusterZoomTier(val maximumDistanceMeters: Double) {
-    FAR(12_000.0),
-    OUT(3_500.0),
-    MEDIUM(900.0),
+enum class MapClusterZoomTier(val maximumDiameterMeters: Double?) {
+    FAR(4_000.0),
+    OUT(2_000.0),
+    /** Matches the pre-dynamic-clustering 0.01-degree grid at the default zoom. */
+    MEDIUM(null),
     NEAR(250.0),
     CLOSE(60.0),
     DETAIL(0.0),
 }
 
 fun mapClusterZoomTier(zoom: Float): MapClusterZoomTier = when {
-    zoom < 10.0f -> MapClusterZoomTier.FAR
-    zoom < 12.0f -> MapClusterZoomTier.OUT
+    zoom < 8.0f -> MapClusterZoomTier.FAR
+    zoom < 10.0f -> MapClusterZoomTier.OUT
     zoom < 14.5f -> MapClusterZoomTier.MEDIUM
     zoom < 16.5f -> MapClusterZoomTier.NEAR
     zoom < 18.0f -> MapClusterZoomTier.CLOSE
@@ -29,9 +31,10 @@ fun mapClusterZoomTier(zoom: Float): MapClusterZoomTier = when {
 }
 
 /**
- * Builds stable display clusters in two steps: conservative real-place grouping,
- * followed by zoom-dependent spatial grouping. BillLocket has no provider place ID,
- * so place names, transaction identity, GPS accuracy and distance are only fallbacks.
+ * Groups real places first, then builds deterministic display clusters. The
+ * default tier retains the historical 0.01-degree grid. Distance tiers use
+ * complete-linkage so every pair stays within the tier's maximum diameter;
+ * a chain of nearby places therefore cannot create an unbounded cluster.
  */
 fun clusterMapPhotos(
     photos: List<MapPhoto>,
@@ -39,32 +42,41 @@ fun clusterMapPhotos(
 ): List<MapCluster> {
     if (photos.isEmpty()) return emptyList()
     val places = groupMapPhotosByPlace(photos)
-    val groups = if (zoomTier == MapClusterZoomTier.DETAIL) {
-        places.indices.map(::listOf)
-    } else {
-        unionGroups(places.size) { left, right ->
-            geoDistanceMeters(places[left].center, places[right].center) <= zoomTier.maximumDistanceMeters
-        }
+    val groups = when (zoomTier) {
+        MapClusterZoomTier.MEDIUM -> places.indices
+            .groupBy { index -> legacyCell(places[index].center) }
+            .values
+            .map { it.sorted() }
+        MapClusterZoomTier.DETAIL -> places.indices.map(::listOf)
+        else -> boundedDistanceGroups(places, requireNotNull(zoomTier.maximumDiameterMeters))
     }
     return groups.map { indices ->
         val clusteredPhotos = indices.flatMap { places[it].photos }.sortedBy { it.imageId.value }
         MapCluster(
             id = clusteredPhotos.joinToString("|") { it.imageId.value },
-            center = centerOf(clusteredPhotos),
+            center = medoidOf(indices.map { places[it].center }),
             photos = clusteredPhotos,
         )
     }.sortedBy(MapCluster::id)
 }
 
-internal data class MapPlaceGroup(val center: GeoPoint, val photos: List<MapPhoto>)
+internal data class MapPlaceGroup(
+    val id: String,
+    val center: GeoPoint,
+    val photos: List<MapPhoto>,
+)
 
 internal fun groupMapPhotosByPlace(photos: List<MapPhoto>): List<MapPlaceGroup> {
     val sorted = photos.sortedBy { it.imageId.value }
-    val groups = unionGroups(sorted.size) { left, right -> sameRealPlace(sorted[left], sorted[right]) }
+    val groups = completeLinkGroups(sorted.size) { left, right -> sameRealPlace(sorted[left], sorted[right]) }
     return groups.map { indices ->
         val placePhotos = indices.map(sorted::get).sortedBy { it.imageId.value }
-        MapPlaceGroup(centerOf(placePhotos), placePhotos)
-    }
+        MapPlaceGroup(
+            id = placePhotos.joinToString("|") { it.imageId.value },
+            center = medoidOf(placePhotos.map { it.location.point }),
+            photos = placePhotos,
+        )
+    }.sortedBy(MapPlaceGroup::id)
 }
 
 internal fun sameRealPlace(left: MapPhoto, right: MapPhoto): Boolean {
@@ -94,10 +106,44 @@ internal fun geoDistanceMeters(left: GeoPoint, right: GeoPoint): Double {
     return earthRadiusMeters * 2 * atan2(sqrt(haversine), sqrt((1 - haversine).coerceAtLeast(0.0)))
 }
 
-private fun centerOf(photos: List<MapPhoto>) = GeoPoint(
-    photos.map { it.location.point.latitude }.average(),
-    photos.map { it.location.point.longitude }.average(),
-)
+private fun legacyCell(point: GeoPoint) =
+    (point.latitude / LEGACY_CELL_DEGREES).roundToInt() to
+        (point.longitude / LEGACY_CELL_DEGREES).roundToInt()
+
+private fun boundedDistanceGroups(
+    places: List<MapPlaceGroup>,
+    maximumDiameterMeters: Double,
+): List<List<Int>> {
+    val groups = mutableListOf<MutableList<Int>>()
+    places.indices.forEach { candidate ->
+        val compatible = groups.withIndex()
+            .filter { (_, group) ->
+                group.all { member ->
+                    geoDistanceMeters(places[candidate].center, places[member].center) <= maximumDiameterMeters
+                }
+            }
+            .minWithOrNull(
+                compareBy<IndexedValue<MutableList<Int>>> {
+                    geoDistanceMeters(
+                        places[candidate].center,
+                        medoidOf(it.value.map { index -> places[index].center }),
+                    )
+                }.thenBy { it.index },
+            )
+        if (compatible == null) groups += mutableListOf(candidate)
+        else compatible.value += candidate
+    }
+    return groups.map { it.toList() }
+}
+
+private fun medoidOf(points: List<GeoPoint>): GeoPoint {
+    require(points.isNotEmpty())
+    return points.withIndex().minWithOrNull(
+        compareBy<IndexedValue<GeoPoint>> { candidate ->
+            points.sumOf { point -> geoDistanceMeters(candidate.value, point) }
+        }.thenBy { it.index },
+    )!!.value
+}
 
 private fun String?.normalizedPlaceName(): String? = this
     ?.trim()
@@ -105,27 +151,17 @@ private fun String?.normalizedPlaceName(): String? = this
     ?.replace(Regex("\\s+"), " ")
     ?.takeIf(String::isNotEmpty)
 
-private fun unionGroups(size: Int, shouldUnion: (Int, Int) -> Boolean): List<List<Int>> {
+private fun completeLinkGroups(size: Int, canShareGroup: (Int, Int) -> Boolean): List<List<Int>> {
     if (size == 0) return emptyList()
-    val parents = IntArray(size) { it }
-
-    fun root(index: Int): Int {
-        var current = index
-        while (parents[current] != current) {
-            parents[current] = parents[parents[current]]
-            current = parents[current]
+    val groups = mutableListOf<MutableList<Int>>()
+    repeat(size) { candidate ->
+        val compatible = groups.firstOrNull { group ->
+            group.all { member -> canShareGroup(candidate, member) }
         }
-        return current
+        if (compatible == null) groups += mutableListOf(candidate)
+        else compatible += candidate
     }
-
-    for (left in 0 until size) {
-        for (right in left + 1 until size) {
-            if (shouldUnion(left, right)) {
-                val leftRoot = root(left)
-                val rightRoot = root(right)
-                if (leftRoot != rightRoot) parents[rightRoot] = leftRoot
-            }
-        }
-    }
-    return (0 until size).groupBy(::root).values.map { it.sorted() }
+    return groups.map { it.toList() }
 }
+
+private const val LEGACY_CELL_DEGREES = 0.01

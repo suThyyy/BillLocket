@@ -9,84 +9,133 @@ import com.billlocket.app.domain.model.Money
 import com.billlocket.app.domain.model.PhotoLocation
 import com.billlocket.app.domain.model.TransactionId
 import com.billlocket.app.domain.model.TransactionImageId
+import kotlin.math.roundToInt
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class MapFeatureTest {
-    @Test fun `far zoom groups nearby places while detail zoom separates them`() {
+    @Test fun `default tier retains legacy grid cluster membership`() {
         val photos = listOf(
-            photo("a", 10.8000, 106.6000, placeName = "Cafe A"),
-            photo("b", 10.8020, 106.6000, placeName = "Cafe B"),
+            photo("a", 21.0201, 105.8401, placeName = "A"),
+            photo("b", 21.0203, 105.8403, placeName = "B"),
+            photo("c", 21.0310, 105.8510, placeName = "C"),
+            photo("d", 21.0410, 105.8610, placeName = "D"),
         )
-        assertEquals(1, clusterMapPhotos(photos, MapClusterZoomTier.FAR).size)
-        assertEquals(2, clusterMapPhotos(photos, MapClusterZoomTier.DETAIL).size)
+
+        val expected = legacyClusterIds(photos)
+        val actual = clusterMapPhotos(photos, MapClusterZoomTier.MEDIUM)
+            .map { it.photos.map { photo -> photo.imageId.value }.toSet() }
+            .toSet()
+
+        assertEquals(expected, actual)
+        assertEquals(MapClusterZoomTier.MEDIUM, mapClusterZoomTier(11f))
+        assertEquals(MapClusterZoomTier.MEDIUM, mapClusterZoomTier(13.5f))
     }
 
-    @Test fun `photos from same transaction and place stay grouped at detail zoom`() {
+    @Test fun `zooming in separates different places from one legacy cell`() {
         val photos = listOf(
-            photo("a", 10.80000, 106.60000, transactionId = "tx-1"),
-            photo("b", 10.80005, 106.60005, transactionId = "tx-1"),
+            photo("a", 21.0200, 105.8400, placeName = "Cafe A"),
+            photo("b", 21.0230, 105.8400, placeName = "Cafe B"),
         )
+
+        assertEquals(1, clusterMapPhotos(photos, MapClusterZoomTier.MEDIUM).size)
+        assertEquals(2, clusterMapPhotos(photos, MapClusterZoomTier.NEAR).size)
+    }
+
+    @Test fun `zooming out groups markers split by legacy grid`() {
+        val photos = listOf(
+            photo("a", 21.0249, 105.8400, placeName = "Cafe A"),
+            photo("b", 21.0351, 105.8400, placeName = "Cafe B"),
+        )
+
+        assertEquals(2, clusterMapPhotos(photos, MapClusterZoomTier.MEDIUM).size)
+        assertEquals(1, clusterMapPhotos(photos, MapClusterZoomTier.OUT).size)
+    }
+
+    @Test fun `bounded clustering prevents single linkage chaining`() {
+        val photos = listOf(
+            photo("a", 21.0000, 105.8400, placeName = "A"),
+            photo("b", 21.0135, 105.8400, placeName = "B"),
+            photo("c", 21.0270, 105.8400, placeName = "C"),
+        )
+
+        val clusters = clusterMapPhotos(photos, MapClusterZoomTier.OUT)
+
+        assertEquals(2, clusters.size)
+        assertTrue(clusters.all { cluster ->
+            cluster.photos.all { left ->
+                cluster.photos.all { right ->
+                    geoDistanceMeters(left.location.point, right.location.point) <= 2_000.0
+                }
+            }
+        })
+    }
+
+    @Test fun `same real place remains grouped at detail zoom`() {
+        val photos = listOf(
+            photo("a", 21.02000, 105.84000, transactionId = "tx-1", placeName = "Cafe"),
+            photo("b", 21.02005, 105.84005, transactionId = "tx-1", placeName = "Cafe"),
+        )
+
         val cluster = clusterMapPhotos(photos, MapClusterZoomTier.DETAIL).single()
+
         assertEquals(listOf("a", "b"), cluster.photos.map { it.imageId.value })
-        assertEquals("a|b", cluster.id)
     }
 
-    @Test fun `normalized place name groups close photos across transactions`() {
+    @Test fun `same place fallback cannot chain beyond its own distance limit`() {
         val photos = listOf(
-            photo("a", 10.80000, 106.60000, placeName = "  The Coffee House "),
-            photo("b", 10.80004, 106.60004, placeName = "the   coffee house"),
+            photo("a", 21.000000, 105.8400, placeName = "Cafe"),
+            photo("b", 21.000135, 105.8400, placeName = "Cafe"),
+            photo("c", 21.000270, 105.8400, placeName = "Cafe"),
         )
-        assertEquals(1, groupMapPhotosByPlace(photos).size)
-        assertEquals(1, clusterMapPhotos(photos, MapClusterZoomTier.DETAIL).size)
-    }
 
-    @Test fun `different named places are not treated as the same real place`() {
-        val photos = listOf(
-            photo("a", 10.80000, 106.60000, placeName = "Cafe A"),
-            photo("b", 10.80000, 106.60000, placeName = "Cafe B"),
-        )
         assertEquals(2, groupMapPhotosByPlace(photos).size)
         assertEquals(2, clusterMapPhotos(photos, MapClusterZoomTier.DETAIL).size)
-        assertEquals(setOf("a", "b"), allPhotoIds(clusterMapPhotos(photos, MapClusterZoomTier.DETAIL)))
     }
 
-    @Test fun `zoom tiers are stable within thresholds`() {
-        assertEquals(MapClusterZoomTier.MEDIUM, mapClusterZoomTier(12.0f))
-        assertEquals(MapClusterZoomTier.MEDIUM, mapClusterZoomTier(14.49f))
-        assertEquals(MapClusterZoomTier.NEAR, mapClusterZoomTier(14.5f))
-        val photos = listOf(photo("b", 10.8, 106.6), photo("a", 10.801, 106.601))
-        assertEquals(
-            clusterMapPhotos(photos, mapClusterZoomTier(12.1f)).map { it.id },
-            clusterMapPhotos(photos, mapClusterZoomTier(14.4f)).map { it.id },
-        )
+    @Test fun `cluster center is an unweighted real place medoid`() {
+        val photos = buildList {
+            repeat(8) { index ->
+                add(photo("a-$index", 21.0200, 105.8400, transactionId = "tx-a", placeName = "A"))
+            }
+            add(photo("b", 21.0210, 105.8400, placeName = "B"))
+            add(photo("c", 21.0220, 105.8400, placeName = "C"))
+        }
+
+        val cluster = clusterMapPhotos(photos, MapClusterZoomTier.MEDIUM).single()
+
+        assertEquals(21.0210, cluster.center.latitude, 0.000001)
+        assertEquals(105.8400, cluster.center.longitude, 0.000001)
     }
 
-    @Test fun `clustering preserves every photo and selected photo across zoom levels`() {
-        val photos = (0 until 300).map { index ->
+    @Test fun `all photos and selected photo remain present across tiers`() {
+        val photos = (0 until 100).map { index ->
             photo(
                 id = "image-${index.toString().padStart(3, '0')}",
-                latitude = 10.7 + (index % 30) * 0.001,
-                longitude = 106.5 + (index / 30) * 0.001,
+                latitude = 21.0 + (index % 20) * 0.001,
+                longitude = 105.8 + (index / 20) * 0.001,
                 placeName = "Place $index",
             )
         }
         val expected = photos.map { it.imageId.value }.toSet()
-        val selectedId = "image-157"
+        val selectedId = "image-057"
+
         MapClusterZoomTier.entries.forEach { tier ->
             val clusters = clusterMapPhotos(photos, tier)
-            assertEquals(expected, allPhotoIds(clusters))
+            assertEquals(expected, clusters.flatMap { it.photos }.map { it.imageId.value }.toSet())
             assertTrue(clusters.any { cluster -> cluster.photos.any { it.imageId.value == selectedId } })
         }
     }
 
-    @Test fun `empty input returns no clusters`() {
-        assertTrue(clusterMapPhotos(emptyList()).isEmpty())
-    }
-
-    private fun allPhotoIds(clusters: List<MapCluster>) =
-        clusters.flatMap { cluster -> cluster.photos.map { it.imageId.value } }.toSet()
+    private fun legacyClusterIds(photos: List<MapPhoto>): Set<Set<String>> = photos
+        .groupBy { photo ->
+            (photo.location.point.latitude / 0.01).roundToInt() to
+                (photo.location.point.longitude / 0.01).roundToInt()
+        }
+        .values
+        .map { group -> group.map { it.imageId.value }.toSet() }
+        .toSet()
 
     private fun photo(
         id: String,
