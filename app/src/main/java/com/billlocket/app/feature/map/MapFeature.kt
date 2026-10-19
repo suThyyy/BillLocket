@@ -55,6 +55,8 @@ import com.billlocket.app.locale.activeAppLocale
 import com.billlocket.app.ui.common.BillLocketEmptyState
 import com.billlocket.app.ui.common.CollectEffects
 import com.billlocket.app.ui.common.collectUiState
+import com.billlocket.app.ui.common.ObservationResult
+import com.billlocket.app.ui.common.asObservationResult
 import androidx.compose.ui.res.stringResource
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
@@ -77,7 +79,6 @@ import java.util.Locale
 import javax.inject.Inject
 import kotlin.math.atan2
 import kotlin.math.cos
-import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.math.sqrt
 import kotlinx.coroutines.Dispatchers
@@ -297,21 +298,30 @@ class MapViewModel @Inject constructor(
                     val selectedCategory = values[3] as CategoryId?
                     _state.update { it.copy(month = selectedMonth, type = selectedType, accountId = selectedAccount, categoryId = selectedCategory) }
                     transactions.observeMapPhotos(TransactionFilter(DateRange(selectedMonth.atDay(1).toEpochDay(), selectedMonth.atEndOfMonth().toEpochDay()), selectedType, selectedAccount, selectedCategory))
+                        .asObservationResult()
                 }
-                .catch { _state.update { it.copy(errorMessage = "Không thể tải ảnh có vị trí") } }
-                .collect { photos ->
-                    _state.update { current ->
-                        val targetFromArg = initialImageId?.let { imgId -> photos.firstOrNull { it.imageId == imgId } }
-                            ?: initialTxId?.let { txId -> photos.firstOrNull { it.transactionId == txId } }
-                        val preservedSelection = targetFromArg
-                            ?: current.selected?.takeIf { selected -> photos.any { it.imageId == selected.imageId } }
-                        current.copy(
-                            photos = photos,
-                            selected = preservedSelection ?: photos.firstOrNull(),
-                            currentFocus = targetFromArg?.location?.point ?: current.currentFocus,
-                        )
+                .collect { result ->
+                    when (result) {
+                        is ObservationResult.Error -> _state.update {
+                            it.copy(errorMessage = "Không thể tải ảnh có vị trí")
+                        }
+                        is ObservationResult.Value -> {
+                            val photos = result.value
+                            _state.update { current ->
+                                val targetFromArg = initialImageId?.let { imgId -> photos.firstOrNull { it.imageId == imgId } }
+                                    ?: initialTxId?.let { txId -> photos.firstOrNull { it.transactionId == txId } }
+                                val preservedSelection = targetFromArg
+                                    ?: current.selected?.takeIf { selected -> photos.any { it.imageId == selected.imageId } }
+                                current.copy(
+                                    photos = photos,
+                                    selected = preservedSelection ?: photos.firstOrNull(),
+                                    currentFocus = targetFromArg?.location?.point ?: current.currentFocus,
+                                    errorMessage = null,
+                                )
+                            }
+                            resolveAddresses(photos)
+                        }
                     }
-                    resolveAddresses(photos)
                 }
         }
     }
@@ -350,20 +360,6 @@ class MapViewModel @Inject constructor(
     }
 }
 
-data class MapCluster(val id: String, val center: GeoPoint, val photos: List<MapPhoto>)
-
-fun clusterMapPhotos(photos: List<MapPhoto>, cellDegrees: Double = 0.01): List<MapCluster> =
-    photos.groupBy { photo ->
-        (photo.location.point.latitude / cellDegrees).roundToInt() to (photo.location.point.longitude / cellDegrees).roundToInt()
-    }.map { (_, group) ->
-        val sorted = group.sortedBy { it.imageId.value }
-        MapCluster(
-            id = sorted.joinToString("|") { it.imageId.value },
-            center = GeoPoint(sorted.map { it.location.point.latitude }.average(), sorted.map { it.location.point.longitude }.average()),
-            photos = sorted,
-        )
-    }
-
 @Composable
 fun OpenPhotoMap(
     photos: List<MapPhoto>,
@@ -376,33 +372,44 @@ fun OpenPhotoMap(
     onUseCurrentLocation: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val clusters = remember(photos) { clusterMapPhotos(photos) }
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    val initialZoom = remember { if (photos.isEmpty() && focus == null) 11f else 13.5f }
+    var clusterZoomTier by remember { mutableStateOf(mapClusterZoomTier(initialZoom)) }
+    var markerZoomTier by remember { mutableStateOf(mapMarkerZoomTier(initialZoom)) }
+    val clusters = remember(photos, clusterZoomTier) { clusterMapPhotos(photos, clusterZoomTier) }
 
     val initialTarget = remember { focus ?: selectedPhoto?.location?.point ?: clusters.firstOrNull()?.center ?: GeoPoint(10.8231, 106.6297) }
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(
             LatLng(initialTarget.latitude, initialTarget.longitude),
-            if (clusters.isEmpty() && focus == null) 11f else 13.5f,
+            initialZoom,
         )
     }
 
-    val zoomTier = mapMarkerZoomTier(cameraPositionState.position.zoom)
+    LaunchedEffect(cameraPositionState) {
+        snapshotFlow { cameraPositionState.position.zoom }
+            .map { zoom -> mapClusterZoomTier(zoom) to mapMarkerZoomTier(zoom) }
+            .distinctUntilChanged()
+            .collect { (clusterTier, markerTier) ->
+                clusterZoomTier = clusterTier
+                markerZoomTier = markerTier
+            }
+    }
 
-    val fallbackMarkers = remember(context, clusters, selectedPhoto?.imageId, zoomTier) {
+    val fallbackMarkers = remember(context, clusters, selectedPhoto?.imageId, markerZoomTier) {
         clusters.associate { cluster ->
             val isSelected = selectedPhoto != null && cluster.photos.any { it.imageId == selectedPhoto.imageId }
-            cluster.id to PhotoMarkerBitmapFactory.fallback(context, cluster, isSelected, zoomTier)
+            cluster.id to PhotoMarkerBitmapFactory.fallback(context, cluster, isSelected, markerZoomTier)
         }
     }
 
-    val markerBitmaps by produceState(fallbackMarkers, context, clusters, selectedPhoto?.imageId, zoomTier) {
+    val markerBitmaps by produceState(fallbackMarkers, context, clusters, selectedPhoto?.imageId, markerZoomTier) {
         value = fallbackMarkers
         value = withContext(Dispatchers.IO) {
             clusters.associate { cluster ->
                 val isSelected = selectedPhoto != null && cluster.photos.any { it.imageId == selectedPhoto.imageId }
-                cluster.id to PhotoMarkerBitmapFactory.representative(context, cluster, isSelected, zoomTier)
+                cluster.id to PhotoMarkerBitmapFactory.representative(context, cluster, isSelected, markerZoomTier)
             }
         }
     }
@@ -435,10 +442,10 @@ fun OpenPhotoMap(
         )
     }
 
-    var lastClusterSignature by remember { mutableStateOf<String?>(null) }
-    val signature = remember(clusters) { clusters.joinToString(";") { it.id } }
-    LaunchedEffect(signature) {
-        if (signature != lastClusterSignature) {
+    var lastPhotoSignature by remember { mutableStateOf<String?>(null) }
+    val photoSignature = remember(photos) { photos.map { it.imageId.value }.sorted().joinToString(";") }
+    LaunchedEffect(photoSignature) {
+        if (photoSignature != lastPhotoSignature) {
             if (clusters.isNotEmpty() && selectedPhoto == null) {
                 val initial = clusters.first().center
                 cameraPositionState.animate(
@@ -448,7 +455,7 @@ fun OpenPhotoMap(
                     ),
                 )
             }
-            lastClusterSignature = signature
+            lastPhotoSignature = photoSignature
         }
     }
 
@@ -488,45 +495,47 @@ fun OpenPhotoMap(
             onMapLoaded = { onProviderChanged(true) },
         ) {
             clusters.forEach { cluster ->
-                val isSelected = selectedPhoto != null && cluster.photos.any { it.imageId == selectedPhoto.imageId }
-                val bitmap = markerBitmaps[cluster.id] ?: fallbackMarkers.getValue(cluster.id)
-                val descriptor = remember(bitmap) {
-                    try {
-                        BitmapDescriptorFactory.fromBitmap(bitmap)
-                    } catch (_: Exception) {
-                        null
-                    }
-                }
-                val markerState = rememberMarkerState(
-                    key = cluster.id,
-                    position = LatLng(cluster.center.latitude, cluster.center.longitude),
-                )
-                LaunchedEffect(cluster.center) {
-                    markerState.position = LatLng(cluster.center.latitude, cluster.center.longitude)
-                }
-
-                Marker(
-                    state = markerState,
-                    icon = descriptor,
-                    zIndex = if (isSelected) 2f else 1f,
-                    anchor = Offset(0.5f, 1.0f),
-                    title = if (cluster.photos.size == 1) cluster.photos.first().categoryName else stringResource(R.string.map_photos_count, cluster.photos.size),
-                    snippet = cluster.photos.firstOrNull()?.location?.placeName,
-                    onClick = {
-                        onPhotoSelected(cluster.photos.first())
-                        if (cluster.photos.size > 1) {
-                            coroutineScope.launch {
-                                cameraPositionState.animate(
-                                    CameraUpdateFactory.newLatLngZoom(
-                                        LatLng(cluster.center.latitude, cluster.center.longitude),
-                                        cameraPositionState.position.zoom + 1.5f,
-                                    ),
-                                )
-                            }
+                key(cluster.id) {
+                    val isSelected = selectedPhoto != null && cluster.photos.any { it.imageId == selectedPhoto.imageId }
+                    val bitmap = markerBitmaps[cluster.id] ?: fallbackMarkers.getValue(cluster.id)
+                    val descriptor = remember(bitmap) {
+                        try {
+                            BitmapDescriptorFactory.fromBitmap(bitmap)
+                        } catch (_: Exception) {
+                            null
                         }
-                        true
-                    },
-                )
+                    }
+                    val markerState = rememberMarkerState(
+                        key = cluster.id,
+                        position = LatLng(cluster.center.latitude, cluster.center.longitude),
+                    )
+                    LaunchedEffect(cluster.center) {
+                        markerState.position = LatLng(cluster.center.latitude, cluster.center.longitude)
+                    }
+
+                    Marker(
+                        state = markerState,
+                        icon = descriptor,
+                        zIndex = if (isSelected) 2f else 1f,
+                        anchor = Offset(0.5f, 1.0f),
+                        title = if (cluster.photos.size == 1) cluster.photos.first().categoryName else stringResource(R.string.map_photos_count, cluster.photos.size),
+                        snippet = cluster.photos.firstOrNull()?.location?.placeName,
+                        onClick = {
+                            onPhotoSelected(cluster.photos.first())
+                            if (cluster.photos.size > 1) {
+                                coroutineScope.launch {
+                                    cameraPositionState.animate(
+                                        CameraUpdateFactory.newLatLngZoom(
+                                            LatLng(cluster.center.latitude, cluster.center.longitude),
+                                            cameraPositionState.position.zoom + 1.5f,
+                                        ),
+                                    )
+                                }
+                            }
+                            true
+                        },
+                    )
+                }
             }
         }
 

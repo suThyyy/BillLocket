@@ -7,6 +7,8 @@ import com.billlocket.app.domain.model.*
 import com.billlocket.app.domain.repository.*
 import com.billlocket.app.domain.result.Outcome
 import com.billlocket.app.domain.usecase.EvaluateBudgetThresholds
+import com.billlocket.app.ui.common.ObservationResult
+import com.billlocket.app.ui.common.asObservationResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.DayOfWeek
 import java.time.LocalDate
@@ -69,24 +71,31 @@ class StatisticsViewModel @Inject constructor(
                 .flatMapLatest { (selectedKind, selectedAnchor, selectedAccount) ->
                     _state.update { it.copy(kind = selectedKind, anchor = selectedAnchor, accountId = selectedAccount, isLoading = true) }
                     insights.observePeriod(periodQuery(selectedKind, selectedAnchor, selectedAccount))
+                        .asObservationResult()
                 }
-                .catch { _state.update { it.copy(isLoading = false, errorMessage = "Không thể tải thống kê") } }
-                .collect { value ->
-                    val query = periodQuery(kind.value, anchor.value, account.value)
-                    val todayEpochDay = LocalDate.now().toEpochDay()
-                    val recentRange = DateRange(query.range.startEpochDay, minOf(query.range.endInclusiveEpochDay, todayEpochDay))
-                    val recentOutcome = transactions.page(
-                        TransactionFilter(range = recentRange, accountId = account.value),
-                        PageRequest(limit = 5),
-                    )
-                    val recent = (recentOutcome as? Outcome.Success)?.value?.items ?: emptyList()
-                    _state.update {
-                        it.copy(
-                            insights = value,
-                            recentTransactions = recent,
-                            isLoading = false,
-                            errorMessage = null,
-                        )
+                .collect { result ->
+                    when (result) {
+                        is ObservationResult.Error -> _state.update {
+                            it.copy(isLoading = false, errorMessage = "Không thể tải thống kê")
+                        }
+                        is ObservationResult.Value -> {
+                            val query = periodQuery(kind.value, anchor.value, account.value)
+                            val todayEpochDay = LocalDate.now().toEpochDay()
+                            val recentRange = DateRange(query.range.startEpochDay, minOf(query.range.endInclusiveEpochDay, todayEpochDay))
+                            val recentOutcome = transactions.page(
+                                TransactionFilter(range = recentRange, accountId = account.value),
+                                PageRequest(limit = 5),
+                            )
+                            val recent = (recentOutcome as? Outcome.Success)?.value?.items ?: emptyList()
+                            _state.update {
+                                it.copy(
+                                    insights = result.value,
+                                    recentTransactions = recent,
+                                    isLoading = false,
+                                    errorMessage = null,
+                                )
+                            }
+                        }
                     }
                 }
         }
@@ -96,10 +105,12 @@ class StatisticsViewModel @Inject constructor(
                 .flatMapLatest { (year, selectedAccount) ->
                     val yearRange = DateRange(LocalDate.of(year, 1, 1).toEpochDay(), LocalDate.of(year, 12, 31).toEpochDay())
                     insights.observePeriod(InsightsQuery(yearRange, accountId = selectedAccount, granularity = TrendGranularity.MONTH))
+                        .asObservationResult()
                 }
-                .catch { }
-                .collect { yearInsights ->
-                    _state.update { it.copy(yearlyTrend = yearInsights.trend) }
+                .collect { result ->
+                    if (result is ObservationResult.Value) {
+                        _state.update { it.copy(yearlyTrend = result.value.trend) }
+                    }
                 }
         }
     }

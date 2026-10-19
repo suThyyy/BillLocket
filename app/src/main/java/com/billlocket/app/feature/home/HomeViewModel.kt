@@ -12,6 +12,8 @@ import com.billlocket.app.domain.usecase.UpdateAmountVisibility
 import com.billlocket.app.feature.transaction.draft.TransactionDraft
 import com.billlocket.app.feature.transaction.draft.TransactionDraftStore
 import com.billlocket.app.navigation.newDraftId
+import com.billlocket.app.ui.common.ObservationResult
+import com.billlocket.app.ui.common.asObservationResult
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.Instant
 import java.time.LocalDate
@@ -85,11 +87,18 @@ class HomeViewModel @Inject constructor(
                 .flatMapLatest { (value, type, account) ->
                     _state.update { it.copy(month = value, isLoading = true, errorMessage = null) }
                     transactions.observeCalendar(value.dateRange(), TransactionFilter(type = type, accountId = account))
+                        .asObservationResult()
                 }
-                .catch { _state.update { state -> state.copy(isLoading = false, errorMessage = "Không thể tải lịch") } }
-                .collect { summaries ->
-                    _state.update { it.copy(days = summaries, isLoading = false) }
-                    loadSelectedDay()
+                .collect { result ->
+                    when (result) {
+                        is ObservationResult.Error -> _state.update {
+                            it.copy(isLoading = false, errorMessage = "Không thể tải lịch")
+                        }
+                        is ObservationResult.Value -> {
+                            _state.update { it.copy(days = result.value, isLoading = false, errorMessage = null) }
+                            loadSelectedDay()
+                        }
+                    }
                 }
         }
     }
