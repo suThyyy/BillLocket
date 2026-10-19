@@ -5,20 +5,21 @@ import com.billlocket.app.domain.model.MapPhoto
 import java.util.Locale
 import kotlin.math.atan2
 import kotlin.math.cos
+import kotlin.math.floor
 import kotlin.math.roundToInt
 import kotlin.math.sin
 import kotlin.math.sqrt
 
 data class MapCluster(val id: String, val center: GeoPoint, val photos: List<MapPhoto>)
 
-enum class MapClusterZoomTier(val maximumDiameterMeters: Double?) {
-    FAR(4_000.0),
-    OUT(2_000.0),
+enum class MapClusterZoomTier {
+    FAR,
+    OUT,
     /** Matches the pre-dynamic-clustering 0.01-degree grid at the default zoom. */
-    MEDIUM(null),
-    NEAR(250.0),
-    CLOSE(60.0),
-    DETAIL(0.0),
+    MEDIUM,
+    NEAR,
+    CLOSE,
+    DETAIL,
 }
 
 fun mapClusterZoomTier(zoom: Float): MapClusterZoomTier = when {
@@ -32,9 +33,9 @@ fun mapClusterZoomTier(zoom: Float): MapClusterZoomTier = when {
 
 /**
  * Groups real places first, then builds deterministic display clusters. The
- * default tier retains the historical 0.01-degree grid. Distance tiers use
- * complete-linkage so every pair stays within the tier's maximum diameter;
- * a chain of nearby places therefore cannot create an unbounded cluster.
+ * default tier retains the historical 0.01-degree grid. Every other display
+ * tier is aligned to that grid, so zooming out only merges existing cells and
+ * zooming in only splits them. Real-place grouping happens before the grid.
  */
 fun clusterMapPhotos(
     photos: List<MapPhoto>,
@@ -42,13 +43,13 @@ fun clusterMapPhotos(
 ): List<MapCluster> {
     if (photos.isEmpty()) return emptyList()
     val places = groupMapPhotosByPlace(photos)
-    val groups = when (zoomTier) {
-        MapClusterZoomTier.MEDIUM -> places.indices
-            .groupBy { index -> legacyCell(places[index].center) }
+    val groups = if (zoomTier == MapClusterZoomTier.DETAIL) {
+        places.indices.map(::listOf)
+    } else {
+        places.indices
+            .groupBy { index -> hierarchicalCell(places[index].center, zoomTier) }
             .values
             .map { it.sorted() }
-        MapClusterZoomTier.DETAIL -> places.indices.map(::listOf)
-        else -> boundedDistanceGroups(places, requireNotNull(zoomTier.maximumDiameterMeters))
     }
     return groups.map { indices ->
         val clusteredPhotos = indices.flatMap { places[it].photos }.sortedBy { it.imageId.value }
@@ -106,35 +107,39 @@ internal fun geoDistanceMeters(left: GeoPoint, right: GeoPoint): Double {
     return earthRadiusMeters * 2 * atan2(sqrt(haversine), sqrt((1 - haversine).coerceAtLeast(0.0)))
 }
 
-private fun legacyCell(point: GeoPoint) =
-    (point.latitude / LEGACY_CELL_DEGREES).roundToInt() to
-        (point.longitude / LEGACY_CELL_DEGREES).roundToInt()
+private data class GridCell(val latitude: Long, val longitude: Long)
 
-private fun boundedDistanceGroups(
-    places: List<MapPlaceGroup>,
-    maximumDiameterMeters: Double,
-): List<List<Int>> {
-    val groups = mutableListOf<MutableList<Int>>()
-    places.indices.forEach { candidate ->
-        val compatible = groups.withIndex()
-            .filter { (_, group) ->
-                group.all { member ->
-                    geoDistanceMeters(places[candidate].center, places[member].center) <= maximumDiameterMeters
-                }
-            }
-            .minWithOrNull(
-                compareBy<IndexedValue<MutableList<Int>>> {
-                    geoDistanceMeters(
-                        places[candidate].center,
-                        medoidOf(it.value.map { index -> places[index].center }),
-                    )
-                }.thenBy { it.index },
-            )
-        if (compatible == null) groups += mutableListOf(candidate)
-        else compatible.value += candidate
-    }
-    return groups.map { it.toList() }
+private fun hierarchicalCell(point: GeoPoint, tier: MapClusterZoomTier): GridCell = when (tier) {
+    MapClusterZoomTier.FAR -> coarseCell(point, legacyCellsPerSide = 20)
+    MapClusterZoomTier.OUT -> coarseCell(point, legacyCellsPerSide = 10)
+    MapClusterZoomTier.MEDIUM -> GridCell(legacyIndex(point.latitude).toLong(), legacyIndex(point.longitude).toLong())
+    MapClusterZoomTier.NEAR -> fineCell(point, subdivisionsPerLegacyCell = 4)
+    MapClusterZoomTier.CLOSE -> fineCell(point, subdivisionsPerLegacyCell = 20)
+    MapClusterZoomTier.DETAIL -> error("Detail tier groups real places directly")
 }
+
+private fun coarseCell(point: GeoPoint, legacyCellsPerSide: Int) = GridCell(
+    latitude = Math.floorDiv(legacyIndex(point.latitude), legacyCellsPerSide).toLong(),
+    longitude = Math.floorDiv(legacyIndex(point.longitude), legacyCellsPerSide).toLong(),
+)
+
+private fun fineCell(point: GeoPoint, subdivisionsPerLegacyCell: Int) = GridCell(
+    latitude = fineIndex(point.latitude, subdivisionsPerLegacyCell),
+    longitude = fineIndex(point.longitude, subdivisionsPerLegacyCell),
+)
+
+private fun fineIndex(value: Double, subdivisions: Int): Long {
+    val parent = legacyIndex(value)
+    val lowerBoundary = (parent - 0.5) * LEGACY_CELL_DEGREES
+    val childSize = LEGACY_CELL_DEGREES / subdivisions
+    val child = floor((value - lowerBoundary) / childSize)
+        .toInt()
+        .coerceIn(0, subdivisions - 1)
+    return parent.toLong() * subdivisions + child
+}
+
+private fun legacyIndex(value: Double): Int =
+    (value / LEGACY_CELL_DEGREES).roundToInt()
 
 private fun medoidOf(points: List<GeoPoint>): GeoPoint {
     require(points.isNotEmpty())

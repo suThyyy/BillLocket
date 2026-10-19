@@ -53,23 +53,49 @@ class MapFeatureTest {
         assertEquals(1, clusterMapPhotos(photos, MapClusterZoomTier.OUT).size)
     }
 
-    @Test fun `bounded clustering prevents single linkage chaining`() {
+    @Test fun `grid clustering cannot chain across regional cells`() {
         val photos = listOf(
-            photo("a", 21.0000, 105.8400, placeName = "A"),
-            photo("b", 21.0135, 105.8400, placeName = "B"),
-            photo("c", 21.0270, 105.8400, placeName = "C"),
+            photo("a", 21.0850, 105.8400, placeName = "A"),
+            photo("b", 21.0960, 105.8400, placeName = "B"),
+            photo("c", 21.1070, 105.8400, placeName = "C"),
         )
 
         val clusters = clusterMapPhotos(photos, MapClusterZoomTier.OUT)
 
         assertEquals(2, clusters.size)
-        assertTrue(clusters.all { cluster ->
-            cluster.photos.all { left ->
-                cluster.photos.all { right ->
-                    geoDistanceMeters(left.location.point, right.location.point) <= 2_000.0
-                }
-            }
-        })
+        assertEquals(setOf(setOf("a"), setOf("b", "c")), clusterMembers(clusters))
+    }
+
+    @Test fun `hierarchical tiers only split when zooming in`() {
+        val photos = (0 until 80).map { index ->
+            photo(
+                id = "p-$index",
+                latitude = 20.85 + (index % 20) * 0.0137,
+                longitude = 105.65 + (index / 20) * 0.0173,
+                placeName = "Place $index",
+            )
+        }
+        val tiers = MapClusterZoomTier.entries
+
+        tiers.zipWithNext().forEach { (coarser, finer) ->
+            val coarseClusters = clusterMembers(clusterMapPhotos(photos, coarser))
+            val fineClusters = clusterMembers(clusterMapPhotos(photos, finer))
+            assertTrue("$finer must only split $coarser", fineClusters.all { fine ->
+                coarseClusters.any { coarse -> coarse.containsAll(fine) }
+            })
+        }
+    }
+
+    @Test fun `legacy boundary stays split when zooming in and merges when zooming out`() {
+        val photos = listOf(
+            photo("left", 21.02499, 105.8400, placeName = "Left"),
+            photo("right", 21.02501, 105.8400, placeName = "Right"),
+        )
+
+        assertEquals(1, clusterMapPhotos(photos, MapClusterZoomTier.OUT).size)
+        assertEquals(2, clusterMapPhotos(photos, MapClusterZoomTier.MEDIUM).size)
+        assertEquals(2, clusterMapPhotos(photos, MapClusterZoomTier.NEAR).size)
+        assertEquals(2, clusterMapPhotos(photos, MapClusterZoomTier.CLOSE).size)
     }
 
     @Test fun `same real place remains grouped at detail zoom`() {
@@ -127,6 +153,23 @@ class MapFeatureTest {
             assertTrue(clusters.any { cluster -> cluster.photos.any { it.imageId.value == selectedId } })
         }
     }
+
+    @Test fun `cluster identity is stable for reordered input within a tier`() {
+        val photos = listOf(
+            photo("c", 21.0203, 105.8403, placeName = "C"),
+            photo("a", 21.0201, 105.8401, placeName = "A"),
+            photo("b", 21.0202, 105.8402, placeName = "B"),
+        )
+
+        val first = clusterMapPhotos(photos, MapClusterZoomTier.MEDIUM).map { it.id }
+        val reordered = clusterMapPhotos(photos.reversed(), MapClusterZoomTier.MEDIUM).map { it.id }
+
+        assertEquals(first, reordered)
+    }
+
+    private fun clusterMembers(clusters: List<MapCluster>): Set<Set<String>> = clusters
+        .map { cluster -> cluster.photos.map { it.imageId.value }.toSet() }
+        .toSet()
 
     private fun legacyClusterIds(photos: List<MapPhoto>): Set<Set<String>> = photos
         .groupBy { photo ->
