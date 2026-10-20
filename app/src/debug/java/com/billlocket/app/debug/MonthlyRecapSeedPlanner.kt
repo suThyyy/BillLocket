@@ -32,16 +32,26 @@ object MonthlyRecapSeedPlanner {
     )
 
     val FAKE_LOCATIONS: List<FakeLocation> = listOf(
-        FakeLocation("Hồ Hoàn Kiếm", 21.0285, 105.8542),
-        FakeLocation("Tây Hồ", 21.0583, 105.8120),
-        FakeLocation("Cầu Giấy", 21.0362, 105.7906),
-        FakeLocation("Ba Đình", 21.0338, 105.8141),
-        FakeLocation("Hai Bà Trưng", 21.0064, 105.8411),
-        FakeLocation("Thanh Xuân", 20.9959, 105.8067),
-        FakeLocation("Hà Đông", 20.9712, 105.7789),
-        FakeLocation("Long Biên", 21.0458, 105.8932),
-        FakeLocation("Nam Từ Liêm", 21.0120, 105.7607),
-        FakeLocation("Đống Đa", 21.0181, 105.8291),
+        FakeLocation("57B Đinh Tiên Hoàng, Hoàn Kiếm, Hà Nội", 21.0314, 105.8527),
+        FakeLocation("1 Tràng Tiền, Hoàn Kiếm, Hà Nội", 21.0254, 105.8555),
+        FakeLocation("13 Thanh Niên, Tây Hồ, Hà Nội", 21.0527, 105.8360),
+        FakeLocation("144 Xuân Thủy, Cầu Giấy, Hà Nội", 21.0373, 105.7826),
+        FakeLocation("302 Cầu Giấy, Cầu Giấy, Hà Nội", 21.0355, 105.7935),
+        FakeLocation("1 Hùng Vương, Ba Đình, Hà Nội", 21.0378, 105.8345),
+        FakeLocation("19 Ngọc Hà, Ba Đình, Hà Nội", 21.0388, 105.8317),
+        FakeLocation("1 Đại Cồ Việt, Hai Bà Trưng, Hà Nội", 21.0058, 105.8430),
+        FakeLocation("458 Minh Khai, Hai Bà Trưng, Hà Nội", 20.9958, 105.8680),
+        FakeLocation("191 Bà Triệu, Hai Bà Trưng, Hà Nội", 21.0113, 105.8495),
+        FakeLocation("72A Nguyễn Trãi, Thanh Xuân, Hà Nội", 21.0020, 105.8154),
+        FakeLocation("334 Nguyễn Trãi, Thanh Xuân, Hà Nội", 20.9907, 105.8015),
+        FakeLocation("2 Quang Trung, Hà Đông, Hà Nội", 20.9711, 105.7781),
+        FakeLocation("8 Phạm Hùng, Nam Từ Liêm, Hà Nội", 21.0162, 105.7830),
+        FakeLocation("32 Lê Đức Thọ, Nam Từ Liêm, Hà Nội", 21.0284, 105.7658),
+        FakeLocation("7 Nguyễn Văn Linh, Long Biên, Hà Nội", 21.0457, 105.8927),
+        FakeLocation("2 Long Biên, Long Biên, Hà Nội", 21.0412, 105.8569),
+        FakeLocation("178 Tây Sơn, Đống Đa, Hà Nội", 21.0086, 105.8242),
+        FakeLocation("1 Tôn Thất Tùng, Đống Đa, Hà Nội", 21.0026, 105.8303),
+        FakeLocation("136 Hồ Tùng Mậu, Bắc Từ Liêm, Hà Nội", 21.0395, 105.7702),
     )
 
     data class TransactionBlueprint(
@@ -271,7 +281,7 @@ object MonthlyRecapSeedPlanner {
         val preferredCategoryName: String,
         val fallbackCategoryName: String,
         val amountMinor: Long,
-        val note: String,
+        val note: String?,
         val photos: List<PlannedPhoto>,
     )
 
@@ -332,7 +342,7 @@ object MonthlyRecapSeedPlanner {
                                 listOf("Ăn uống", "Mua sắm", "Di chuyển", "Cà phê", "Giải trí")[index % 5],
                             fallbackCategoryName = if (type == TransactionType.INCOME) "Thu nhập khác" else "Ăn uống",
                             amountMinor = amount,
-                            note = "Giao dịch demo ${if (monthIndex == 0) "tháng 9" else "tháng 10"} #${index + 1} [$DEMO_MARKER]",
+                            note = null,
                             photos = listOf(
                                 PlannedPhoto(
                                     sortedImages[index],

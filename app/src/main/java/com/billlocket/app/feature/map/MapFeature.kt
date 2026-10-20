@@ -81,6 +81,7 @@ import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
 import kotlin.math.sqrt
+import kotlin.math.roundToInt
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.*
@@ -226,8 +227,6 @@ data class MapState(
     val amountVisibility: AmountVisibility = AmountVisibility.SHOWN,
     val errorMessage: String? = null,
     val currentFocus: GeoPoint? = null,
-    val cameraTarget: GeoPoint? = null,
-    val cameraZoom: Float? = null,
 )
 
 sealed interface MapAction {
@@ -241,7 +240,6 @@ sealed interface MapAction {
     data object NextMonth : MapAction
     data object UseCurrentLocation : MapAction
     data object ResolveCurrentLocation : MapAction
-    data class CameraSettled(val target: GeoPoint, val zoom: Float) : MapAction
 }
 
 sealed interface MapEffect {
@@ -251,7 +249,7 @@ sealed interface MapEffect {
 @OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class MapViewModel @Inject constructor(
-    private val savedStateHandle: SavedStateHandle,
+    savedStateHandle: SavedStateHandle,
     private val transactions: TransactionRepository,
     accounts: AccountRepository,
     categories: CategoryRepository,
@@ -265,16 +263,7 @@ class MapViewModel @Inject constructor(
     private val type = MutableStateFlow<TransactionType?>(null)
     private val account = MutableStateFlow<AccountId?>(null)
     private val category = MutableStateFlow<CategoryId?>(null)
-    private val restoredSelectedImageId = savedStateHandle.get<String>(KEY_SELECTED_IMAGE_ID)?.let(::TransactionImageId)
-    private val restoredCameraTarget = savedStateHandle.get<Double>(KEY_CAMERA_LATITUDE)?.let { latitude ->
-        savedStateHandle.get<Double>(KEY_CAMERA_LONGITUDE)?.let { longitude -> GeoPoint(latitude, longitude) }
-    }
-    private val _state = MutableStateFlow(
-        MapState(
-            cameraTarget = restoredCameraTarget,
-            cameraZoom = savedStateHandle.get<Float>(KEY_CAMERA_ZOOM),
-        ),
-    )
+    private val _state = MutableStateFlow(MapState())
     val state = _state.asStateFlow()
     private val effectChannel = kotlinx.coroutines.channels.Channel<MapEffect>(kotlinx.coroutines.channels.Channel.BUFFERED)
     val effects = effectChannel.receiveAsFlow()
@@ -324,7 +313,6 @@ class MapViewModel @Inject constructor(
                                     ?: initialTxId?.let { txId -> photos.firstOrNull { it.transactionId == txId } }
                                 val preservedSelection = targetFromArg
                                     ?: current.selected?.takeIf { selected -> photos.any { it.imageId == selected.imageId } }
-                                    ?: restoredSelectedImageId?.let { restoredId -> photos.firstOrNull { it.imageId == restoredId } }
                                 current.copy(
                                     photos = photos,
                                     selected = preservedSelection ?: photos.firstOrNull(),
@@ -332,7 +320,6 @@ class MapViewModel @Inject constructor(
                                     errorMessage = null,
                                 )
                             }
-                            savedStateHandle[KEY_SELECTED_IMAGE_ID] = _state.value.selected?.imageId?.value
                             resolveAddresses(photos)
                         }
                     }
@@ -356,10 +343,7 @@ class MapViewModel @Inject constructor(
     fun onAction(action: MapAction) {
         when (action) {
             is MapAction.ProviderChanged -> _state.update { it.copy(provider = if (action.available) MapProviderState.READY else MapProviderState.UNAVAILABLE) }
-            is MapAction.SelectPhoto -> {
-                savedStateHandle[KEY_SELECTED_IMAGE_ID] = action.value?.imageId?.value
-                _state.update { it.copy(selected = action.value) }
-            }
+            is MapAction.SelectPhoto -> _state.update { it.copy(selected = action.value) }
             is MapAction.SetThemeMode -> _state.update { it.copy(themeMode = action.value) }
             is MapAction.TypeChanged -> type.value = action.value
             is MapAction.AccountChanged -> account.value = action.value
@@ -373,77 +357,55 @@ class MapViewModel @Inject constructor(
                     is Outcome.Failure -> _state.update { it.copy(errorMessage = "Không lấy được vị trí hiện tại") }
                 }
             }
-            is MapAction.CameraSettled -> {
-                savedStateHandle[KEY_CAMERA_LATITUDE] = action.target.latitude
-                savedStateHandle[KEY_CAMERA_LONGITUDE] = action.target.longitude
-                savedStateHandle[KEY_CAMERA_ZOOM] = action.zoom
-                _state.update { it.copy(cameraTarget = action.target, cameraZoom = action.zoom) }
-            }
         }
     }
-
-    private companion object {
-        const val KEY_SELECTED_IMAGE_ID = "map_selected_image_id"
-        const val KEY_CAMERA_LATITUDE = "map_camera_latitude"
-        const val KEY_CAMERA_LONGITUDE = "map_camera_longitude"
-        const val KEY_CAMERA_ZOOM = "map_camera_zoom"
-    }
 }
+
+data class MapCluster(val id: String, val center: GeoPoint, val photos: List<MapPhoto>)
+
+fun clusterMapPhotos(photos: List<MapPhoto>, cellDegrees: Double = 0.01): List<MapCluster> =
+    photos.groupBy { photo ->
+        (photo.location.point.latitude / cellDegrees).roundToInt() to
+            (photo.location.point.longitude / cellDegrees).roundToInt()
+    }.map { (_, group) ->
+        val sorted = group.sortedBy { it.imageId.value }
+        MapCluster(
+            id = sorted.joinToString("|") { it.imageId.value },
+            center = GeoPoint(
+                sorted.map { it.location.point.latitude }.average(),
+                sorted.map { it.location.point.longitude }.average(),
+            ),
+            photos = sorted,
+        )
+    }
 
 @Composable
 fun OpenPhotoMap(
     photos: List<MapPhoto>,
     selectedPhoto: MapPhoto?,
     focus: GeoPoint?,
-    restoredCameraTarget: GeoPoint? = null,
-    restoredCameraZoom: Float? = null,
     themeMode: MapThemeMode = MapThemeMode.DARK,
     onPhotoSelected: (MapPhoto) -> Unit,
     onSetThemeMode: (MapThemeMode) -> Unit = {},
     onProviderChanged: (Boolean) -> Unit,
     onUseCurrentLocation: () -> Unit,
-    onCameraSettled: (GeoPoint, Float) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier,
 ) {
+    val clusters = remember(photos) { clusterMapPhotos(photos) }
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
-    val initialZoom = remember { restoredCameraZoom ?: if (photos.isEmpty() && focus == null) 11f else 13.5f }
-    var clusterZoomTier by remember { mutableStateOf(mapClusterZoomTier(initialZoom)) }
-    var markerZoomTier by remember { mutableStateOf(mapMarkerZoomTier(initialZoom)) }
-    val clusters = remember(photos, clusterZoomTier) { clusterMapPhotos(photos, clusterZoomTier) }
 
     val initialTarget = remember {
-        restoredCameraTarget ?: focus ?: selectedPhoto?.location?.point ?: clusters.firstOrNull()?.center ?: GeoPoint(10.8231, 106.6297)
+        focus ?: selectedPhoto?.location?.point ?: clusters.firstOrNull()?.center ?: GeoPoint(10.8231, 106.6297)
     }
     val cameraPositionState = rememberCameraPositionState {
         position = CameraPosition.fromLatLngZoom(
             LatLng(initialTarget.latitude, initialTarget.longitude),
-            initialZoom,
+            if (clusters.isEmpty() && focus == null) 11f else 13.5f,
         )
     }
 
-    LaunchedEffect(cameraPositionState) {
-        snapshotFlow { cameraPositionState.position.zoom }
-            .map { zoom -> mapClusterZoomTier(zoom) to mapMarkerZoomTier(zoom) }
-            .distinctUntilChanged()
-            .collect { (clusterTier, markerTier) ->
-                clusterZoomTier = clusterTier
-                markerZoomTier = markerTier
-            }
-    }
-
-    LaunchedEffect(cameraPositionState) {
-        snapshotFlow { cameraPositionState.isMoving }
-            .distinctUntilChanged()
-            .filter { isMoving -> !isMoving }
-            .collect {
-                val position = cameraPositionState.position
-                onCameraSettled(
-                    GeoPoint(position.target.latitude, position.target.longitude),
-                    position.zoom,
-                )
-            }
-    }
+    val markerZoomTier = mapMarkerZoomTier(cameraPositionState.position.zoom)
 
     val fallbackMarkers = remember(context, clusters, selectedPhoto?.imageId, markerZoomTier) {
         clusters.associate { cluster ->
@@ -490,11 +452,11 @@ fun OpenPhotoMap(
         )
     }
 
-    var lastPhotoSignature by remember { mutableStateOf<String?>(null) }
-    val photoSignature = remember(photos) { photos.map { it.imageId.value }.sorted().joinToString(";") }
-    LaunchedEffect(photoSignature) {
-        if (photoSignature != lastPhotoSignature) {
-            if (restoredCameraTarget == null && clusters.isNotEmpty() && selectedPhoto == null) {
+    var lastClusterSignature by remember { mutableStateOf<String?>(null) }
+    val signature = remember(clusters) { clusters.joinToString(";") { it.id } }
+    LaunchedEffect(signature) {
+        if (signature != lastClusterSignature) {
+            if (clusters.isNotEmpty() && selectedPhoto == null) {
                 val initial = clusters.first().center
                 cameraPositionState.animate(
                     CameraUpdateFactory.newLatLngZoom(
@@ -503,14 +465,12 @@ fun OpenPhotoMap(
                     ),
                 )
             }
-            lastPhotoSignature = photoSignature
+            lastClusterSignature = signature
         }
     }
 
-    var lastHandledFocus by remember { mutableStateOf(if (restoredCameraTarget != null) focus else null) }
     LaunchedEffect(focus) {
-        focus?.takeIf { it != lastHandledFocus }?.let {
-            lastHandledFocus = it
+        focus?.let {
             cameraPositionState.animate(
                 CameraUpdateFactory.newLatLngZoom(LatLng(it.latitude, it.longitude), 15f),
             )
@@ -545,7 +505,6 @@ fun OpenPhotoMap(
             onMapLoaded = { onProviderChanged(true) },
         ) {
             clusters.forEach { cluster ->
-                key(cluster.id) {
                     val isSelected = selectedPhoto != null && cluster.photos.any { it.imageId == selectedPhoto.imageId }
                     val bitmap = markerBitmaps[cluster.id] ?: fallbackMarkers.getValue(cluster.id)
                     val descriptor = remember(bitmap) {
@@ -585,7 +544,6 @@ fun OpenPhotoMap(
                             true
                         },
                     )
-                }
             }
         }
 
@@ -866,8 +824,6 @@ fun MapScreen(
                     photos = state.photos,
                     selectedPhoto = state.selected,
                     focus = state.currentFocus,
-                    restoredCameraTarget = state.cameraTarget,
-                    restoredCameraZoom = state.cameraZoom,
                     themeMode = state.themeMode,
                     onPhotoSelected = { photo ->
                         viewModel.onAction(MapAction.SelectPhoto(photo))
@@ -877,9 +833,6 @@ fun MapScreen(
                     },
                     onProviderChanged = { viewModel.onAction(MapAction.ProviderChanged(it)) },
                     onUseCurrentLocation = { viewModel.onAction(MapAction.UseCurrentLocation) },
-                    onCameraSettled = { target, zoom ->
-                        viewModel.onAction(MapAction.CameraSettled(target, zoom))
-                    },
                     modifier = Modifier.fillMaxSize(),
                 )
                 MapProviderState.UNAVAILABLE -> Box(

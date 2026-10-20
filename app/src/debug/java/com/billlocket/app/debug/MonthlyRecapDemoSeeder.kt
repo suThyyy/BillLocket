@@ -292,6 +292,9 @@ class MonthlyRecapDemoSeeder(private val context: Context) {
             }
             importedRows.flatMap { it.staged }.forEach { mediaStore.markCommitted(it) }
             mediaStore.reconcile(clock.nowEpochMillis())
+            prefs.edit()
+                .putStringSet("seeded_ids", importedRows.map { it.transaction.id }.toSet())
+                .apply()
         } catch (failure: Throwable) {
             mediaStore.deleteOwned(promotedUris)
             importedRows.flatMap { it.staged }.forEach { mediaStore.discardStaged(it) }

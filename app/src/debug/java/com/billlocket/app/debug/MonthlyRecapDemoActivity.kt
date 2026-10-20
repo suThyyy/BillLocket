@@ -446,7 +446,7 @@ private fun SeederContent(
 
                     MetricRow("Số giao dịch đã tạo", "${result.transactionCount}")
                     MetricRow("Số ảnh giao dịch đã gắn", "${result.imageCount}")
-                    MetricRow("Số vị trí giả lập đã xác nhận", "${result.locationCount} (10 điểm Hà Nội)")
+                    MetricRow("Số vị trí giả lập đã xác nhận", "${result.locationCount} (20 địa chỉ Hà Nội)")
                     MetricRow("Tổng thu nhập", "${currencyFormatter.format(result.totalIncomeMinor)} ₫")
                     MetricRow("Tổng chi tiêu", "${currencyFormatter.format(result.totalExpenseMinor)} ₫")
                     MetricRow("Danh mục chi tiêu hàng đầu", result.topCategoryName)
@@ -479,8 +479,8 @@ private fun SeederContent(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = "• Mọi giao dịch được gắn marker DEMO_MONTHLY_RECAP_2026_09_10.\n" +
-                        "• Thao tác chạy lại hoặc xóa chỉ tác động lên dữ liệu demo, tuyệt đối không ảnh hưởng đến giao dịch cá nhân khác.\n" +
+                    text = "• Ghi chú giao dịch để trống; ID dữ liệu demo được lưu riêng để có thể dọn dẹp an toàn.\n" +
+                        "• Chạy lại sẽ tạo backup đã kiểm tra trước khi thay thế dữ liệu hiện tại.\n" +
                         "• Ảnh được chuẩn hóa JPEG và loại bỏ EXIF tự động, tọa độ là dữ liệu giả lập.",
                     fontSize = 11.sp,
                     color = Color(0xFF888888),
