@@ -48,6 +48,8 @@ class AndroidAddressResolver @Inject constructor(
         point: GeoPoint,
         existingPlaceName: String?,
     ): ResolvedAddress {
+        savedPlaceNameAddress(existingPlaceName)?.let { return it }
+
         // Approximate to 4 decimal places (~11 meters) to deduplicate near-identical coordinates,
         // and include custom place name if provided to avoid cross-cache contamination.
         val placeKey = existingPlaceName?.trim()?.takeIf { it.isNotEmpty() && !isCoordinateString(it) }?.let { ":$it" } ?: ""
@@ -121,6 +123,12 @@ class AndroidAddressResolver @Inject constructor(
         val district = address.subAdminArea?.trim()?.takeIf { it.isNotEmpty() }
         val city = (address.adminArea ?: address.locality)?.trim()?.takeIf { it.isNotEmpty() }
         val feature = address.featureName?.trim()?.takeIf { it.isNotEmpty() }
+        val cleanedLine0 = address.getAddressLine(0)
+            ?.trim()
+            ?.replace(Regex(",?\\s*(Việt Nam|Vietnam)\\s*$", RegexOption.IGNORE_CASE), "")
+            ?.replace(Regex(",?\\s*\\b\\d{5,6}\\b"), "")
+            ?.trim()
+            ?.takeIf(String::isNotEmpty)
 
         // Cleaned up address components
         val parts = listOfNotNull(streetLine, ward, district, city).distinct()
@@ -128,11 +136,6 @@ class AndroidAddressResolver @Inject constructor(
         val fullAddress = if (parts.size >= 2) {
             parts.joinToString(", ")
         } else {
-            val line0 = address.getAddressLine(0)?.trim()
-            val cleanedLine0 = line0
-                ?.replace(Regex(",?\\s*(Việt Nam|Vietnam)\\s*$", RegexOption.IGNORE_CASE), "")
-                ?.replace(Regex(",?\\s*\\b\\d{5,6}\\b"), "")
-                ?.trim()
             if (!cleanedLine0.isNullOrBlank()) {
                 cleanedLine0
             } else if (parts.isNotEmpty()) {
@@ -140,6 +143,10 @@ class AndroidAddressResolver @Inject constructor(
             } else {
                 fallback(point, existingPlaceName).fullAddress
             }
+        }
+
+        if (!hasLocalAddressDetail(streetLine, ward, district, feature, city, address.countryName, cleanedLine0)) {
+            return cityLevelAddress(point, fullAddress)
         }
 
         // Detailed location (e.g. "Gần Khu đô thị Ngoại Giao Đoàn")
@@ -165,14 +172,7 @@ class AndroidAddressResolver @Inject constructor(
     }
 
     private fun fallback(point: GeoPoint, existingPlaceName: String?): ResolvedAddress {
-        if (existingPlaceName != null && existingPlaceName.isNotBlank() && !isCoordinateString(existingPlaceName)) {
-            return ResolvedAddress(
-                shortAddress = existingPlaceName,
-                fullAddress = existingPlaceName,
-                detailLocation = null,
-                isFallback = false,
-            )
-        }
+        savedPlaceNameAddress(existingPlaceName)?.let { return it }
         val coord = "${point.latitude.formatCoordinate()}, ${point.longitude.formatCoordinate()}"
         return ResolvedAddress(
             shortAddress = "Không xác định được địa chỉ",
@@ -187,4 +187,44 @@ class AndroidAddressResolver @Inject constructor(
 
     private fun Double.formatCoordinate(): String =
         String.format(Locale.US, "%.4f", this)
+}
+
+internal fun savedPlaceNameAddress(existingPlaceName: String?): ResolvedAddress? {
+    val saved = existingPlaceName
+        ?.trim()
+        ?.takeIf { it.isNotEmpty() && !it.matches(Regex("^[\\d\\.\\,\\-\\s]+$")) }
+        ?: return null
+    return ResolvedAddress(
+        shortAddress = saved,
+        fullAddress = saved,
+        detailLocation = null,
+        isFallback = false,
+    )
+}
+
+internal fun hasLocalAddressDetail(
+    streetLine: String?,
+    ward: String?,
+    district: String?,
+    feature: String?,
+    city: String?,
+    country: String?,
+    cleanedLine0: String?,
+): Boolean {
+    if (streetLine != null || ward != null || district != null) return true
+    val genericNames = listOfNotNull(city, country).map { it.trim().lowercase(Locale.ROOT) }.toSet()
+    val detailedFeature = feature?.trim()?.lowercase(Locale.ROOT)?.takeIf { it !in genericNames }
+    val detailedLine = cleanedLine0?.trim()?.lowercase(Locale.ROOT)?.takeIf { it !in genericNames }
+    return detailedFeature != null || detailedLine != null
+}
+
+internal fun cityLevelAddress(point: GeoPoint, label: String): ResolvedAddress {
+    val normalizedLabel = label.trim().ifEmpty { "Không xác định được địa chỉ" }
+    val coordinates = String.format(Locale.US, "%.4f, %.4f", point.latitude, point.longitude)
+    return ResolvedAddress(
+        shortAddress = "$normalizedLabel • $coordinates",
+        fullAddress = normalizedLabel,
+        detailLocation = coordinates,
+        isFallback = true,
+    )
 }
